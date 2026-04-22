@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"regexp"
 	"strings"
@@ -218,6 +219,8 @@ func checkForUpdates(
 	total := len(pkgNames)
 
 	for _, pkgName := range pkgNames {
+		checked++
+
 		matches := build.RegexpALRPackageName.FindStringSubmatch(pkgName)
 		if matches != nil {
 			packageName := matches[pkgIdx]
@@ -251,26 +254,26 @@ func checkForUpdates(
 
 			// Формируем полное имя пакета как в installed (pkg.Name + репозиторий)
 			fullPkgName := fmt.Sprintf("%s+%s", pkg.Name, repoName)
-			
+
 			// Получаем установленную версию по полному имени из БД
 			installedVer, exists := installed[fullPkgName]
 			if !exists {
 				// Fallback: пробуем оригинальное имя из списка установленных
 				installedVer = installed[pkgName]
 			}
-			
+
 			// Нормализуем версии перед сравнением (убираем dist суффиксы типа .red80, .el9, .fc41)
 			normalizedInstalled := normalizeVersion(installedVer)
 			normalizedRepo := normalizeVersion(repoVer)
-			
+
 			c := vercmp.Compare(normalizedRepo, normalizedInstalled)
-			
+
 			if c == 1 {
-				slog.Debug("checkForUpdates: adding update", 
-					"pkgName", pkgName, 
-					"fullPkgName", fullPkgName, 
+				slog.Debug("checkForUpdates: adding update",
+					"pkgName", pkgName,
+					"fullPkgName", fullPkgName,
 					"exists", exists,
-					"repoVer", repoVer, 
+					"repoVer", repoVer,
 					"installedVer", installedVer)
 				// Создаём копию pkg, т.к. переменная цикла переиспользуется
 				pkgCopy := pkg
@@ -282,13 +285,11 @@ func checkForUpdates(
 			}
 		}
 
-		checked++
-
 		// Рисуем прогресс-бар из точек с RGB-градиентом
 		progress := float64(checked) / float64(total)
 		barWidth := 40
 		filled := int(progress * float64(barWidth))
-		
+
 		var bar strings.Builder
 		for i := 0; i < barWidth; i++ {
 			pos := float64(i) / float64(barWidth-1)
@@ -299,8 +300,8 @@ func checkForUpdates(
 				bar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("○"))
 			}
 		}
-		
-		fmt.Fprintf(os.Stderr, "\r%s %3.0f%% (%d/%d)", bar.String(), progress*100, checked, total)
+
+		fmt.Fprintf(os.Stderr, "\r%s %3.0f%% (%d/%d)", bar.String(), math.Floor(progress*100), checked, total)
 	}
 
 	fmt.Fprintln(os.Stderr) // новая строка после завершения
