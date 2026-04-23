@@ -1141,6 +1141,10 @@ func (i *Builder) InstallPkgs(
 		pkg := node.Package
 		basePkgName := node.BasePkgName
 
+		// Очищаем имя пакета от суффикса репозитория (+repo) перед сборкой,
+		// так как в alr.sh функции meta_*, package_*, files_* не содержат суффикса.
+		cleanPkgName := StripRepoSuffix(pkgName)
+
 		// Проверяем нужна ли сборка
 		needBuildPkgs, err := i.installerExecutor.FilterPackagesByVersion(ctx, []alrsh.Package{*pkg}, input.OSRelease())
 		if err != nil {
@@ -1157,13 +1161,13 @@ func (i *Builder) InstallPkgs(
 		buildInput := &BuildInput{
 			script:     scriptInfo.Script,
 			repository: scriptInfo.Repository,
-			packages:   []string{pkgName},
+			packages:   []string{cleanPkgName},
 			pkgFormat:  input.PkgFormat(),
 			opts:       input.BuildOpts(),
 			info:       input.OSRelease(),
 		}
 
-		cachedDeps, allInCache, err := i.checkCacheForAllSubpackages(ctx, buildInput, basePkgName, []string{pkgName})
+		cachedDeps, allInCache, err := i.checkCacheForAllSubpackages(ctx, buildInput, basePkgName, []string{cleanPkgName})
 		if err != nil {
 			return nil, err
 		}
@@ -1199,7 +1203,7 @@ func (i *Builder) InstallPkgs(
 			ctx,
 			&BuildPackageFromDbArgs{
 				Package:  pkg,
-				Packages: []string{pkgName},
+				Packages: []string{cleanPkgName},
 				BuildArgs: BuildArgs{
 					Opts:             input.BuildOpts(),
 					Info:             input.OSRelease(),

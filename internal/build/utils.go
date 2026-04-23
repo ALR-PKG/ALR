@@ -200,6 +200,17 @@ func escapeGlobChars(path string) string {
 
 var RegexpALRPackageName = regexp.MustCompile(`^(?P<package>[^+]+)\+(?P<repo>.+)$`)
 
+// StripRepoSuffix удаляет суффикс репозитория (+repo) из имени пакета.
+// Например, "python3-maturin+ALR-repo" → "python3-maturin".
+// Если суффикс отсутствует, возвращает исходное имя.
+func StripRepoSuffix(pkgName string) string {
+	matches := RegexpALRPackageName.FindStringSubmatch(pkgName)
+	if matches == nil {
+		return pkgName
+	}
+	return matches[RegexpALRPackageName.SubexpIndex("package")]
+}
+
 // goArchToRPMISA конвертирует Go-архитектуру в RPM ISA (Instruction Set Architecture)
 // квалификатор, используемый в спецификациях зависимостей (например, "x86-64" для amd64).
 // Возвращает пустую строку, если ISA квалификатор неизвестен для данной архитектуры.
