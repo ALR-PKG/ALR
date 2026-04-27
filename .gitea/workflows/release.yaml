@@ -61,6 +61,7 @@ jobs:
           cp alr ./out
           cp scripts/completion/bash ./out/completion/alr
           cp scripts/completion/zsh ./out/completion/_alr
+          cp scripts/completion/fish ./out/completion/alr.fish
 
           ( cd out && tar -czvf ../alr-${{ env.VERSION }}-linux-x86_64.tar.gz * )
 

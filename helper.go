@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/leonelquinteros/gotext"
@@ -115,10 +116,23 @@ func HelperCmd() *cli.Command {
 
 			return helper(hc, c.Args().First(), c.Args().Slice()[1:])
 		},
-		BashComplete: func(ctx *cli.Context) {
-			for name := range helpers.Helpers {
-				fmt.Println(name)
+		BashComplete: cliutils.BashCompleteWithError(func(ctx *cli.Context) error {
+			if cliutils.MaybePrintFlags(ctx) {
+				return nil
 			}
-		},
+
+			prefix := cliutils.CompletionPrefix(ctx)
+			names := make([]string, 0, len(helpers.Helpers))
+			for name := range helpers.Helpers {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			for _, name := range names {
+				if prefix == "" || strings.HasPrefix(name, prefix) {
+					cliutils.PrintCompletionItem(name, false)
+				}
+			}
+			return nil
+		}),
 	}
 }

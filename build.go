@@ -20,9 +20,11 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/leonelquinteros/gotext"
 	"github.com/urfave/cli/v2"
@@ -32,13 +34,87 @@ import (
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/osutils"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
+	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
 )
+
+// isFileFlag возвращает true, если arg — это флаг, ожидающий путь к файлу.
+// Учитывает как отдельные флаги (-s foo), так и --flag=value (--script=foo).
+func isFileFlag(arg string) bool {
+	return arg == "-s" || arg == "--script" ||
+		strings.HasPrefix(arg, "-s=") || strings.HasPrefix(arg, "--script=")
+}
+
+// isPackageFlag возвращает true, если arg — это флаг -p/--package (с или без значения).
+func isPackageFlag(arg string) bool {
+	return arg == "-p" || arg == "--package" ||
+		strings.HasPrefix(arg, "-p=") || strings.HasPrefix(arg, "--package=")
+}
+
+// isSubpackageFlag возвращает true, если arg — это флаг -sb/--subpackage (с или без значения).
+func isSubpackageFlag(arg string) bool {
+	return arg == "-sb" || arg == "--subpackage" ||
+		strings.HasPrefix(arg, "-sb=") || strings.HasPrefix(arg, "--subpackage=")
+}
 
 func BuildCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "build",
 		Usage: gotext.Get("Build a local package"),
+		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			var lastArg, prevArg string
+			if len(os.Args) > 2 {
+				lastArg = os.Args[len(os.Args)-2]
+			}
+			if len(os.Args) > 3 {
+				prevArg = os.Args[len(os.Args)-3]
+			}
+
+			// Если ожидается значение флага — позволяем shell сделать file completion
+			if isFileFlag(lastArg) || isFileFlag(prevArg) {
+				return nil
+			}
+
+			// Для -sb/--subpackage не можем предложить completion (нужен парсинг скрипта)
+			if isSubpackageFlag(lastArg) || isSubpackageFlag(prevArg) {
+				return nil
+			}
+
+			// Для -p/--package выводим ALR-пакеты в формате repo/name
+			if isPackageFlag(lastArg) || isPackageFlag(prevArg) {
+				ctx := c.Context
+				deps, err := appbuilder.New(ctx).WithConfig().WithDB().Build()
+				if err != nil {
+					return err
+				}
+				defer deps.Defer()
+
+				prefix := cliutils.CompletionPrefix(c)
+
+				var result []alrsh.Package
+				parts := strings.SplitN(prefix, "/", 2)
+				if len(parts) == 2 {
+					result, err = deps.DB.GetPkgs(ctx,
+						"name LIKE ? ESCAPE ? AND repository = ?",
+						cliutils.EscapeLikePattern(parts[1])+"%", "\\", parts[0])
+				} else {
+					where, args := cliutils.BuildPkgQuery(prefix)
+					result, err = deps.DB.GetPkgs(ctx, where, args...)
+				}
+				if err != nil {
+					return cliutils.FormatCliExit(gotext.Get("Error getting packages"), err)
+				}
+
+				for _, pkg := range result {
+					fmt.Printf("%s/%s\n", pkg.Repository, pkg.Name)
+				}
+				return nil
+			}
+
+			// Выводим флаги команды build
+			cliutils.PrintCompletionFlags(c.Command.Flags)
+			return nil
+		}),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "script",

@@ -22,6 +22,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 	"github.com/jeandeaual/go-locale"
@@ -47,6 +48,10 @@ func InfoCmd() *cli.Command {
 			},
 		},
 		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
+
 			ctx := c.Context
 			deps, err := appbuilder.
 				New(ctx).
@@ -58,13 +63,22 @@ func InfoCmd() *cli.Command {
 			}
 			defer deps.Defer()
 
-			result, err := deps.DB.GetPkgs(c.Context, "true")
+			prefix := cliutils.CompletionPrefix(c)
+
+			where, args := cliutils.BuildPkgQuery(prefix)
+			result, err := deps.DB.GetPkgs(c.Context, where, args...)
 			if err != nil {
 				return cliutils.FormatCliExit(gotext.Get("Error getting packages"), err)
 			}
 
+			seen := make(map[string]struct{})
 			for _, pkg := range result {
-				fmt.Println(pkg.Name)
+				if prefix == "" || strings.HasPrefix(pkg.Name, prefix) {
+					if _, ok := seen[pkg.Name]; !ok {
+						seen[pkg.Name] = struct{}{}
+						cliutils.PrintCompletionItem(pkg.Name, true)
+					}
+				}
 			}
 			return nil
 		}),
@@ -73,7 +87,7 @@ func InfoCmd() *cli.Command {
 
 			args := c.Args()
 			if args.Len() < 1 {
-				return cli.Exit(gotext.Get("Command info expected at least 1 argument, got %d", args.Len()), 1)
+				return cliutils.FormatCliExit(gotext.Get("Command info expected at least 1 argument, got %d", args.Len()), nil)
 			}
 
 			ctx := c.Context
@@ -86,7 +100,7 @@ func InfoCmd() *cli.Command {
 				WithRepos().
 				Build()
 			if err != nil {
-				return cli.Exit(err, 1)
+				return err
 			}
 			defer deps.Defer()
 

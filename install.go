@@ -32,6 +32,7 @@ import (
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
+	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
 )
 
@@ -110,6 +111,10 @@ func InstallCmd() *cli.Command {
 			return nil
 		}),
 		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
+
 			ctx := c.Context
 			deps, err := appbuilder.
 				New(ctx).
@@ -123,16 +128,10 @@ func InstallCmd() *cli.Command {
 			defer deps.Defer()
 
 			seen := make(map[string]struct{})
+			prefix := cliutils.CompletionPrefix(c)
 
-			var prefix string
-			if c.Args().Len() > 0 {
-				prefix = c.Args().Get(c.Args().Len() - 1)
-				if strings.HasPrefix(prefix, "-") {
-					prefix = ""
-				}
-			}
-
-			result, err := deps.DB.GetPkgs(c.Context, "true")
+			where, args := cliutils.BuildPkgQuery(prefix)
+			result, err := deps.DB.GetPkgs(c.Context, where, args...)
 			if err != nil {
 				return cliutils.FormatCliExit(gotext.Get("Error getting packages"), err)
 			}
@@ -141,19 +140,21 @@ func InstallCmd() *cli.Command {
 				if prefix == "" || strings.HasPrefix(pkg.Name, prefix) {
 					if _, ok := seen[pkg.Name]; !ok {
 						seen[pkg.Name] = struct{}{}
-						fmt.Println(pkg.Name)
+						cliutils.PrintCompletionItem(pkg.Name, true)
 					}
 				}
 			}
 
-			sysPkgs, err := deps.Manager.ListAvailable(prefix)
-			if err != nil {
-				slog.Debug("failed to list system packages", "err", err)
-			} else {
-				for _, name := range sysPkgs {
-					if _, ok := seen[name]; !ok {
-						seen[name] = struct{}{}
-						fmt.Println(name)
+			if prefix != "" {
+				sysPkgs, err := deps.Manager.ListAvailable(prefix)
+				if err != nil {
+					slog.Debug("failed to list system packages", "err", err)
+				} else {
+					for _, name := range sysPkgs {
+						if _, ok := seen[name]; !ok {
+							seen[name] = struct{}{}
+							cliutils.PrintCompletionItem(name, false)
+						}
 					}
 				}
 			}
@@ -169,8 +170,11 @@ func RemoveCmd() *cli.Command {
 		Usage:   gotext.Get("Remove an installed package"),
 		Aliases: []string{"rm"},
 		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
-			ctx := c.Context
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
 
+			ctx := c.Context
 			deps, err := appbuilder.
 				New(ctx).
 				WithConfig().
@@ -178,9 +182,12 @@ func RemoveCmd() *cli.Command {
 				WithManager().
 				Build()
 			if err != nil {
-				return cli.Exit(err, 1)
+				return err
 			}
 			defer deps.Defer()
+
+			prefix := cliutils.CompletionPrefix(c)
+			seen := make(map[string]struct{})
 
 			installedAlrPackages := map[string]string{}
 			installed, err := deps.Manager.ListInstalled(&manager.Opts{})
@@ -196,7 +203,35 @@ func RemoveCmd() *cli.Command {
 				}
 			}
 
-			result, err := deps.DB.GetPkgs(c.Context, "true")
+			var result []alrsh.Package
+			if prefix != "" {
+				where, args := cliutils.BuildPkgQuery(prefix)
+				result, err = deps.DB.GetPkgs(c.Context, where, args...)
+			} else if len(installedAlrPackages) > 0 {
+				nameSet := make(map[string]struct{})
+				for key := range installedAlrPackages {
+					parts := strings.SplitN(key, "/", 2)
+					if len(parts) == 2 {
+						nameSet[parts[1]] = struct{}{}
+					}
+				}
+				if len(nameSet) > 900 {
+					// SQLite лимит на 999 параметров; fallback на полную выборку
+					result, err = deps.DB.GetPkgs(c.Context, "true")
+				} else if len(nameSet) > 0 {
+					names := make([]string, 0, len(nameSet))
+					for n := range nameSet {
+						names = append(names, n)
+					}
+					placeholders := strings.Repeat("?,", len(names))
+					placeholders = placeholders[:len(placeholders)-1]
+					args := make([]any, len(names))
+					for i, n := range names {
+						args[i] = n
+					}
+					result, err = deps.DB.GetPkgs(c.Context, "name IN ("+placeholders+")", args...)
+				}
+			}
 			if err != nil {
 				return cliutils.FormatCliExit(gotext.Get("Error getting packages"), err)
 			}
@@ -206,7 +241,26 @@ func RemoveCmd() *cli.Command {
 				if !ok {
 					continue
 				}
-				fmt.Println(pkg.Name)
+				if prefix == "" || strings.HasPrefix(pkg.Name, prefix) {
+					if _, exists := seen[pkg.Name]; !exists {
+						seen[pkg.Name] = struct{}{}
+						cliutils.PrintCompletionItem(pkg.Name, true)
+					}
+				}
+			}
+
+			if prefix != "" {
+				for pkgName := range installed {
+					if build.RegexpALRPackageName.MatchString(pkgName) {
+						continue
+					}
+					if strings.HasPrefix(pkgName, prefix) {
+						if _, exists := seen[pkgName]; !exists {
+							seen[pkgName] = struct{}{}
+							cliutils.PrintCompletionItem(pkgName, false)
+						}
+					}
+				}
 			}
 
 			return nil
