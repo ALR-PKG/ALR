@@ -75,30 +75,18 @@ func (o *OverridableField[T]) Resolve(overrides []string) {
 
 // Database serialization (JSON)
 func (f *OverridableField[T]) ToDB() ([]byte, error) {
-	var data map[string]T
-
-	if f.data == nil {
-		data = make(map[string]T)
-	} else {
-		data = f.data
-	}
-
-	return json.Marshal(data)
+	return json.Marshal(f.data)
 }
 
 func (f *OverridableField[T]) FromDB(data []byte) error {
 	if len(data) == 0 {
-		*f = OverridableField[T]{data: make(map[string]T)}
+		*f = OverridableField[T]{}
 		return nil
 	}
 
 	var temp map[string]T
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return err
-	}
-
-	if temp == nil {
-		temp = make(map[string]T)
 	}
 
 	*f = OverridableField[T]{data: temp}

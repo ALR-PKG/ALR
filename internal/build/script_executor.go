@@ -59,7 +59,7 @@ func (e *LocalScriptExecutor) ReadScript(ctx context.Context, scriptPath string)
 }
 
 func (e *LocalScriptExecutor) ExecuteFirstPass(ctx context.Context, input *BuildInput, sf *alrsh.ScriptFile) (string, []*alrsh.Package, error) {
-	return sf.ParseBuildVars(ctx, input.info, input.packages, true)
+	return sf.ParseBuildVars(ctx, input.info, input.packages, false)
 }
 
 func (e *LocalScriptExecutor) PrepareDirs(
@@ -114,6 +114,15 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 	err = runner.Run(ctx, sf.File())
 	if err != nil {
 		return nil, err
+	}
+
+	// Обновляем переменную version в runner'е, чтобы build()/package()
+	// использовали динамическую версию, полученную через ResolveVersion.
+	for _, vars := range varsOfPackages {
+		if vars.Version != "" {
+			runner.Vars["version"] = expand.Variable{Kind: expand.String, Str: vars.Version}
+			break
+		}
 	}
 
 	dec := decoder.New(input.info, runner)
