@@ -74,21 +74,26 @@ func RemoveRepoCmd() *cli.Command {
 		Usage:     gotext.Get("Remove an existing repository"),
 		Aliases:   []string{"rm"},
 		ArgsUsage: gotext.Get("<name>"),
-		BashComplete: func(c *cli.Context) {
-			if c.NArg() == 0 {
-				// Get repo names from config
-				ctx := c.Context
-				deps, err := appbuilder.New(ctx).WithConfig().Build()
-				if err != nil {
-					return
-				}
-				defer deps.Defer()
+		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
 
-				for _, repo := range deps.Cfg.Repos() {
-					fmt.Println(repo.Name)
+			ctx := c.Context
+			deps, err := appbuilder.New(ctx).WithConfig().Build()
+			if err != nil {
+				return err
+			}
+			defer deps.Defer()
+
+			prefix := cliutils.CompletionPrefix(c)
+			for _, repo := range deps.Cfg.Repos() {
+				if prefix == "" || strings.HasPrefix(repo.Name, prefix) {
+					cliutils.PrintCompletionItem(repo.Name, false)
 				}
 			}
-		},
+			return nil
+		}),
 		Action: utils.RootNeededAction(func(c *cli.Context) error {
 			if c.Args().Len() < 1 {
 				return cliutils.FormatCliExit("missing args", nil)
@@ -219,21 +224,29 @@ func SetRepoRefCmd() *cli.Command {
 		Name:      "set-ref",
 		Usage:     gotext.Get("Set the reference of the repository"),
 		ArgsUsage: gotext.Get("<name> <ref>"),
-		BashComplete: func(c *cli.Context) {
-			if c.NArg() == 0 {
-				// Get repo names from config
-				ctx := c.Context
-				deps, err := appbuilder.New(ctx).WithConfig().Build()
-				if err != nil {
-					return
-				}
-				defer deps.Defer()
+		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
+			if c.Args().Len() > 0 {
+				return nil
+			}
 
-				for _, repo := range deps.Cfg.Repos() {
-					fmt.Println(repo.Name)
+			ctx := c.Context
+			deps, err := appbuilder.New(ctx).WithConfig().Build()
+			if err != nil {
+				return err
+			}
+			defer deps.Defer()
+
+			prefix := cliutils.CompletionPrefix(c)
+			for _, repo := range deps.Cfg.Repos() {
+				if prefix == "" || strings.HasPrefix(repo.Name, prefix) {
+					cliutils.PrintCompletionItem(repo.Name, false)
 				}
 			}
-		},
+			return nil
+		}),
 		Action: utils.RootNeededAction(func(c *cli.Context) error {
 			if c.Args().Len() < 2 {
 				return cliutils.FormatCliExit("missing args", nil)
@@ -282,21 +295,29 @@ func SetUrlCmd() *cli.Command {
 		Name:      "set-url",
 		Usage:     gotext.Get("Set the main url of the repository"),
 		ArgsUsage: gotext.Get("<name> <url>"),
-		BashComplete: func(c *cli.Context) {
-			if c.NArg() == 0 {
-				// Get repo names from config
-				ctx := c.Context
-				deps, err := appbuilder.New(ctx).WithConfig().Build()
-				if err != nil {
-					return
-				}
-				defer deps.Defer()
+		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
+			if c.Args().Len() > 0 {
+				return nil
+			}
 
-				for _, repo := range deps.Cfg.Repos() {
-					fmt.Println(repo.Name)
+			ctx := c.Context
+			deps, err := appbuilder.New(ctx).WithConfig().Build()
+			if err != nil {
+				return err
+			}
+			defer deps.Defer()
+
+			prefix := cliutils.CompletionPrefix(c)
+			for _, repo := range deps.Cfg.Repos() {
+				if prefix == "" || strings.HasPrefix(repo.Name, prefix) {
+					cliutils.PrintCompletionItem(repo.Name, false)
 				}
 			}
-		},
+			return nil
+		}),
 		Action: utils.RootNeededAction(func(c *cli.Context) error {
 			if c.Args().Len() < 2 {
 				return cliutils.FormatCliExit("missing args", nil)
@@ -375,20 +396,29 @@ func AddMirror() *cli.Command {
 		Name:      "add",
 		Usage:     gotext.Get("Add a mirror URL to repository"),
 		ArgsUsage: gotext.Get("<name> <url>"),
-		BashComplete: func(c *cli.Context) {
-			if c.NArg() == 0 {
-				ctx := c.Context
-				deps, err := appbuilder.New(ctx).WithConfig().Build()
-				if err != nil {
-					return
-				}
-				defer deps.Defer()
+		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
+			if c.Args().Len() > 0 {
+				return nil
+			}
 
-				for _, repo := range deps.Cfg.Repos() {
-					fmt.Println(repo.Name)
+			ctx := c.Context
+			deps, err := appbuilder.New(ctx).WithConfig().Build()
+			if err != nil {
+				return err
+			}
+			defer deps.Defer()
+
+			prefix := cliutils.CompletionPrefix(c)
+			for _, repo := range deps.Cfg.Repos() {
+				if prefix == "" || strings.HasPrefix(repo.Name, prefix) {
+					cliutils.PrintCompletionItem(repo.Name, false)
 				}
 			}
-		},
+			return nil
+		}),
 		Action: utils.RootNeededAction(func(c *cli.Context) error {
 			if c.Args().Len() < 2 {
 				return cliutils.FormatCliExit("missing args", nil)
@@ -432,20 +462,29 @@ func RemoveMirror() *cli.Command {
 		Aliases:   []string{"rm"},
 		Usage:     gotext.Get("Remove mirror from the repository"),
 		ArgsUsage: gotext.Get("<name> <url>"),
-		BashComplete: func(c *cli.Context) {
+		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
+			if c.Args().Len() > 0 {
+				return nil
+			}
+
 			ctx := c.Context
 			deps, err := appbuilder.New(ctx).WithConfig().Build()
 			if err != nil {
-				return
+				return err
 			}
 			defer deps.Defer()
 
-			if c.NArg() == 0 {
-				for _, repo := range deps.Cfg.Repos() {
-					fmt.Println(repo.Name)
+			prefix := cliutils.CompletionPrefix(c)
+			for _, repo := range deps.Cfg.Repos() {
+				if prefix == "" || strings.HasPrefix(repo.Name, prefix) {
+					cliutils.PrintCompletionItem(repo.Name, false)
 				}
 			}
-		},
+			return nil
+		}),
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "ignore-missing",
@@ -551,21 +590,26 @@ func ClearMirrors() *cli.Command {
 		Aliases:   []string{"rm-all"},
 		Usage:     gotext.Get("Remove all mirrors from the repository"),
 		ArgsUsage: gotext.Get("<name>"),
-		BashComplete: func(c *cli.Context) {
-			if c.NArg() == 0 {
-				// Get repo names from config
-				ctx := c.Context
-				deps, err := appbuilder.New(ctx).WithConfig().Build()
-				if err != nil {
-					return
-				}
-				defer deps.Defer()
+		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
+			if cliutils.MaybePrintFlags(c) {
+				return nil
+			}
 
-				for _, repo := range deps.Cfg.Repos() {
-					fmt.Println(repo.Name)
+			ctx := c.Context
+			deps, err := appbuilder.New(ctx).WithConfig().Build()
+			if err != nil {
+				return err
+			}
+			defer deps.Defer()
+
+			prefix := cliutils.CompletionPrefix(c)
+			for _, repo := range deps.Cfg.Repos() {
+				if prefix == "" || strings.HasPrefix(repo.Name, prefix) {
+					cliutils.PrintCompletionItem(repo.Name, false)
 				}
 			}
-		},
+			return nil
+		}),
 		Action: utils.RootNeededAction(func(c *cli.Context) error {
 			if c.Args().Len() < 1 {
 				return cliutils.FormatCliExit("missing args", nil)

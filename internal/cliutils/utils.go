@@ -28,7 +28,23 @@ import (
 type BashCompleteWithErrorFunc func(c *cli.Context) error
 
 func BashCompleteWithError(f BashCompleteWithErrorFunc) cli.BashCompleteFunc {
-	return func(c *cli.Context) { HandleExitCoder(f(c)) }
+	return func(c *cli.Context) {
+		if err := f(c); err != nil {
+			// В completion-контексте os.Exit обрезает buffered stdout в pipe.
+			// Логируем ошибку, но не вызываем exit.
+			if exitErr, ok := err.(cli.ExitCoder); ok {
+				if err.Error() != "" {
+					if _, ok := exitErr.(cli.ErrorFormatter); ok {
+						slog.Error(fmt.Sprintf("%+v\n", err))
+					} else {
+						slog.Error(err.Error())
+					}
+				}
+				return
+			}
+			slog.Error(err.Error())
+		}
+	}
 }
 
 func HandleExitCoder(err error) {

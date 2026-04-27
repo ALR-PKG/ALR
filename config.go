@@ -64,9 +64,6 @@ func ShowCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "show",
 		Usage: gotext.Get("Show config"),
-		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
-			return nil
-		}),
 		Action: func(c *cli.Context) error {
 			deps, err := appbuilder.
 				New(c.Context).
@@ -104,11 +101,18 @@ func SetConfig() *cli.Command {
 		Usage:     gotext.Get("Set config value"),
 		ArgsUsage: gotext.Get("<key> <value>"),
 		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
-			if c.Args().Len() == 0 {
-				for _, key := range configKeys {
-					fmt.Println(key)
-				}
+			if cliutils.MaybePrintFlags(c) {
 				return nil
+			}
+			if c.Args().Len() > 0 {
+				return nil
+			}
+
+			prefix := cliutils.CompletionPrefix(c)
+			for _, key := range configKeys {
+				if prefix == "" || strings.HasPrefix(key, prefix) {
+					cliutils.PrintCompletionItem(key, false)
+				}
 			}
 			return nil
 		}),
@@ -191,11 +195,15 @@ func GetConfig() *cli.Command {
 		Usage:     gotext.Get("Get config value"),
 		ArgsUsage: gotext.Get("<key>"),
 		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
-			if c.Args().Len() == 0 {
-				for _, key := range configKeys {
-					fmt.Println(key)
-				}
+			if cliutils.MaybePrintFlags(c) {
 				return nil
+			}
+
+			prefix := cliutils.CompletionPrefix(c)
+			for _, key := range configKeys {
+				if prefix == "" || strings.HasPrefix(key, prefix) {
+					cliutils.PrintCompletionItem(key, false)
+				}
 			}
 			return nil
 		}),
