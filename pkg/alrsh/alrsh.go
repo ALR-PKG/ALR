@@ -141,6 +141,12 @@ func (s *ScriptFile) createPackagesForBuildVars(
 		if err := dec.DecodeVars(&pkg); err != nil {
 			return nil, err
 		}
+		if v, ok, err := dec.CallFuncOutput(ctx, "version"); err != nil {
+			return nil, err
+		} else if ok && v != "" {
+			pkg.Version = v
+			dec.Runner.Vars["version"] = expand.Variable{Kind: expand.String, Str: v}
+		}
 		varsOfPackages = append(varsOfPackages, &pkg)
 		return varsOfPackages, nil
 	}
@@ -194,6 +200,12 @@ func (s *ScriptFile) createPackageFromMeta(
 	var vars Package
 	if err := metaDecoder.DecodeVars(&vars); err != nil {
 		return nil, err
+	}
+	if v, ok, err := metaDecoder.CallFuncOutput(ctx, "version"); err != nil {
+		return nil, err
+	} else if ok && v != "" {
+		vars.Version = v
+		metaDecoder.Runner.Vars["version"] = expand.Variable{Kind: expand.String, Str: v}
 	}
 
 	vars.Name = pkgName
