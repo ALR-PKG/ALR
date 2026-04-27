@@ -63,7 +63,7 @@ type Package struct {
 	Depends          OverridableField[[]string] `sh:"deps" xorm:"'depends'" json:"deps"`
 	BuildDepends     OverridableField[[]string] `sh:"build_deps" xorm:"'builddepends'" json:"build_deps"`
 	OptDepends       OverridableField[[]string] `sh:"opt_deps" xorm:"'optdepends'" json:"opt_deps,omitempty"`
-	Sources          OverridableField[[]string] `sh:"sources" xorm:"-" json:"sources"`
+	Sources          OverridableField[[]string] `sh:"sources" xorm:"'sources'" json:"sources"`
 	Checksums        OverridableField[[]string] `sh:"checksums" xorm:"-" json:"checksums,omitempty"`
 	Backup           OverridableField[[]string] `sh:"backup" xorm:"-" json:"backup"`
 	Scripts          OverridableField[Scripts]  `sh:"scripts" xorm:"-" json:"scripts,omitempty"`

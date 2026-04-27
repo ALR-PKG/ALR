@@ -485,6 +485,23 @@ func (b *Builder) BuildPackage(
 
 	builtDeps = removeDuplicates(append(builtDeps, newBuiltDeps...))
 
+	// Для git-пакетов с функцией version() обновляем версию после скачивания исходников,
+	// когда srcdir уже содержит git-репозиторий.
+	dirs, err := getDirs(b.cfg, input.script, basePkg)
+	if err != nil {
+		return nil, err
+	}
+	for i, vars := range varsOfPackages {
+		v, err := sf.ResolveVersion(ctx, input.info, dirs.SrcDir)
+		if err != nil {
+			slog.Warn("Failed to resolve git version", "package", vars.Name, "error", err)
+			continue
+		}
+		if v != "" {
+			varsOfPackages[i].Version = v
+		}
+	}
+
 	slog.Debug("ExecuteSecondPass")
 	res, err := b.scriptExecutor.ExecuteSecondPass(
 		ctx,

@@ -220,6 +220,40 @@ func (s *ScriptFile) createPackageFromMeta(
 	return &vars, nil
 }
 
+// ResolveVersion вызывает функцию version() в alr.sh с установленным srcdir.
+// Используется после скачивания исходников, когда version() может обратиться к git-репозиторию.
+func (s *ScriptFile) ResolveVersion(ctx context.Context, info *distro.OSRelease, srcDir string) (string, error) {
+	scriptDir := filepath.Dir(s.path)
+	dirs := types.Directories{ScriptDir: scriptDir, SrcDir: srcDir}
+
+	runner, err := interp.New(
+		interp.Env(expand.ListEnviron(createBuildEnvVars(info, dirs)...)),
+		interp.StdIO(os.Stdin, os.Stderr, os.Stderr),
+		interp.ExecHandler(helpers.Restricted.ExecHandler(handlers.NopExec)),
+		interp.ReadDirHandler2(handlers.RestrictedReadDir(scriptDir)),
+		interp.StatHandler(handlers.RestrictedStat(scriptDir)),
+		interp.OpenHandler(handlers.RestrictedOpen(scriptDir)),
+		interp.Dir(scriptDir),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := runScript(ctx, runner, s.file); err != nil {
+		return "", err
+	}
+
+	dec := newDecoder(info, runner)
+	v, ok, err := dec.CallFuncOutput(ctx, "version")
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		return "", nil
+	}
+	return v, nil
+}
+
 func runScript(ctx context.Context, runner *interp.Runner, fl *syntax.File) error {
 	runner.Reset()
 	return runner.Run(ctx, fl)

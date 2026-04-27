@@ -83,6 +83,10 @@ func getSrcDir(cfg Config, basePkg string) string {
 	return filepath.Join(getBaseDir(cfg, basePkg), "src")
 }
 
+func GetSrcDir(cfg Config, basePkg string) string {
+	return getSrcDir(cfg, basePkg)
+}
+
 func getScriptDir(scriptPath string) string {
 	return filepath.Dir(scriptPath)
 }

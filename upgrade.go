@@ -25,12 +25,15 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"git.alr-pkg.ru/xpamych/vercmp"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/leonelquinteros/gotext"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/exp/maps"
@@ -115,7 +118,7 @@ func UpgradeCmd() *cli.Command {
 			}
 
 			slog.Debug(fmt.Sprintf("[TIME: %s] Starting checkForUpdates", time.Now().Format("15:04:05.000")))
-			updates, err := checkForUpdates(ctx, deps.Manager, deps.DB, deps.Info)
+			updates, err := checkForUpdates(ctx, deps.Manager, deps.DB, deps.Info, deps.Cfg)
 			slog.Debug(fmt.Sprintf("[TIME: %s] Finished checkForUpdates", time.Now().Format("15:04:05.000")), "updates_count", len(updates))
 			if err != nil {
 				return cliutils.FormatCliExit(gotext.Get("Error checking for updates"), err)
@@ -176,6 +179,7 @@ func checkForUpdates(
 	mgr manager.Manager,
 	db *database.Database,
 	info *distro.OSRelease,
+	cfg build.Config,
 ) ([]UpdateInfo, error) {
 	slog.Debug("checkForUpdates: starting", "time", time.Now().Format("15:04:05.000"))
 
@@ -282,6 +286,41 @@ func checkForUpdates(
 					FromVersion: installedVer,
 					ToVersion:   repoVer,
 				})
+			} else {
+				// Для git-пакетов с функцией version() проверяем актуальную версию
+				// на скачанных исходниках, так как статическая версия в БД может отставать.
+				sources := pkg.Sources.Resolved()
+				if len(sources) > 0 {
+					for _, src := range sources {
+						if strings.HasPrefix(src, "git+") {
+							basePkg := pkg.BasePkgName
+							if basePkg == "" {
+								basePkg = pkg.Name
+							}
+							srcDir := build.GetSrcDir(cfg, basePkg)
+							gitRepoPath, err := findGitRepoInSrcDir(srcDir)
+							if err == nil && gitRepoPath != "" {
+								gitVer, err := gitVersionFromPath(gitRepoPath)
+								if err == nil && gitVer != "" {
+									cgit := vercmp.Compare(gitVer, installedVer)
+									if cgit == 1 {
+										slog.Debug("checkForUpdates: adding git update",
+											"pkgName", pkgName,
+											"installedVer", installedVer,
+											"gitVer", gitVer)
+										pkgCopy := pkg
+										out = append(out, UpdateInfo{
+											Package:     &pkgCopy,
+											FromVersion: installedVer,
+											ToVersion:   gitVer,
+										})
+									}
+								}
+							}
+							break
+						}
+					}
+				}
 			}
 		}
 
@@ -330,4 +369,45 @@ func normalizeVersion(version string) string {
 		return matches[1] + matches[2]
 	}
 	return version
+}
+
+// findGitRepoInSrcDir ищет git-репозиторий внутри директории исходников.
+// Возвращает путь к найденному репозиторию или пустую строку.
+func findGitRepoInSrcDir(srcDir string) (string, error) {
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return "", err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			gitDir := filepath.Join(srcDir, entry.Name(), ".git")
+			if _, err := os.Stat(gitDir); err == nil {
+				return filepath.Join(srcDir, entry.Name()), nil
+			}
+		}
+	}
+	return "", nil
+}
+
+// gitVersionFromPath получает версию в формате git-version (revNum.hash) из локального git-репозитория.
+func gitVersionFromPath(repoPath string) (string, error) {
+	r, err := git.PlainOpen(repoPath)
+	if err != nil {
+		return "", err
+	}
+	revNum := 0
+	commits, err := r.Log(&git.LogOptions{})
+	if err != nil {
+		return "", err
+	}
+	err = commits.ForEach(func(*object.Commit) error { revNum++; return nil })
+	if err != nil {
+		return "", err
+	}
+	HEAD, err := r.Head()
+	if err != nil {
+		return "", err
+	}
+	hash := HEAD.Hash().String()
+	return fmt.Sprintf("%d.%s", revNum, hash[:7]), nil
 }
