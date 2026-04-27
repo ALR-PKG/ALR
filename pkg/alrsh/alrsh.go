@@ -73,7 +73,7 @@ func createBuildEnvVars(info *distro.OSRelease, dirs types.Directories) []string
 	return env
 }
 
-func (s *ScriptFile) ParseBuildVars(ctx context.Context, info *distro.OSRelease, packages []string) (string, []*Package, error) {
+func (s *ScriptFile) ParseBuildVars(ctx context.Context, info *distro.OSRelease, packages []string, resolveVersionFunc bool) (string, []*Package, error) {
 	runner, err := s.createRunner(info)
 	if err != nil {
 		return "", nil, err
@@ -99,7 +99,7 @@ func (s *ScriptFile) ParseBuildVars(ctx context.Context, info *distro.OSRelease,
 		targetPackages = pkgNames.Names
 	}
 
-	varsOfPackages, err := s.createPackagesForBuildVars(ctx, dec, pkgNames, targetPackages)
+	varsOfPackages, err := s.createPackagesForBuildVars(ctx, dec, pkgNames, targetPackages, resolveVersionFunc)
 	if err != nil {
 		return "", nil, err
 	}
@@ -132,6 +132,7 @@ func (s *ScriptFile) createPackagesForBuildVars(
 	dec *decoder.Decoder,
 	pkgNames *PackageNames,
 	targetPackages []string,
+	resolveVersionFunc bool,
 ) ([]*Package, error) {
 	var varsOfPackages []*Package
 
@@ -141,18 +142,20 @@ func (s *ScriptFile) createPackagesForBuildVars(
 		if err := dec.DecodeVars(&pkg); err != nil {
 			return nil, err
 		}
-		if v, ok, err := dec.CallFuncOutput(ctx, "version"); err != nil {
-			return nil, err
-		} else if ok && v != "" {
-			pkg.Version = v
-			dec.Runner.Vars["version"] = expand.Variable{Kind: expand.String, Str: v}
+		if resolveVersionFunc {
+			if v, ok, err := dec.CallFuncOutput(ctx, "version"); err != nil {
+				return nil, err
+			} else if ok && v != "" {
+				pkg.Version = v
+				dec.Runner.Vars["version"] = expand.Variable{Kind: expand.String, Str: v}
+			}
 		}
 		varsOfPackages = append(varsOfPackages, &pkg)
 		return varsOfPackages, nil
 	}
 
 	for _, pkgName := range targetPackages {
-		pkg, err := s.createPackageFromMeta(ctx, dec, pkgName, pkgNames.BasePkgName)
+		pkg, err := s.createPackageFromMeta(ctx, dec, pkgName, pkgNames.BasePkgName, resolveVersionFunc)
 		if err != nil {
 			return nil, err
 		}
@@ -166,6 +169,7 @@ func (s *ScriptFile) createPackageFromMeta(
 	ctx context.Context,
 	dec *decoder.Decoder,
 	pkgName, basePkgName string,
+	resolveVersionFunc bool,
 ) (*Package, error) {
 	funcName := fmt.Sprintf("meta_%s", pkgName)
 	meta, ok := dec.GetFuncWithSubshell(funcName)
@@ -201,11 +205,13 @@ func (s *ScriptFile) createPackageFromMeta(
 	if err := metaDecoder.DecodeVars(&vars); err != nil {
 		return nil, err
 	}
-	if v, ok, err := metaDecoder.CallFuncOutput(ctx, "version"); err != nil {
-		return nil, err
-	} else if ok && v != "" {
-		vars.Version = v
-		metaDecoder.Runner.Vars["version"] = expand.Variable{Kind: expand.String, Str: v}
+	if resolveVersionFunc {
+		if v, ok, err := metaDecoder.CallFuncOutput(ctx, "version"); err != nil {
+			return nil, err
+		} else if ok && v != "" {
+			vars.Version = v
+			metaDecoder.Runner.Vars["version"] = expand.Variable{Kind: expand.String, Str: v}
+		}
 	}
 
 	vars.Name = pkgName
