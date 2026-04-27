@@ -296,6 +296,27 @@ func (d *Decoder) GetFuncWithSubshell(name string) (ScriptFuncWithSubshell, bool
 	}, true
 }
 
+// CallFuncOutput вызывает shell-функцию с заданным именем и возвращает её stdout.
+// Если функция не найдена, возвращает ("", false, nil).
+func (d *Decoder) CallFuncOutput(ctx context.Context, name string) (string, bool, error) {
+	fn := d.getFunc(name)
+	if fn == nil {
+		return "", false, nil
+	}
+
+	var buf strings.Builder
+	sub := d.Runner.Subshell()
+	err := interp.StdIO(nil, &buf, nil)(sub)
+	if err != nil {
+		return "", true, err
+	}
+	err = sub.Run(ctx, fn)
+	if err != nil {
+		return "", true, err
+	}
+	return strings.TrimSpace(buf.String()), true, nil
+}
+
 func (d *Decoder) getFunc(name string) *syntax.Stmt {
 	names, err := overrides.Resolve(d.info, overrides.DefaultOpts.WithName(name))
 	if err != nil {

@@ -45,7 +45,7 @@ func parseScript(
 	if err != nil {
 		return nil, err
 	}
-	_, dbPkgs, err := f.ParseBuildVars(ctx, &distro.OSRelease{}, []string{})
+	_, dbPkgs, err := f.ParseBuildVars(ctx, &distro.OSRelease{}, []string{}, false)
 	if err != nil {
 		return nil, err
 	}

@@ -59,7 +59,7 @@ func (e *LocalScriptExecutor) ReadScript(ctx context.Context, scriptPath string)
 }
 
 func (e *LocalScriptExecutor) ExecuteFirstPass(ctx context.Context, input *BuildInput, sf *alrsh.ScriptFile) (string, []*alrsh.Package, error) {
-	return sf.ParseBuildVars(ctx, input.info, input.packages)
+	return sf.ParseBuildVars(ctx, input.info, input.packages, true)
 }
 
 func (e *LocalScriptExecutor) PrepareDirs(
