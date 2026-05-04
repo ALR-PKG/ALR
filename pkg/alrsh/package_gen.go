@@ -45,6 +45,9 @@ type packageResolved struct {
 	AutoProv         []string          `json:"auto_prov"`
 	AutoReqSkipList  []string          `json:"auto_req_skiplist,omitempty"`
 	AutoProvSkipList []string          `json:"auto_prov_skiplist,omitempty"`
+	AlrShURL         string            `json:"-"`
+	CachedAt         int64             `json:"-"`
+	ExtraFiles       []ExtraFile       `json:"extra_files,omitempty"`
 	FireJailed       bool              `json:"firejailed"`
 	FireJailProfiles map[string]string `json:"firejail_profiles,omitempty"`
 }
@@ -78,6 +81,9 @@ func PackageToResolved(src *Package) packageResolved {
 		AutoProv:         src.AutoProv.Resolved(),
 		AutoReqSkipList:  src.AutoReqSkipList.Resolved(),
 		AutoProvSkipList: src.AutoProvSkipList.Resolved(),
+		AlrShURL:         src.AlrShURL,
+		CachedAt:         src.CachedAt,
+		ExtraFiles:       src.ExtraFiles,
 		FireJailed:       src.FireJailed.Resolved(),
 		FireJailProfiles: src.FireJailProfiles.Resolved(),
 	}

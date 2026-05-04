@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/leonelquinteros/gotext"
 	"github.com/urfave/cli/v2"
@@ -83,13 +84,19 @@ func BuildCmd() *cli.Command {
 			// Для -p/--package выводим ALR-пакеты в формате repo/name
 			if isPackageFlag(lastArg) || isPackageFlag(prevArg) {
 				ctx := c.Context
-				deps, err := appbuilder.New(ctx).WithConfig().WithDB().Build()
+				deps, err := appbuilder.New(ctx).WithConfig().WithDB().WithReposNoPull().Build()
 				if err != nil {
+					slog.Debug("BashComplete: ошибка инициализации appbuilder", "error", err)
 					return err
 				}
 				defer deps.Defer()
 
-				prefix := cliutils.CompletionPrefix(c)
+				// Для флага -p/--package префикс — это последний аргумент командной строки (lastArg),
+				// потому что значение флага не попадает в c.Args() как positional arg.
+				prefix := lastArg
+				if prefix == "" {
+					prefix = cliutils.CompletionPrefix(c)
+				}
 
 				var result []alrsh.Package
 				parts := strings.SplitN(prefix, "/", 2)
@@ -105,9 +112,45 @@ func BuildCmd() *cli.Command {
 					return cliutils.FormatCliExit(gotext.Get("Error getting packages"), err)
 				}
 
+				seen := make(map[string]struct{})
 				for _, pkg := range result {
+					key := fmt.Sprintf("%s/%s", pkg.Repository, pkg.Name)
+					seen[key] = struct{}{}
 					fmt.Printf("%s/%s\n", pkg.Repository, pkg.Name)
 				}
+
+				// Если RPC доступен и есть префикс — запрашиваем пакеты с сайта
+				if prefix != "" && deps.Repos != nil && deps.Repos.HasRPC() {
+					searchTerm := prefix
+					repoFilter := ""
+					if len(parts) == 2 {
+						searchTerm = parts[1]
+						repoFilter = parts[0]
+					}
+					rpcPkgs, err := deps.Repos.RPCClient().SearchPackages(ctx, "name", searchTerm)
+					if err == nil {
+						for _, p := range rpcPkgs {
+							pkg := *p.ToALRShPackage()
+							pkg.CachedAt = time.Now().Unix()
+							// Фильтруем по репозиторию если указан
+							if repoFilter != "" && pkg.Repository != repoFilter {
+								continue
+							}
+							key := fmt.Sprintf("%s/%s", pkg.Repository, pkg.Name)
+							if _, ok := seen[key]; !ok {
+								seen[key] = struct{}{}
+								fmt.Printf("%s/%s\n", pkg.Repository, pkg.Name)
+							}
+							// Сохраняем в локальную БД для будущих подстановок
+							if dbErr := deps.DB.InsertPackage(ctx, pkg); dbErr != nil {
+								slog.Debug("BashComplete: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", dbErr)
+							}
+						}
+					} else if err != nil {
+						slog.Debug("BashComplete: RPC поиск не удался", "prefix", prefix, "error", err)
+					}
+				}
+
 				return nil
 			}
 

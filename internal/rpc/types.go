@@ -36,9 +36,17 @@ type Package struct {
 	Depends       []string `json:"depends"`
 	BuildDepends  []string `json:"build_depends"`
 	OptDepends    []string `json:"opt_depends"`
-	Path          string   `json:"path"`
-	AlrShURL      string   `json:"alr_sh_url"`
-	LastModified  int64    `json:"last_modified"`
+	Path          string     `json:"path"`
+	AlrShURL      string     `json:"alr_sh_url"`
+	LastModified  int64      `json:"last_modified"`
+	ExtraFiles    []ExtraFile `json:"extra_files"`
+}
+
+// ExtraFile — дополнительный файл из директории пакета
+type ExtraFile struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	DownloadURL string `json:"download_url"`
 }
 
 // InfoResponse — ответ от /rpc/v1/info
@@ -118,6 +126,19 @@ func (p *Package) ToALRShPackage() *alrsh.Package {
 	pkg.Depends.SetResolved(p.Depends)
 	pkg.BuildDepends.SetResolved(p.BuildDepends)
 	pkg.OptDepends.SetResolved(p.OptDepends)
+	pkg.AlrShURL = p.AlrShURL
+
+	// Копируем дополнительные файлы
+	if len(p.ExtraFiles) > 0 {
+		pkg.ExtraFiles = make([]alrsh.ExtraFile, len(p.ExtraFiles))
+		for i, ef := range p.ExtraFiles {
+			pkg.ExtraFiles[i] = alrsh.ExtraFile{
+				Name:        ef.Name,
+				Path:        ef.Path,
+				DownloadURL: ef.DownloadURL,
+			}
+		}
+	}
 
 	return pkg
 }

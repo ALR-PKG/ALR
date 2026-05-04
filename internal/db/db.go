@@ -36,7 +36,7 @@ import (
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 )
 
-const CurrentVersion = 6
+const CurrentVersion = 7
 
 type Version struct {
 	Version int `xorm:"'version'"`
@@ -128,7 +128,7 @@ func (d *Database) addVersion(ver int) error {
 }
 
 func (d *Database) reset() error {
-	return d.engine.DropTables(new(alrsh.Package), new(Version))
+	return d.engine.DropTables(new(alrsh.Package), new(Version), new(PackageAvailabilityCache))
 }
 
 func (d *Database) InsertPackage(ctx context.Context, pkg alrsh.Package) error {

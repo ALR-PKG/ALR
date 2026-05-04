@@ -69,13 +69,29 @@ func MaybePrintFlags(c *cli.Context) bool {
 }
 
 // PrintCompletionFlags выводит флаги команды для автодополнения.
+// Для zsh используется формат "flag:описание" (поддерживается _describe).
+// Для bash выводятся только имена флагов.
 func PrintCompletionFlags(flags []cli.Flag) {
+	isZsh := strings.HasSuffix(os.Getenv("SHELL"), "zsh")
+
 	for _, f := range flags {
+		var usage string
+		if df, ok := f.(cli.DocGenerationFlag); ok {
+			usage = df.GetUsage()
+		}
+
 		for _, name := range f.Names() {
-			if len(name) > 1 {
-				fmt.Println("--" + name)
+			var flagStr string
+			if len(name) == 1 {
+				flagStr = "-" + name
 			} else {
-				fmt.Println("-" + name)
+				flagStr = "--" + name
+			}
+
+			if isZsh && usage != "" {
+				fmt.Printf("%s:%s\n", flagStr, usage)
+			} else {
+				fmt.Println(flagStr)
 			}
 		}
 	}

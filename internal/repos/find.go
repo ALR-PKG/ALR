@@ -24,11 +24,36 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/rpc"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/depver"
 )
+
+const rpcCacheTTL = 1 * time.Hour
+
+// findInCache ищет пакеты в локальной SQLite БД (кэш от предыдущих RPC-запросов).
+// Возвращает найденные пакеты и список имён, которых нет в кэше или кэш устарел.
+func (rs *Repos) findInCache(pkgNames []string) (map[string][]alrsh.Package, []string) {
+	found := make(map[string][]alrsh.Package)
+	var notFound []string
+	cutoff := time.Now().Add(-rpcCacheTTL).Unix()
+
+	for _, name := range pkgNames {
+		if name == "" {
+			continue
+		}
+		result, err := rs.db.GetPkgs(context.Background(), "name = ? AND cached_at > ?", name, cutoff)
+		if err == nil && len(result) > 0 {
+			found[name] = result
+			slog.Debug("FindPkgs: пакет найден в локальном кэше", "name", name)
+		} else {
+			notFound = append(notFound, name)
+		}
+	}
+	return found, notFound
+}
 
 // findViaRPC ищет пакеты через ALR Site RPC API
 func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string][]alrsh.Package, []string) {
@@ -59,7 +84,13 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 		if pkgs, ok := rpcResults[name]; ok && len(pkgs) > 0 {
 			var result []alrsh.Package
 			for _, p := range pkgs {
-				result = append(result, *p.ToALRShPackage())
+				pkg := *p.ToALRShPackage()
+				pkg.CachedAt = time.Now().Unix()
+				result = append(result, pkg)
+				// Сохраняем пакет в локальную БД для кэширования и tab completion
+				if err := rs.db.InsertPackage(ctx, pkg); err != nil {
+					slog.Debug("FindPkgs: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", err)
+				}
 			}
 			found[name] = result
 			slog.Debug("FindPkgs: пакет найден через RPC", "name", name)
@@ -76,10 +107,28 @@ func (rs *Repos) FindPkgs(ctx context.Context, pkgs []string) (map[string][]alrs
 	found := make(map[string][]alrsh.Package)
 	var notFound []string
 
-	// Сначала пробуем найти через RPC (для репозиториев, которые знает alr-site)
-	rpcFound, rpcNotFound := rs.findViaRPC(ctx, pkgs)
-	for k, v := range rpcFound {
-		found[k] = v
+	// Сначала проверяем локальный кэш (пакеты, ранее полученные через RPC)
+	var cacheNotFound []string
+	if rs.rpc != nil {
+		cacheFound, remaining := rs.findInCache(pkgs)
+		for k, v := range cacheFound {
+			found[k] = v
+		}
+		cacheNotFound = remaining
+	} else {
+		cacheNotFound = pkgs
+	}
+
+	// Затем пробуем найти через RPC (для репозиториев, которые знает alr-site)
+	var rpcNotFound []string
+	if len(cacheNotFound) > 0 && rs.rpc != nil {
+		rpcFound, remaining := rs.findViaRPC(ctx, cacheNotFound)
+		for k, v := range rpcFound {
+			found[k] = v
+		}
+		rpcNotFound = remaining
+	} else {
+		rpcNotFound = cacheNotFound
 	}
 
 	// Для оставшихся ищем в локальной БД (git-репозитории или fallback)

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/leonelquinteros/gotext"
 	"github.com/urfave/cli/v2"
@@ -120,6 +121,7 @@ func InstallCmd() *cli.Command {
 				New(ctx).
 				WithConfig().
 				WithDB().
+				WithReposNoPull().
 				WithManager().
 				Build()
 			if err != nil {
@@ -142,6 +144,28 @@ func InstallCmd() *cli.Command {
 						seen[pkg.Name] = struct{}{}
 						cliutils.PrintCompletionItem(pkg.Name, true)
 					}
+				}
+			}
+
+			// Если RPC доступен и есть префикс — запрашиваем пакеты с сайта для подстановки
+			if prefix != "" && deps.Repos != nil && deps.Repos.HasRPC() {
+				slog.Debug("BashComplete: запрос пакетов через RPC для подстановки", "prefix", prefix)
+				rpcPkgs, err := deps.Repos.RPCClient().SearchPackages(ctx, "name", prefix)
+				if err == nil {
+					for _, p := range rpcPkgs {
+						pkg := *p.ToALRShPackage()
+						pkg.CachedAt = time.Now().Unix()
+						if _, ok := seen[pkg.Name]; !ok {
+							seen[pkg.Name] = struct{}{}
+							cliutils.PrintCompletionItem(pkg.Name, true)
+						}
+						// Сохраняем в локальную БД для будущих подстановок
+						if dbErr := deps.DB.InsertPackage(ctx, pkg); dbErr != nil {
+							slog.Debug("BashComplete: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", dbErr)
+						}
+					}
+				} else if err != nil {
+					slog.Debug("BashComplete: RPC поиск не удался", "prefix", prefix, "error", err)
 				}
 			}
 

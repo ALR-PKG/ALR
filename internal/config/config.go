@@ -60,12 +60,12 @@ func defaultConfigKoanf() *koanf.Koanf {
 		"autoPull":              true,
 		"updateSystemOnUpgrade": false,
 		"preferALRDeps":         true,
-		"repo": []types.Repo{
-			{
-				Name: "alr-default",
-				URL:  "https://git.alr-pkg.ru/Plemya-x/alr-default.git",
-			},
+		"site": types.Site{
+			URL:     "https://alr-pkg.ru",
+			Mirrors: []string{},
+			Timeout: 10,
 		},
+		"repo": []types.Repo{},
 	}
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		panic(k)
