@@ -81,7 +81,7 @@ func ListCmd() *cli.Command {
 			info := deps.Info
 
 			if c.Bool("upgradable") {
-				updates, err := checkForUpdates(ctx, mgr, db, info, cfg)
+				updates, err := checkForUpdates(ctx, mgr, db, info, cfg, deps.Repos)
 				if err != nil {
 					return cliutils.FormatCliExit(gotext.Get("Error getting packages for upgrade"), err)
 				}

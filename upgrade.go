@@ -44,6 +44,7 @@ import (
 	database "git.alr-pkg.ru/Plemya-x/ALR/internal/db"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
+	"git.alr-pkg.ru/Plemya-x/ALR/internal/repos"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/search"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
@@ -118,7 +119,7 @@ func UpgradeCmd() *cli.Command {
 			}
 
 			slog.Debug(fmt.Sprintf("[TIME: %s] Starting checkForUpdates", time.Now().Format("15:04:05.000")))
-			updates, err := checkForUpdates(ctx, deps.Manager, deps.DB, deps.Info, deps.Cfg)
+			updates, err := checkForUpdates(ctx, deps.Manager, deps.DB, deps.Info, deps.Cfg, deps.Repos)
 			slog.Debug(fmt.Sprintf("[TIME: %s] Finished checkForUpdates", time.Now().Format("15:04:05.000")), "updates_count", len(updates))
 			if err != nil {
 				return cliutils.FormatCliExit(gotext.Get("Error checking for updates"), err)
@@ -180,6 +181,7 @@ func checkForUpdates(
 	db *database.Database,
 	info *distro.OSRelease,
 	cfg build.Config,
+	repos *repos.Repos,
 ) ([]UpdateInfo, error) {
 	slog.Debug("checkForUpdates: starting", "time", time.Now().Format("15:04:05.000"))
 
@@ -222,7 +224,54 @@ func checkForUpdates(
 	checked := 0
 	total := len(pkgNames)
 
+	// --- Batch RPC проверка обновлений (если настроен) ---
+	rpcHandled := make(map[string]bool)
+	if repos != nil && repos.HasRPC() {
+		rpcUpdates, err := repos.CheckUpdates(ctx, installed, info)
+		if err == nil && len(rpcUpdates) > 0 {
+			// Собираем имена пакетов для batch запроса метаданных
+			rpcNames := make([]string, 0, len(rpcUpdates))
+			for _, u := range rpcUpdates {
+				rpcNames = append(rpcNames, u.Name)
+			}
+
+			rpcPkgs, err := repos.RPCClient().GetPackages(ctx, rpcNames)
+			if err == nil {
+				// Индексируем по имени для быстрого поиска
+				rpcPkgMap := make(map[string]*alrsh.Package, len(rpcPkgs))
+				for i := range rpcPkgs {
+					p := &rpcPkgs[i]
+					pkg := p.ToALRShPackage()
+					rpcPkgMap[p.Name] = pkg
+				}
+
+				for _, u := range rpcUpdates {
+					pkg, ok := rpcPkgMap[u.Name]
+					if !ok {
+						continue
+					}
+					// Отмечаем как обработанный через RPC
+					fullName := fmt.Sprintf("%s+%s", u.Name, u.Repo)
+					rpcHandled[fullName] = true
+					checked++
+
+					out = append(out, UpdateInfo{
+						Package:     pkg,
+						FromVersion: u.FromVersion,
+						ToVersion:   u.ToVersion,
+					})
+				}
+			}
+		}
+	}
+
+	// --- Локальная проверка для оставшихся пакетов ---
 	for _, pkgName := range pkgNames {
+		// Пропускаем если уже обработан через RPC
+		if rpcHandled[pkgName] {
+			continue
+		}
+
 		checked++
 
 		matches := build.RegexpALRPackageName.FindStringSubmatch(pkgName)

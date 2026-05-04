@@ -269,4 +269,5 @@ func (c *ALRConfig) LogLevel() string            { return c.cfg.LogLevel }
 func (c *ALRConfig) UseRootCmd() bool            { return c.cfg.UseRootCmd }
 func (c *ALRConfig) UpdateSystemOnUpgrade() bool { return c.cfg.UpdateSystemOnUpgrade }
 func (c *ALRConfig) PreferALRDeps() bool         { return c.cfg.PreferALRDeps }
+func (c *ALRConfig) Site() types.Site            { return c.cfg.Site }
 func (c *ALRConfig) GetPaths() *Paths            { return c.paths }

@@ -25,16 +25,65 @@ import (
 	"log/slog"
 	"strings"
 
+	"git.alr-pkg.ru/Plemya-x/ALR/internal/rpc"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/depver"
 )
+
+// findViaRPC ищет пакеты через ALR Site RPC API
+func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string][]alrsh.Package, []string) {
+	if rs.rpc == nil {
+		return nil, pkgNames
+	}
+
+	found := make(map[string][]alrsh.Package)
+	var notFound []string
+
+	// Отправляем batch-запрос на RPC
+	slog.Debug("FindPkgs: запрос через RPC", "url", rs.rpc, "count", len(pkgNames))
+	rpcPkgs, err := rs.rpc.GetPackages(ctx, pkgNames)
+	if err != nil {
+		slog.Debug("FindPkgs: RPC запрос не удался, используем локальную БД", "error", err)
+		return nil, pkgNames
+	}
+	slog.Debug("FindPkgs: RPC вернул пакеты", "count", len(rpcPkgs))
+
+	// Создаём мапу имя → пакеты
+	rpcResults := make(map[string][]rpc.Package)
+	for _, p := range rpcPkgs {
+		key := p.Name
+		rpcResults[key] = append(rpcResults[key], p)
+	}
+
+	for _, name := range pkgNames {
+		if pkgs, ok := rpcResults[name]; ok && len(pkgs) > 0 {
+			var result []alrsh.Package
+			for _, p := range pkgs {
+				result = append(result, *p.ToALRShPackage())
+			}
+			found[name] = result
+			slog.Debug("FindPkgs: пакет найден через RPC", "name", name)
+		} else {
+			notFound = append(notFound, name)
+		}
+	}
+
+	return found, notFound
+}
 
 func (rs *Repos) FindPkgs(ctx context.Context, pkgs []string) (map[string][]alrsh.Package, []string, error) {
 	slog.Debug("FindPkgs: started", "packages", pkgs)
 	found := make(map[string][]alrsh.Package)
 	var notFound []string
 
-	for _, pkgName := range pkgs {
+	// Сначала пробуем найти через RPC (для репозиториев, которые знает alr-site)
+	rpcFound, rpcNotFound := rs.findViaRPC(ctx, pkgs)
+	for k, v := range rpcFound {
+		found[k] = v
+	}
+
+	// Для оставшихся ищем в локальной БД (git-репозитории или fallback)
+	for _, pkgName := range rpcNotFound {
 		if pkgName == "" {
 			continue
 		}
