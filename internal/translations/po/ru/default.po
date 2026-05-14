@@ -1137,3 +1137,6 @@ msgstr "Не удалось очистить директорию сборки"
 
 msgid "Cleaned build directory for rebuild"
 msgstr "Очищена директория сборки для пересборки"
+
+msgid "Start typing to filter packages"
+msgstr "Начните ввод для фильтрации пакетов"

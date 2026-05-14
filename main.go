@@ -24,107 +24,18 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
-	"github.com/leonelquinteros/gotext"
-	"github.com/mattn/go-isatty"
-	"github.com/urfave/cli/v2"
-
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
+	"git.alr-pkg.ru/Plemya-x/ALR/cmd"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/translations"
-
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/logger"
+	"git.alr-pkg.ru/Plemya-x/ALR/internal/translations"
+	"github.com/mattn/go-isatty"
 )
-
-func VersionCmd() *cli.Command {
-	return &cli.Command{
-		Name:  "version",
-		Usage: gotext.Get("Print the current ALR version and exit"),
-		Action: func(ctx *cli.Context) error {
-			println(config.Version)
-			return nil
-		},
-	}
-}
-
-func HelpCmd() *cli.Command {
-	return &cli.Command{
-		Name:      "help",
-		Aliases:   []string{"h"},
-		Usage:     gotext.Get("Shows a list of commands or help for one command"),
-		ArgsUsage: "[command]",
-		Action: func(cCtx *cli.Context) error {
-			args := cCtx.Args()
-			if args.Present() {
-				return cli.ShowCommandHelp(cCtx, args.First())
-			}
-			return cli.ShowAppHelp(cCtx)
-		},
-	}
-}
-
-func GetApp() *cli.App {
-	return &cli.App{
-		Name:  "alr",
-		Usage: "Any Linux Repository",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "pm-args",
-				Aliases: []string{"P"},
-				Usage:   gotext.Get("Arguments to be passed on to the package manager"),
-			},
-			&cli.BoolFlag{
-				Name:    "interactive",
-				Aliases: []string{"i"},
-				Value:   isatty.IsTerminal(os.Stdin.Fd()),
-				Usage:   gotext.Get("Enable interactive questions and prompts"),
-			},
-		},
-		Commands: []*cli.Command{
-			InstallCmd(),
-			RemoveCmd(),
-			UpgradeCmd(),
-			InfoCmd(),
-			ListCmd(),
-			BuildCmd(),
-			LegacyAddRepoCmd(),
-			LegacyRemoveRepoCmd(),
-			RefreshCmd(),
-			FixCmd(),
-			GenCmd(),
-			HelperCmd(),
-			VersionCmd(),
-			SearchCmd(),
-			RepoCmd(),
-			DBusCmd(),
-			ConfigCmd(),
-			// Internal commands
-			InternalBuildCmd(),
-			InternalInstallCmd(),
-			InternalReposCmd(),
-			InternalDBusServiceCmd(),
-			HelpCmd(),
-		},
-		Before: func(c *cli.Context) error {
-			if trimmed := strings.TrimSpace(c.String("pm-args")); trimmed != "" {
-				args := strings.Split(trimmed, " ")
-				manager.Args = append(manager.Args, args...)
-			}
-			return nil
-		},
-		EnableBashCompletion: true,
-		ExitErrHandler: func(cCtx *cli.Context, err error) {
-			cliutils.HandleExitCoder(err)
-		},
-	}
-}
 
 func setLogLevel(newLevel string) {
 	level := slog.LevelInfo
-	switch strings.ToUpper(newLevel) {
+	switch newLevel {
 	case "DEBUG":
 		level = slog.LevelDebug
 	case "INFO":
@@ -138,49 +49,37 @@ func setLogLevel(newLevel string) {
 			slog.Warn("unknown logLevel value, falling back to INFO", "value", newLevel)
 		}
 	}
-	logger, ok := slog.Default().Handler().(*logger.Logger)
-	if !ok {
-		panic("unexpected")
+	if l, ok := slog.Default().Handler().(*logger.Logger); ok {
+		l.SetLevel(level)
 	}
-	logger.SetLevel(level)
 }
 
 func main() {
 	translations.Setup()
 	logger.SetupDefault()
 
-	ctx := context.Background()
-
-	app := GetApp()
 	cfg := config.New()
-	err := cfg.Load()
-	if err != nil {
-		slog.Error(gotext.Get("Error loading config"), "err", err)
+	if err := cfg.Load(); err != nil {
+		slog.Error("Error loading config", "err", err)
 		os.Exit(1)
 	}
 	setLogLevel(cfg.LogLevel())
-	// Переменная окружения имеет приоритет над конфигом
 	if envLevel := os.Getenv("ALR_LOG_LEVEL"); envLevel != "" {
 		setLogLevel(envLevel)
 	}
-
-	// Автоматически подавляем INFO-логи при перенаправлении stdout (pipe/file),
-	// если пользователь не задал уровень явно через ALR_LOG_LEVEL
 	if os.Getenv("ALR_LOG_LEVEL") == "" && !isatty.IsTerminal(os.Stdout.Fd()) {
 		setLogLevel("WARN")
 	}
 
-	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	// Make the application more internationalized
-	cli.AppHelpTemplate = cliutils.GetAppCliTemplate()
-	cli.CommandHelpTemplate = cliutils.GetCommandHelpTemplate()
-	cli.SubcommandHelpTemplate = cliutils.GetSubcommandHelpTemplate()
-	cli.HelpFlag.(*cli.BoolFlag).Usage = gotext.Get("Show help")
+	root := cmd.NewRootCmd()
+	root.SetOut(os.Stdout)
+	root.SetErr(os.Stderr)
 
-	err = app.RunContext(ctx, os.Args)
-	if err != nil {
-		slog.Error(gotext.Get("Error while running app"), "err", err)
+	if err := root.ExecuteContext(ctx); err != nil {
+		slog.Error("Error while running app", "err", err)
+		os.Exit(1)
 	}
 }

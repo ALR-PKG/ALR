@@ -1,5 +1,5 @@
 // ALR - Any Linux Repository
-// Copyright (C) 2025 The ALR Authors
+// Copyright (C) 2026 The ALR Authors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package cmd
 
 import (
 	"fmt"
@@ -23,9 +23,8 @@ import (
 
 	"github.com/jeandeaual/go-locale"
 	"github.com/leonelquinteros/gotext"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/search"
@@ -33,52 +32,30 @@ import (
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
 )
 
-func SearchCmd() *cli.Command {
-	return &cli.Command{
-		Name:    "search",
-		Usage:   gotext.Get("Search packages"),
+func newSearchCmd() *cobra.Command {
+	var (
+		all         bool
+		name        string
+		description string
+		repository  string
+		provides    string
+		format      string
+	)
+
+	cmd := &cobra.Command{
+		Use:     "search",
+		Short:   gotext.Get("Search packages"),
 		Aliases: []string{"s"},
-		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:    "all",
-				Aliases: []string{"a"},
-				Usage:   gotext.Get("Show all information, not just for the current distro"),
-			},
-			&cli.StringFlag{
-				Name:    "name",
-				Aliases: []string{"n"},
-				Usage:   gotext.Get("Search by name"),
-			},
-			&cli.StringFlag{
-				Name:    "description",
-				Aliases: []string{"d"},
-				Usage:   gotext.Get("Search by description"),
-			},
-			&cli.StringFlag{
-				Name:    "repository",
-				Aliases: []string{"repo"},
-				Usage:   gotext.Get("Search by repository"),
-			},
-			&cli.StringFlag{
-				Name:    "provides",
-				Aliases: []string{"p"},
-				Usage:   gotext.Get("Search by provides"),
-			},
-			&cli.StringFlag{
-				Name:    "format",
-				Aliases: []string{"f"},
-				Usage:   gotext.Get("Format output using a Go template"),
-			},
-		},
-		Action: func(c *cli.Context) error {
-			ctx := c.Context
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
 
 			var names []string
-			all := c.Bool("all")
+
+			all, _ = cmd.Flags().GetBool("all")
 
 			systemLang, err := locale.GetLanguage()
 			if err != nil {
-				return cliutils.FormatCliExit(gotext.Get("Can't detect system language"), err)
+				return fmt.Errorf("%s: %w", gotext.Get("Can't detect system language"), err)
 			}
 			if systemLang == "" {
 				systemLang = "en"
@@ -86,7 +63,7 @@ func SearchCmd() *cli.Command {
 			if !all {
 				info, err := distro.ParseOSRelease(ctx)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error parsing os-release file"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error parsing os-release file"), err)
 				}
 				names, err = overrides.Resolve(
 					info,
@@ -94,7 +71,7 @@ func SearchCmd() *cli.Command {
 						WithLanguages([]string{systemLang}),
 				)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error resolving overrides"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error resolving overrides"), err)
 				}
 			}
 
@@ -112,25 +89,30 @@ func SearchCmd() *cli.Command {
 
 			s := search.New(database)
 
+			name, _ = cmd.Flags().GetString("name")
+			description, _ = cmd.Flags().GetString("description")
+			repository, _ = cmd.Flags().GetString("repository")
+			provides, _ = cmd.Flags().GetString("provides")
+
 			packages, err := s.Search(
 				ctx,
 				search.NewSearchOptions().
-					WithName(c.String("name")).
-					WithDescription(c.String("description")).
-					WithRepository(c.String("repository")).
-					WithProvides(c.String("provides")).
+					WithName(name).
+					WithDescription(description).
+					WithRepository(repository).
+					WithProvides(provides).
 					Build(),
 			)
 			if err != nil {
-				return cliutils.FormatCliExit(gotext.Get("Error while executing search"), err)
+				return fmt.Errorf("%s: %w", gotext.Get("Error while executing search"), err)
 			}
 
-			format := c.String("format")
+			format, _ = cmd.Flags().GetString("format")
 			var tmpl *template.Template
 			if format != "" {
 				tmpl, err = template.New("format").Parse(format)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error parsing format template"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error parsing format template"), err)
 				}
 			}
 
@@ -139,7 +121,7 @@ func SearchCmd() *cli.Command {
 				if tmpl != nil {
 					err = tmpl.Execute(os.Stdout, &pkg)
 					if err != nil {
-						return cliutils.FormatCliExit(gotext.Get("Error executing template"), err)
+						return fmt.Errorf("%s: %w", gotext.Get("Error executing template"), err)
 					}
 					fmt.Println()
 				} else {
@@ -150,4 +132,13 @@ func SearchCmd() *cli.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&all, "all", "a", false, gotext.Get("Show all information, not just for the current distro"))
+	cmd.Flags().StringVarP(&name, "name", "n", "", gotext.Get("Search by name"))
+	cmd.Flags().StringVarP(&description, "description", "d", "", gotext.Get("Search by description"))
+	cmd.Flags().StringVarP(&repository, "repository", "r", "", gotext.Get("Search by repository"))
+	cmd.Flags().StringVarP(&provides, "provides", "p", "", gotext.Get("Search by provides"))
+	cmd.Flags().StringVarP(&format, "format", "f", "", gotext.Get("Format output using a Go template"))
+
+	return cmd
 }

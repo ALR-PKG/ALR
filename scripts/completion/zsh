@@ -6,7 +6,7 @@ cur=${words[-1]}
 opts=(${(f)"$(${words[@]:0:#words[@]-1} ${cur} --generate-bash-completion)"})
 
 if [[ "${opts[1]}" != "" ]]; then
-  _describe 'values' opts
+  _describe -V 'values' opts
 else
   _files
 fi

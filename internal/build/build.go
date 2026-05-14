@@ -1045,9 +1045,7 @@ func (i *Builder) InstallPkgs(
 		
 		titleStyle := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#6C5DD3")).
-			MarginBottom(1)
-		
+			Foreground(lipgloss.Color("#6C5DD3"))
 		versionStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#94A3B8"))
 		

@@ -26,6 +26,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"time"
 	"net/url"
 	"os"
 	"path"
@@ -96,7 +97,12 @@ func (FileDownloader) Download(ctx context.Context, opts Options) (Type, string,
 			return 0, "", fmt.Errorf("failed to create request: %w", err)
 		}
 		// Выполнение HTTP GET запроса
-		res, err := http.DefaultClient.Do(req)
+		client := &http.Client{
+			Transport: &http.Transport{
+				TLSHandshakeTimeout: 30 * time.Second,
+			},
+		}
+		res, err := client.Do(req)
 		if err != nil {
 			return 0, "", err
 		}

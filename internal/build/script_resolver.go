@@ -104,6 +104,7 @@ func (s *ScriptResolver) downloadFile(ctx context.Context, url, destPath string)
 	if err != nil {
 		return fmt.Errorf("не удалось создать запрос: %w", err)
 	}
+	req.Header.Set("User-Agent", "ALR")
 
 	resp, err := client.Do(req)
 	if err != nil {

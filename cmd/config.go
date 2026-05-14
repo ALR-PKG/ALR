@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package cmd
 
 import (
 	"fmt"
@@ -23,50 +23,46 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/leonelquinteros/gotext"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
 )
 
-func ConfigCmd() *cli.Command {
-	return &cli.Command{
-		Name:  "config",
-		Usage: gotext.Get("Manage config"),
-		Subcommands: []*cli.Command{
-			ShowCmd(),
-			SetConfig(),
-			GetConfig(),
-			ConfigHelpCmd(),
-		},
-	}
+var configKeys = []string{
+	"rootCmd",
+	"useRootCmd",
+	"pagerStyle",
+	"autoPull",
+	"logLevel",
+	"ignorePkgUpdates",
+	"updateSystemOnUpgrade",
+	"preferALRDeps",
 }
 
-func ConfigHelpCmd() *cli.Command {
-	return &cli.Command{
-		Name:      "help",
-		Aliases:   []string{"h"},
-		Usage:     gotext.Get("Shows a list of commands or help for one command"),
-		ArgsUsage: "[command]",
-		Action: func(cCtx *cli.Context) error {
-			args := cCtx.Args()
-			if args.Present() {
-				return cli.ShowCommandHelp(cCtx, args.First())
-			}
-			cli.ShowSubcommandHelp(cCtx)
-			return nil
-		},
+func newConfigCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: gotext.Get("Manage config"),
 	}
+
+	cmd.AddCommand(
+		newConfigShowCmd(),
+		newConfigSetCmd(),
+		newConfigGetCmd(),
+		newConfigHelpCmd(),
+	)
+
+	return cmd
 }
 
-func ShowCmd() *cli.Command {
-	return &cli.Command{
-		Name:  "show",
-		Usage: gotext.Get("Show config"),
-		Action: func(c *cli.Context) error {
+func newConfigShowCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "show",
+		Short: gotext.Get("Show config"),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			deps, err := appbuilder.
-				New(c.Context).
+				New(cmd.Context()).
 				WithConfig().
 				Build()
 			if err != nil {
@@ -84,48 +80,25 @@ func ShowCmd() *cli.Command {
 	}
 }
 
-var configKeys = []string{
-	"rootCmd",
-	"useRootCmd",
-	"pagerStyle",
-	"autoPull",
-	"logLevel",
-	"ignorePkgUpdates",
-	"updateSystemOnUpgrade",
-	"preferALRDeps",
-}
-
-func SetConfig() *cli.Command {
-	return &cli.Command{
-		Name:      "set",
-		Usage:     gotext.Get("Set config value"),
-		ArgsUsage: gotext.Get("<key> <value>"),
-		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
-			if cliutils.MaybePrintFlags(c) {
-				return nil
-			}
-			if c.Args().Len() > 0 {
-				return nil
+func newConfigSetCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:               "set",
+		Short:             gotext.Get("Set config value"),
+		ValidArgsFunction: configKeyCompletion,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := utils.CheckUserPrivileges(); err != nil {
+				return err
 			}
 
-			prefix := cliutils.CompletionPrefix(c)
-			for _, key := range configKeys {
-				if prefix == "" || strings.HasPrefix(key, prefix) {
-					cliutils.PrintCompletionItem(key, false)
-				}
-			}
-			return nil
-		}),
-		Action: utils.RootNeededAction(func(c *cli.Context) error {
-			if c.Args().Len() < 2 {
-				return cliutils.FormatCliExit("missing args", nil)
+			if len(args) < 2 {
+				return fmt.Errorf("%s", gotext.Get("missing args"))
 			}
 
-			key := c.Args().Get(0)
-			value := c.Args().Get(1)
+			key := args[0]
+			value := args[1]
 
 			deps, err := appbuilder.
-				New(c.Context).
+				New(cmd.Context()).
 				WithConfig().
 				Build()
 			if err != nil {
@@ -139,7 +112,7 @@ func SetConfig() *cli.Command {
 			case "useRootCmd":
 				boolValue, err := strconv.ParseBool(value)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("invalid boolean value for %s: %s", key, value), err)
+					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
 				deps.Cfg.System.SetUseRootCmd(boolValue)
 			case "pagerStyle":
@@ -147,7 +120,7 @@ func SetConfig() *cli.Command {
 			case "autoPull":
 				boolValue, err := strconv.ParseBool(value)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("invalid boolean value for %s: %s", key, value), err)
+					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
 				deps.Cfg.System.SetAutoPull(boolValue)
 			case "logLevel":
@@ -164,52 +137,39 @@ func SetConfig() *cli.Command {
 			case "updateSystemOnUpgrade":
 				boolValue, err := strconv.ParseBool(value)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("invalid boolean value for %s: %s", key, value), err)
+					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
 				deps.Cfg.System.SetUpdateSystemOnUpgrade(boolValue)
 			case "preferALRDeps":
 				boolValue, err := strconv.ParseBool(value)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("invalid boolean value for %s: %s", key, value), err)
+					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
 				deps.Cfg.System.SetPreferALRDeps(boolValue)
 			case "repo", "repos":
-				return cliutils.FormatCliExit(gotext.Get("use 'repo add/remove' commands to manage repositories"), nil)
+				return fmt.Errorf("%s", gotext.Get("use 'repo add/remove' commands to manage repositories"))
 			default:
-				return cliutils.FormatCliExit(gotext.Get("unknown config key: %s", key), nil)
+				return fmt.Errorf("%s", gotext.Get("unknown config key: %s", key))
 			}
 
 			if err := deps.Cfg.System.Save(); err != nil {
-				return cliutils.FormatCliExit(gotext.Get("failed to save config"), err)
+				return fmt.Errorf("%s: %w", gotext.Get("failed to save config"), err)
 			}
 
 			fmt.Println(gotext.Get("Successfully set %s = %s", key, value))
 			return nil
-		}),
+		},
 	}
 }
 
-func GetConfig() *cli.Command {
-	return &cli.Command{
-		Name:      "get",
-		Usage:     gotext.Get("Get config value"),
-		ArgsUsage: gotext.Get("<key>"),
-		BashComplete: cliutils.BashCompleteWithError(func(c *cli.Context) error {
-			if cliutils.MaybePrintFlags(c) {
-				return nil
-			}
-
-			prefix := cliutils.CompletionPrefix(c)
-			for _, key := range configKeys {
-				if prefix == "" || strings.HasPrefix(key, prefix) {
-					cliutils.PrintCompletionItem(key, false)
-				}
-			}
-			return nil
-		}),
-		Action: func(c *cli.Context) error {
+func newConfigGetCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:               "get",
+		Short:             gotext.Get("Get config value"),
+		ValidArgsFunction: configKeyCompletion,
+		RunE: func(cmd *cobra.Command, args []string) error {
 			deps, err := appbuilder.
-				New(c.Context).
+				New(cmd.Context()).
 				WithConfig().
 				Build()
 			if err != nil {
@@ -217,16 +177,16 @@ func GetConfig() *cli.Command {
 			}
 			defer deps.Defer()
 
-			if c.Args().Len() == 0 {
+			if len(args) == 0 {
 				content, err := deps.Cfg.ToYAML()
 				if err != nil {
-					return cliutils.FormatCliExit("failed to serialize config", err)
+					return fmt.Errorf("%s: %w", gotext.Get("failed to serialize config"), err)
 				}
 				fmt.Print(content)
 				return nil
 			}
 
-			key := c.Args().Get(0)
+			key := args[0]
 
 			switch key {
 			case "rootCmd":
@@ -257,15 +217,48 @@ func GetConfig() *cli.Command {
 				} else {
 					repoData, err := yaml.Marshal(repos)
 					if err != nil {
-						return cliutils.FormatCliExit("failed to serialize repos", err)
+						return fmt.Errorf("%s: %w", gotext.Get("failed to serialize repos"), err)
 					}
 					fmt.Print(string(repoData))
 				}
 			default:
-				return cliutils.FormatCliExit(gotext.Get("unknown config key: %s", key), nil)
+				return fmt.Errorf("%s", gotext.Get("unknown config key: %s", key))
 			}
 
 			return nil
 		},
 	}
+}
+
+func newConfigHelpCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:     "help",
+		Aliases: []string{"h"},
+		Short:   gotext.Get("Shows a list of commands or help for one command"),
+		Args:    cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				subCmd, _, err := cmd.Parent().Find(args)
+				if err != nil {
+					return err
+				}
+				return subCmd.Help()
+			}
+			return cmd.Parent().Help()
+		},
+	}
+}
+
+func configKeyCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	var out []string
+	for _, key := range configKeys {
+		if toComplete == "" || strings.HasPrefix(key, toComplete) {
+			out = append(out, key)
+		}
+	}
+	return out, cobra.ShellCompDirectiveNoFileComp
 }

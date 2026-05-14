@@ -21,9 +21,10 @@ import (
 	"errors"
 	"log/slog"
 
+	"fmt"
+
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/db"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
@@ -72,7 +73,7 @@ func (b *AppBuilder) WithConfig() *AppBuilder {
 
 	cfg := config.New()
 	if err := cfg.Load(); err != nil {
-		b.err = cliutils.FormatCliExit(gotext.Get("Error loading config"), err)
+		b.err = fmt.Errorf("%s: %w", gotext.Get("Error loading config"), err)
 		return b
 	}
 
@@ -93,7 +94,7 @@ func (b *AppBuilder) WithDB() *AppBuilder {
 
 	db := db.New(cfg)
 	if err := db.Init(b.ctx); err != nil {
-		b.err = cliutils.FormatCliExit(gotext.Get("Error initialization database"), err)
+		b.err = fmt.Errorf("%s: %w", gotext.Get("Error initialization database"), err)
 		return b
 	}
 
@@ -139,7 +140,7 @@ func (b *AppBuilder) withRepos(enablePull, forcePull bool) *AppBuilder {
 
 	if enablePull && (forcePull || cfg.AutoPull()) {
 		if err := rs.Pull(b.ctx, cfg.Repos()); err != nil {
-			b.err = cliutils.FormatCliExit(gotext.Get("Error pulling repositories"), err)
+			b.err = fmt.Errorf("%s: %w", gotext.Get("Error pulling repositories"), err)
 			return b
 		}
 	}
@@ -156,7 +157,7 @@ func (b *AppBuilder) WithDistroInfo() *AppBuilder {
 
 	b.deps.Info, b.err = distro.ParseOSRelease(b.ctx)
 	if b.err != nil {
-		b.err = cliutils.FormatCliExit(gotext.Get("Error parsing os release"), b.err)
+		b.err = fmt.Errorf("%s: %w", gotext.Get("Error parsing os release"), b.err)
 	}
 
 	return b
@@ -169,7 +170,7 @@ func (b *AppBuilder) WithManager() *AppBuilder {
 
 	mgr := manager.Detect()
 	if mgr == nil {
-		b.err = cliutils.FormatCliExit(gotext.Get("Unable to detect a supported package manager on the system"), nil)
+		b.err = fmt.Errorf("%s", gotext.Get("Unable to detect a supported package manager on the system"))
 		return b
 	}
 

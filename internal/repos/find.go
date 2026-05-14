@@ -73,10 +73,13 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	}
 	slog.Debug("FindPkgs: RPC вернул пакеты", "count", len(rpcPkgs))
 
-	// Создаём мапу имя → пакеты
+	// Создаём мапу имя → пакеты (ключ — полное имя с репозиторием)
 	rpcResults := make(map[string][]rpc.Package)
 	for _, p := range rpcPkgs {
 		key := p.Name
+		if p.Repo != "" {
+			key = p.Name + "+" + p.Repo
+		}
 		rpcResults[key] = append(rpcResults[key], p)
 	}
 
