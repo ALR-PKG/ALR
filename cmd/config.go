@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/cobra"
 
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
 )
 
 var configKeys = []string{
@@ -86,10 +85,6 @@ func newConfigSetCmd() *cobra.Command {
 		Short:             gotext.Get("Set config value"),
 		ValidArgsFunction: configKeyCompletion,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := utils.CheckUserPrivileges(); err != nil {
-				return err
-			}
-
 			if len(args) < 2 {
 				return fmt.Errorf("%s", gotext.Get("missing args"))
 			}
@@ -108,23 +103,23 @@ func newConfigSetCmd() *cobra.Command {
 
 			switch key {
 			case "rootCmd":
-				deps.Cfg.System.SetRootCmd(value)
+				deps.Cfg.User.SetRootCmd(value)
 			case "useRootCmd":
 				boolValue, err := strconv.ParseBool(value)
 				if err != nil {
 					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
-				deps.Cfg.System.SetUseRootCmd(boolValue)
+				deps.Cfg.User.SetUseRootCmd(boolValue)
 			case "pagerStyle":
-				deps.Cfg.System.SetPagerStyle(value)
+				deps.Cfg.User.SetPagerStyle(value)
 			case "autoPull":
 				boolValue, err := strconv.ParseBool(value)
 				if err != nil {
 					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
-				deps.Cfg.System.SetAutoPull(boolValue)
+				deps.Cfg.User.SetAutoPull(boolValue)
 			case "logLevel":
-				deps.Cfg.System.SetLogLevel(value)
+				deps.Cfg.User.SetLogLevel(value)
 			case "ignorePkgUpdates":
 				var updates []string
 				if value != "" {
@@ -133,26 +128,26 @@ func newConfigSetCmd() *cobra.Command {
 						updates[i] = strings.TrimSpace(update)
 					}
 				}
-				deps.Cfg.System.SetIgnorePkgUpdates(updates)
+				deps.Cfg.User.SetIgnorePkgUpdates(updates)
 			case "updateSystemOnUpgrade":
 				boolValue, err := strconv.ParseBool(value)
 				if err != nil {
 					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
-				deps.Cfg.System.SetUpdateSystemOnUpgrade(boolValue)
+				deps.Cfg.User.SetUpdateSystemOnUpgrade(boolValue)
 			case "preferALRDeps":
 				boolValue, err := strconv.ParseBool(value)
 				if err != nil {
 					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
-				deps.Cfg.System.SetPreferALRDeps(boolValue)
+				deps.Cfg.User.SetPreferALRDeps(boolValue)
 			case "repo", "repos":
 				return fmt.Errorf("%s", gotext.Get("use 'repo add/remove' commands to manage repositories"))
 			default:
 				return fmt.Errorf("%s", gotext.Get("unknown config key: %s", key))
 			}
 
-			if err := deps.Cfg.System.Save(); err != nil {
+			if err := deps.Cfg.User.Save(); err != nil {
 				return fmt.Errorf("%s: %w", gotext.Get("failed to save config"), err)
 			}
 

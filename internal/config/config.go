@@ -39,12 +39,14 @@ type ALRConfig struct {
 	paths *Paths
 
 	System *SystemConfig
+	User   *UserConfig
 	env    *EnvConfig
 }
 
 func New() *ALRConfig {
 	return &ALRConfig{
 		System: NewSystemConfig(),
+		User:   NewUserConfig(),
 		env:    NewEnvConfig(),
 	}
 }
@@ -82,11 +84,16 @@ func (c *ALRConfig) Load() error {
 		return fmt.Errorf("failed to load system config: %w", err)
 	}
 
+	if err := c.User.Load(); err != nil {
+		return fmt.Errorf("failed to load user config: %w", err)
+	}
+
 	if err := c.env.Load(); err != nil {
 		return fmt.Errorf("failed to load env config: %w", err)
 	}
 
 	systemK := c.System.koanf()
+	userK := c.User.koanf()
 	envK := c.env.koanf()
 
 	if err := merged.Merge(defaultConfigKoanf()); err != nil {
@@ -94,6 +101,9 @@ func (c *ALRConfig) Load() error {
 	}
 	if err := merged.Merge(systemK); err != nil {
 		return fmt.Errorf("failed to merge system config: %w", err)
+	}
+	if err := merged.Merge(userK); err != nil {
+		return fmt.Errorf("failed to merge user config: %w", err)
 	}
 	if err := merged.Merge(envK); err != nil {
 		return fmt.Errorf("failed to merge env config: %w", err)

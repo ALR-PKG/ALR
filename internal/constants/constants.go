@@ -18,6 +18,7 @@ package constants
 
 const (
 	SystemConfigPath = "/etc/alr/alr.toml"
+	UserConfigPath   = "~/.config/alr/alr.toml"
 	SystemCachePath  = "/var/cache/alr"
 	TempDir          = "/tmp/alr"
 	// PrivilegedGroup - устарело, используйте GetPrivilegedGroup()

@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"git.alr-pkg.ru/Plemya-x/ALR/cmd"
@@ -35,7 +36,7 @@ import (
 
 func setLogLevel(newLevel string) {
 	level := slog.LevelInfo
-	switch newLevel {
+	switch strings.ToUpper(newLevel) {
 	case "DEBUG":
 		level = slog.LevelDebug
 	case "INFO":
