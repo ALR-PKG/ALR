@@ -64,23 +64,41 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	found := make(map[string][]alrsh.Package)
 	var notFound []string
 
+	// Преобразуем repo/pkg → pkg+repo для RPC API
+	rpcNames := make([]string, 0, len(pkgNames))
+	nameMap := make(map[string]string) // rpcName → originalName
+	for _, name := range pkgNames {
+		rpcName := name
+		if strings.Contains(name, "/") {
+			parts := strings.SplitN(name, "/", 2)
+			rpcName = parts[1] + "+" + parts[0]
+		}
+		rpcNames = append(rpcNames, rpcName)
+		nameMap[rpcName] = name
+	}
+
 	// Отправляем batch-запрос на RPC
-	slog.Debug("FindPkgs: запрос через RPC", "url", rs.rpc, "count", len(pkgNames))
-	rpcPkgs, err := rs.rpc.GetPackages(ctx, pkgNames)
+	slog.Debug("FindPkgs: запрос через RPC", "url", rs.rpc, "count", len(rpcNames))
+	rpcPkgs, err := rs.rpc.GetPackages(ctx, rpcNames)
 	if err != nil {
 		slog.Debug("FindPkgs: RPC запрос не удался, используем локальную БД", "error", err)
 		return nil, pkgNames
 	}
 	slog.Debug("FindPkgs: RPC вернул пакеты", "count", len(rpcPkgs))
 
-	// Создаём мапу имя → пакеты (ключ — полное имя с репозиторием)
+	// Создаём мапу имя → пакеты (ключ — оригинальное имя)
 	rpcResults := make(map[string][]rpc.Package)
 	for _, p := range rpcPkgs {
 		key := p.Name
 		if p.Repo != "" {
 			key = p.Name + "+" + p.Repo
 		}
-		rpcResults[key] = append(rpcResults[key], p)
+		// Сопоставляем с оригинальным именем (repo/pkg или pkg+repo)
+		if origName, ok := nameMap[key]; ok {
+			rpcResults[origName] = append(rpcResults[origName], p)
+		} else {
+			rpcResults[key] = append(rpcResults[key], p)
+		}
 	}
 
 	for _, name := range pkgNames {

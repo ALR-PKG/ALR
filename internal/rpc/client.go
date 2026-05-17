@@ -163,6 +163,68 @@ func (c *Client) ListPackages(ctx context.Context, repo string, page, limit int)
 	return resp.Results, resp.Total, nil
 }
 
+// CountPackages получает количество пакетов
+func (c *Client) CountPackages(ctx context.Context, by, query string) (int, error) {
+	q := url.Values{}
+	q.Set("by", by)
+	q.Set("arg", query)
+
+	var resp CountResponse
+	if err := c.get(ctx, "/rpc/v1/count", q, &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Count, nil
+}
+
+// ListAllPackages загружает все пакеты через пагинацию
+func (c *Client) ListAllPackages(ctx context.Context, repo string) ([]Package, error) {
+	const pageSize = 200
+	var all []Package
+	page := 1
+
+	for {
+		pkgs, total, err := c.ListPackages(ctx, repo, page, pageSize)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, pkgs...)
+		if len(all) >= total {
+			break
+		}
+		page++
+	}
+
+	return all, nil
+}
+
+// SearchAllPackages загружает все пакеты по поиску через пагинацию
+func (c *Client) SearchAllPackages(ctx context.Context, by, query string) ([]Package, error) {
+	const pageSize = 200
+	var all []Package
+	page := 1
+
+	for {
+		q := url.Values{}
+		q.Set("by", by)
+		q.Set("arg", query)
+		q.Set("page", fmt.Sprintf("%d", page))
+		q.Set("limit", fmt.Sprintf("%d", pageSize))
+
+		var resp SearchResponse
+		if err := c.get(ctx, "/rpc/v1/search", q, &resp); err != nil {
+			return nil, err
+		}
+		all = append(all, resp.Results...)
+		if len(resp.Results) < pageSize {
+			break
+		}
+		page++
+	}
+
+	return all, nil
+}
+
 // CheckUpdates проверяет доступные обновления для установленных пакетов
 func (c *Client) CheckUpdates(ctx context.Context, installed []InstalledPackage, distroInfo *distro.OSRelease) ([]UpdateInfo, error) {
 	if len(installed) == 0 {

@@ -25,11 +25,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 )
 
 func newRemoveCmd() *cobra.Command {
@@ -73,6 +71,7 @@ func newRemoveCmd() *cobra.Command {
 		},
 	}
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -92,69 +91,46 @@ func removePackageCompletion(cmd *cobra.Command, args []string, toComplete strin
 
 	prefix := toComplete
 	seen := make(map[string]struct{})
+	var out []string
 
-	installedAlrPackages := map[string]string{}
 	installed, err := deps.Manager.ListInstalled(&manager.Opts{})
 	if err != nil {
 		slog.Debug("completion: ошибка получения установленных пакетов", "error", err)
 		return nil, cobra.ShellCompDirectiveError
 	}
-	for pkgName, version := range installed {
+
+	// Собираем установленные ALR пакеты в формате name+repo
+	installedAlr := make(map[string]struct{})
+	for pkgName := range installed {
 		matches := build.RegexpALRPackageName.FindStringSubmatch(pkgName)
 		if matches != nil {
 			packageName := matches[build.RegexpALRPackageName.SubexpIndex("package")]
 			repoName := matches[build.RegexpALRPackageName.SubexpIndex("repo")]
-			installedAlrPackages[fmt.Sprintf("%s/%s", repoName, packageName)] = version
+			installedAlr[packageName+"+"+repoName] = struct{}{}
 		}
 	}
 
-	var result []alrsh.Package
 	if prefix != "" {
-		where, queryArgs := cliutils.BuildPkgQuery(prefix)
-		result, err = deps.DB.GetPkgs(ctx, where, queryArgs...)
-	} else if len(installedAlrPackages) > 0 {
-		nameSet := make(map[string]struct{})
-		for key := range installedAlrPackages {
-			parts := strings.SplitN(key, "/", 2)
-			if len(parts) == 2 {
-				nameSet[parts[1]] = struct{}{}
+		dbPkgs, err := completePackages(ctx, deps.DB, nil, prefix)
+		if err != nil {
+			slog.Debug("completion: ошибка получения пакетов", "error", err)
+			return nil, cobra.ShellCompDirectiveError
+		}
+		for _, key := range dbPkgs {
+			if _, ok := installedAlr[key]; ok {
+				if _, exists := seen[key]; !exists {
+					seen[key] = struct{}{}
+					out = append(out, key)
+				}
 			}
 		}
-		if len(nameSet) > 900 {
-			result, err = deps.DB.GetPkgs(ctx, "true")
-		} else if len(nameSet) > 0 {
-			names := make([]string, 0, len(nameSet))
-			for n := range nameSet {
-				names = append(names, n)
-			}
-			placeholders := strings.Repeat("?,", len(names))
-			placeholders = placeholders[:len(placeholders)-1]
-			queryArgs := make([]any, len(names))
-			for i, n := range names {
-				queryArgs[i] = n
-			}
-			result, err = deps.DB.GetPkgs(ctx, "name IN ("+placeholders+")", queryArgs...)
-		}
-	}
-	if err != nil {
-		slog.Debug("completion: ошибка получения пакетов", "error", err)
-		return nil, cobra.ShellCompDirectiveError
-	}
-
-	var out []string
-	for _, pkg := range result {
-		_, ok := installedAlrPackages[fmt.Sprintf("%s/%s", pkg.Repository, pkg.Name)]
-		if !ok {
-			continue
-		}
-		if prefix == "" || strings.HasPrefix(pkg.Name, prefix) {
-			if _, exists := seen[pkg.Name]; !exists {
-				seen[pkg.Name] = struct{}{}
-				out = append(out, pkg.Name)
-			}
+	} else {
+		for key := range installedAlr {
+			out = append(out, key)
 		}
 	}
 
+	// Добавляем системные пакеты (не ALR), начинающиеся с prefix
 	if prefix != "" {
 		for pkgName := range installed {
 			if build.RegexpALRPackageName.MatchString(pkgName) {

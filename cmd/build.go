@@ -21,8 +21,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
+
+
 
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
@@ -32,7 +32,7 @@ import (
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/osutils"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
 )
 
@@ -192,6 +192,7 @@ func newBuildCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&clean, "clean", "c", false, gotext.Get("Build package from scratch even if there's an already built package available"))
 
 	_ = cmd.RegisterFlagCompletionFunc("package", packageCompletion)
+	addFlagCompletion(cmd)
 
 	return cmd
 }
@@ -205,71 +206,13 @@ func packageCompletion(cmd *cobra.Command, args []string, toComplete string) ([]
 	}
 	defer deps.Defer()
 
-	prefix := toComplete
-	var result []alrsh.Package
-	parts := strings.SplitN(prefix, "/", 2)
-	if len(parts) == 2 {
-		result, err = deps.DB.GetPkgs(ctx,
-			"name LIKE ? ESCAPE ? AND repository = ?",
-			cliutils.EscapeLikePattern(parts[1])+"%", "\\", parts[0])
-	} else {
-		where, queryArgs := cliutils.BuildPkgQuery(prefix)
-		result, err = deps.DB.GetPkgs(ctx, where, queryArgs...)
-	}
+	out, err := completePackages(ctx, deps.DB, deps.Repos, toComplete)
 	if err != nil {
-		slog.Debug("completion: ошибка получения пакетов", "error", err)
+		slog.Debug("completion: ошибка", "error", err)
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	seen := make(map[string]struct{})
-	var out []string
-	for _, pkg := range result {
-		key := fmt.Sprintf("%s/%s", pkg.Repository, pkg.Name)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		out = append(out, key)
-	}
-
-	if deps.Repos != nil && deps.Repos.HasRPC() {
-		searchTerm := prefix
-		repoFilter := ""
-		if len(parts) == 2 {
-			searchTerm = parts[1]
-			repoFilter = parts[0]
-		}
-		rpcPkgs, err := deps.Repos.RPCClient().SearchPackages(ctx, "name", searchTerm)
-		if err == nil {
-			for _, p := range rpcPkgs {
-				pkg := *p.ToALRShPackage()
-				pkg.CachedAt = time.Now().Unix()
-				if repoFilter != "" && pkg.Repository != repoFilter {
-					continue
-				}
-				key := fmt.Sprintf("%s/%s", pkg.Repository, pkg.Name)
-				if _, ok := seen[key]; ok {
-					continue
-				}
-				seen[key] = struct{}{}
-				out = append(out, key)
-				if dbErr := deps.DB.InsertPackage(ctx, pkg); dbErr != nil {
-					slog.Debug("completion: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", dbErr)
-				}
-			}
-		} else {
-			slog.Debug("completion: RPC поиск не удался", "prefix", prefix, "error", err)
-		}
-	}
-
 	return out, cobra.ShellCompDirectiveNoFileComp
-}
-
-func buildPkgQuery(prefix string) (where string, args []any) {
-	if prefix != "" {
-		return "name LIKE ? ESCAPE ?", []any{cliutils.EscapeLikePattern(prefix) + "%", "\\"}
-	}
-	return "true", nil
 }
 
 

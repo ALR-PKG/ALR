@@ -54,5 +54,6 @@ func newInternalDBusServiceCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&session, "session", "s", false, "Use session bus instead of system bus")
 
+	addFlagCompletion(cmd)
 	return cmd
 }

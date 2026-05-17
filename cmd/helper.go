@@ -83,6 +83,7 @@ func newHelperCmd() *cobra.Command {
 		newHelperListCmd(),
 	)
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 

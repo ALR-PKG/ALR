@@ -46,6 +46,7 @@ func newRepoCmd() *cobra.Command {
 		newRepoMirrorCmd(),
 	)
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -119,6 +120,7 @@ func newRepoRemoveCmd() *cobra.Command {
 		},
 	}
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -183,6 +185,7 @@ func newRepoAddCmd() *cobra.Command {
 		},
 	}
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -239,6 +242,7 @@ func newRepoSetRefCmd() *cobra.Command {
 		},
 	}
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -295,6 +299,7 @@ func newRepoSetUrlCmd() *cobra.Command {
 		},
 	}
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -310,6 +315,7 @@ func newRepoMirrorCmd() *cobra.Command {
 		newRepoMirrorClearCmd(),
 	)
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -360,6 +366,7 @@ func newRepoMirrorAddCmd() *cobra.Command {
 		},
 	}
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -467,6 +474,7 @@ func newRepoMirrorRemoveCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&ignoreMissing, "ignore-missing", false, gotext.Get("Ignore if mirror does not exist"))
 	cmd.Flags().BoolVarP(&partial, "partial", "p", false, gotext.Get("Match partial URL (e.g., github.com instead of full URL)"))
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -527,6 +535,7 @@ func newRepoMirrorClearCmd() *cobra.Command {
 		},
 	}
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 

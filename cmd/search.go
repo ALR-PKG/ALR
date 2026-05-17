@@ -140,5 +140,6 @@ func newSearchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&provides, "provides", "p", "", gotext.Get("Search by provides"))
 	cmd.Flags().StringVarP(&format, "format", "f", "", gotext.Get("Format output using a Go template"))
 
+	addFlagCompletion(cmd)
 	return cmd
 }

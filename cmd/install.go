@@ -19,14 +19,12 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"strings"
-	"time"
+
 
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
@@ -119,6 +117,7 @@ func newInstallCmd() *cobra.Command {
 
 	_ = cmd.RegisterFlagCompletionFunc("package", installPackageCompletion)
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -137,48 +136,19 @@ func installPackageCompletion(cmd *cobra.Command, args []string, toComplete stri
 	}
 	defer deps.Defer()
 
-	seen := make(map[string]struct{})
-	prefix := toComplete
-	var out []string
-
-	where, queryArgs := cliutils.BuildPkgQuery(prefix)
-	result, err := deps.DB.GetPkgs(ctx, where, queryArgs...)
+	out, err := completePackages(ctx, deps.DB, deps.Repos, toComplete)
 	if err != nil {
-		slog.Debug("completion: ошибка получения пакетов", "error", err)
+		slog.Debug("completion: ошибка", "error", err)
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	for _, pkg := range result {
-		if prefix == "" || strings.HasPrefix(pkg.Name, prefix) {
-			if _, ok := seen[pkg.Name]; !ok {
-				seen[pkg.Name] = struct{}{}
-				out = append(out, pkg.Name)
-			}
-		}
+	seen := make(map[string]struct{})
+	for _, name := range out {
+		seen[name] = struct{}{}
 	}
 
-	if prefix != "" && deps.Repos != nil && deps.Repos.HasRPC() {
-		slog.Debug("BashComplete: запрос пакетов через RPC для подстановки", "prefix", prefix)
-		rpcPkgs, err := deps.Repos.RPCClient().SearchPackages(ctx, "name", prefix)
-		if err == nil {
-			for _, p := range rpcPkgs {
-				pkg := *p.ToALRShPackage()
-				pkg.CachedAt = time.Now().Unix()
-				if _, ok := seen[pkg.Name]; !ok {
-					seen[pkg.Name] = struct{}{}
-					out = append(out, pkg.Name)
-				}
-				if dbErr := deps.DB.InsertPackage(ctx, pkg); dbErr != nil {
-					slog.Debug("BashComplete: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", dbErr)
-				}
-			}
-		} else {
-			slog.Debug("BashComplete: RPC поиск не удался", "prefix", prefix, "error", err)
-		}
-	}
-
-	if prefix != "" {
-		sysPkgs, err := deps.Manager.ListAvailable(prefix)
+	if toComplete != "" {
+		sysPkgs, err := deps.Manager.ListAvailable(toComplete)
 		if err != nil {
 			slog.Debug("failed to list system packages", "err", err)
 		} else {

@@ -18,8 +18,9 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
-	"strings"
+
 
 	"github.com/goccy/go-yaml"
 	"github.com/jeandeaual/go-locale"
@@ -112,6 +113,7 @@ func newInfoCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&all, "all", "a", false, gotext.Get("Show all information, not just for the current distro"))
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -121,29 +123,18 @@ func infoPackageCompletion(cmd *cobra.Command, args []string, toComplete string)
 		New(ctx).
 		WithConfig().
 		WithDB().
+		WithReposNoPull().
 		Build()
 	if err != nil {
+		slog.Debug("completion: ошибка инициализации appbuilder", "error", err)
 		return nil, cobra.ShellCompDirectiveError
 	}
 	defer deps.Defer()
 
-	prefix := toComplete
-
-	where, queryArgs := cliutils.BuildPkgQuery(prefix)
-	result, err := deps.DB.GetPkgs(ctx, where, queryArgs...)
+	out, err := completePackages(ctx, deps.DB, deps.Repos, toComplete)
 	if err != nil {
+		slog.Debug("completion: ошибка", "error", err)
 		return nil, cobra.ShellCompDirectiveError
-	}
-
-	seen := make(map[string]struct{})
-	var out []string
-	for _, pkg := range result {
-		if prefix == "" || strings.HasPrefix(pkg.Name, prefix) {
-			if _, ok := seen[pkg.Name]; !ok {
-				seen[pkg.Name] = struct{}{}
-				out = append(out, pkg.Name)
-			}
-		}
 	}
 	return out, cobra.ShellCompDirectiveNoFileComp
 }

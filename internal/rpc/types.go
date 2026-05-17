@@ -73,6 +73,12 @@ type ListResponse struct {
 	Results     []Package `json:"results"`
 }
 
+// CountResponse — ответ от /rpc/v1/count
+type CountResponse struct {
+	Version int `json:"version"`
+	Count   int `json:"count"`
+}
+
 // InstalledPackage — установленный пакет в запросе обновлений
 type InstalledPackage struct {
 	Name    string `json:"name"`

@@ -149,6 +149,7 @@ func newUpgradeCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&clean, "clean", "c", false, gotext.Get("Build package from scratch even if there's an already built package available"))
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 

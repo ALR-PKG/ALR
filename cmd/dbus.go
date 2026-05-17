@@ -44,6 +44,7 @@ func newDBusCmd() *cobra.Command {
 		newDBusRemoveCmd(),
 	)
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -97,6 +98,7 @@ func newDBusStartCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&session, "session", true, "Use session bus (default)")
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -186,6 +188,7 @@ func newDBusSearchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&description, "description", "d", "", gotext.Get("Search by description"))
 	cmd.Flags().StringVarP(&repository, "repository", "r", "", gotext.Get("Search by repository"))
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -256,6 +259,7 @@ func newDBusInstallCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&clean, "clean", "c", false, gotext.Get("Build from scratch"))
 	cmd.Flags().BoolVar(&noProgress, "no-progress", false, gotext.Get("Don't show progress"))
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 
@@ -321,6 +325,7 @@ func newDBusRemoveCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&noProgress, "no-progress", false, gotext.Get("Don't show progress"))
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 

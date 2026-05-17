@@ -197,5 +197,6 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&upgradable, "upgradable", "U", false, "")
 	cmd.Flags().StringVarP(&formatFlag, "format", "f", "", gotext.Get("Format output using a Go template"))
 
+	addFlagCompletion(cmd)
 	return cmd
 }

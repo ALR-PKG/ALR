@@ -37,6 +37,7 @@ func newGenCmd() *cobra.Command {
 		newGenAurCmd(),
 	)
 
+	addFlagCompletion(cmd)
 	return cmd
 }
 

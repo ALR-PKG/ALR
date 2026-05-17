@@ -31,6 +31,7 @@ import (
 	_ "modernc.org/sqlite"
 	"xorm.io/xorm"
 
+	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/fsutils"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
@@ -191,6 +192,35 @@ func (d *Database) HasRepoPackages(repoName string) bool {
 
 func (d *Database) Close() error {
 	return d.engine.Close()
+}
+
+// CountPkgs возвращает количество пакетов, удовлетворяющих условию
+func (d *Database) CountPkgs(_ context.Context, where string, args ...any) (int64, error) {
+	return d.engine.Where(where, args...).Count(new(alrsh.Package))
+}
+
+// GetMinCachedAt возвращает минимальное значение cached_at среди пакетов,
+// удовлетворяющих условию по имени (или всех, если prefix пустой).
+func (d *Database) GetMinCachedAt(ctx context.Context, prefix string) (int64, error) {
+	session := d.engine.Context(ctx)
+	sql := "SELECT MIN(cached_at) as min FROM packages WHERE cached_at IS NOT NULL"
+	var args []any
+	if prefix != "" {
+		sql += " AND name LIKE ? ESCAPE ?"
+		args = append(args, cliutils.EscapeLikePattern(prefix)+"%", "\\")
+	}
+
+	var result struct {
+		Min *int64
+	}
+	has, err := session.SQL(sql, args...).Get(&result)
+	if err != nil {
+		return 0, err
+	}
+	if !has || result.Min == nil {
+		return 0, fmt.Errorf("no cached packages found")
+	}
+	return *result.Min, nil
 }
 
 // GetPackageAvailability получает информацию о доступности пакета из кэша
