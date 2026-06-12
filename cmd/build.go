@@ -22,14 +22,12 @@ import (
 	"os"
 	"path/filepath"
 
-
-
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
+	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/osutils"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
 
@@ -214,5 +212,3 @@ func packageCompletion(cmd *cobra.Command, args []string, toComplete string) ([]
 
 	return out, cobra.ShellCompDirectiveNoFileComp
 }
-
-

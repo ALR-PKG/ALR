@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"os"
 
-
 	"github.com/goccy/go-yaml"
 	"github.com/jeandeaual/go-locale"
 	"github.com/leonelquinteros/gotext"

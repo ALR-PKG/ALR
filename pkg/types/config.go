@@ -35,9 +35,11 @@ type Config struct {
 
 // Site represents the ALR site RPC configuration
 type Site struct {
-	URL     string   `json:"url" koanf:"url"`
-	Mirrors []string `json:"mirrors" koanf:"mirrors"`
-	Timeout int      `json:"timeout" koanf:"timeout"`
+	URL        string   `json:"url" koanf:"url"`
+	Mirrors    []string `json:"mirrors" koanf:"mirrors"`
+	Timeout    int      `json:"timeout" koanf:"timeout"`
+	DisableRPC bool     `json:"disableRPC" koanf:"disableRPC"`
+	PreferRPC  bool     `json:"preferRPC" koanf:"preferRPC"`
 }
 
 // Repo represents a ALR repo within a configuration file

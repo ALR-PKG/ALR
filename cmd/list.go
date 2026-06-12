@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"os"
 	"slices"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -106,10 +107,24 @@ func newListCmd() *cobra.Command {
 				queryArgs = []any{args[0], args[0]}
 			}
 
-			result, err := db.GetPkgs(ctx, where, queryArgs...)
+			var result []alrsh.Package
+
+			if deps.Repos != nil && deps.Repos.HasRPC() {
+				if len(args) == 0 {
+					result, err = deps.Repos.ListAllPackages(ctx)
+				} else {
+					result, err = deps.Repos.SearchPackages(ctx, args[0])
+				}
+			} else {
+				result, err = db.GetPkgs(ctx, where, queryArgs...)
+			}
 			if err != nil {
 				return fmt.Errorf("%s: %w", gotext.Get("Error getting packages"), err)
 			}
+
+			sort.Slice(result, func(i, j int) bool {
+				return result[i].Name < result[j].Name
+			})
 
 			type verInfo struct {
 				Version string

@@ -69,7 +69,17 @@ func (rs *Repos) Pull(ctx context.Context, repos []types.Repo) error {
 		repos = rs.cfg.Repos()
 	}
 
+	// Загружаем список site-репозиториев
+	rs.loadSiteRepos(ctx)
+
+	// Если RPC работает, пропускаем site-репозитории (они обновляются через RPC)
+	skipSiteRepos := rs.rpc != nil && rs.SiteReposErr() == nil
+
 	for _, repo := range repos {
+		if skipSiteRepos && rs.isSiteRepo(repo.Name) {
+			slog.Debug("Pull: пропускаем site-репозиторий (обновляется через RPC)", "repo", repo.Name)
+			continue
+		}
 		err := rs.pullRepo(ctx, &repo, false)
 		if err != nil {
 			return err
@@ -555,7 +565,7 @@ func (rs *Repos) processRepoFull(ctx context.Context, repo types.Repo, repoDir s
 		progress := float64(processed) / float64(len(matches))
 		barWidth := 40
 		filled := int(progress * float64(barWidth))
-		
+
 		var bar strings.Builder
 		for i := 0; i < barWidth; i++ {
 			pos := float64(i) / float64(barWidth-1)
@@ -566,7 +576,7 @@ func (rs *Repos) processRepoFull(ctx context.Context, repo types.Repo, repoDir s
 				bar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("○"))
 			}
 		}
-		
+
 		fmt.Fprintf(os.Stderr, "\r%s %3.0f%% (%d/%d)", bar.String(), math.Floor(progress*100), processed, len(matches))
 
 		runner, err := rs.processRepoChangesRunner(repoDir, filepath.Dir(match))

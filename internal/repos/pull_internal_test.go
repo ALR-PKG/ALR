@@ -48,6 +48,10 @@ func (c *TestALRConfig) Repos() []types.Repo {
 	}
 }
 
+func (c *TestALRConfig) Site() types.Site {
+	return types.Site{}
+}
+
 func createReadCloserFromString(input string) io.ReadCloser {
 	reader := strings.NewReader(input)
 	return struct {

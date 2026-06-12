@@ -49,6 +49,18 @@ type ExtraFile struct {
 	DownloadURL string `json:"download_url"`
 }
 
+// ReposResponse — ответ от /rpc/v1/repos
+type ReposResponse struct {
+	Version      int              `json:"version"`
+	Repositories []RepositoryInfo `json:"repositories"`
+}
+
+// RepositoryInfo — информация о репозитории в RPC
+type RepositoryInfo struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
 // InfoResponse — ответ от /rpc/v1/info
 type InfoResponse struct {
 	Version     int       `json:"version"`

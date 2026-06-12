@@ -113,6 +113,15 @@ func (c *Client) post(ctx context.Context, endpoint string, body any, result any
 	return nil
 }
 
+// GetRepos получает список активных репозиториев с alr-site
+func (c *Client) GetRepos(ctx context.Context) ([]RepositoryInfo, error) {
+	var resp ReposResponse
+	if err := c.get(ctx, "/rpc/v1/repos", nil, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Repositories, nil
+}
+
 // GetPackages получает метаданные пакетов по именам
 func (c *Client) GetPackages(ctx context.Context, names []string) ([]Package, error) {
 	if len(names) == 0 {

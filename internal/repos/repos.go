@@ -18,7 +18,9 @@ package repos
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"sync"
 
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
 	database "git.alr-pkg.ru/Plemya-x/ALR/internal/db"
@@ -34,9 +36,13 @@ type Config interface {
 }
 
 type Repos struct {
-	cfg Config
-	db  *database.Database
-	rpc *rpc.Client
+	cfg             Config
+	db              *database.Database
+	rpc             *rpc.Client
+	siteRepos       []string
+	siteReposLoaded bool
+	siteReposErr    error
+	siteReposMu     sync.RWMutex
 }
 
 func New(
@@ -48,9 +54,9 @@ func New(
 		db:  db,
 	}
 
-	// Инициализируем RPC клиент если указан URL сайта
+	// Инициализируем RPC клиент если указан URL сайта и RPC не отключен
 	site := cfg.Site()
-	if site.URL != "" {
+	if site.URL != "" && !site.DisableRPC {
 		rs.rpc = rpc.NewClient(site)
 	}
 
@@ -65,6 +71,62 @@ func (r *Repos) HasRPC() bool {
 // RPCClient возвращает RPC клиент (nil если не настроен)
 func (r *Repos) RPCClient() *rpc.Client {
 	return r.rpc
+}
+
+// loadSiteRepos загружает список репозиториев с alr-site через RPC
+func (r *Repos) loadSiteRepos(ctx context.Context) {
+	r.siteReposMu.Lock()
+	defer r.siteReposMu.Unlock()
+
+	if r.siteReposLoaded {
+		return
+	}
+
+	if r.rpc == nil {
+		r.siteReposLoaded = true
+		return
+	}
+
+	repos, err := r.rpc.GetRepos(ctx)
+	if err != nil {
+		slog.Warn("Не удалось получить список репозиториев с сайта", "error", err)
+		r.siteReposErr = err
+		r.siteReposLoaded = true
+		return
+	}
+
+	for _, repo := range repos {
+		r.siteRepos = append(r.siteRepos, repo.Name)
+	}
+	r.siteReposLoaded = true
+	slog.Debug("Получен список site-репозиториев", "count", len(r.siteRepos), "repos", r.siteRepos)
+}
+
+// isSiteRepo проверяет, является ли репозиторий site-репозиторием
+func (r *Repos) isSiteRepo(name string) bool {
+	r.siteReposMu.RLock()
+	defer r.siteReposMu.RUnlock()
+
+	for _, repo := range r.siteRepos {
+		if repo == name {
+			return true
+		}
+	}
+	return false
+}
+
+// SiteReposLoaded возвращает true если список site-репозиториев был загружен
+func (r *Repos) SiteReposLoaded() bool {
+	r.siteReposMu.RLock()
+	defer r.siteReposMu.RUnlock()
+	return r.siteReposLoaded
+}
+
+// SiteReposErr возвращает ошибку загрузки site-репозиториев (если была)
+func (r *Repos) SiteReposErr() error {
+	r.siteReposMu.RLock()
+	defer r.siteReposMu.RUnlock()
+	return r.siteReposErr
 }
 
 // CheckUpdates проверяет обновления через RPC (batch) или локально
@@ -92,8 +154,7 @@ func (r *Repos) CheckUpdates(
 
 	updates, err := r.rpc.CheckUpdates(ctx, pkgs, info)
 	if err != nil {
-		slog.Warn("RPC проверка обновлений не удалась, fallback на локальную БД", "error", err)
-		return nil, nil
+		return nil, fmt.Errorf("RPC проверка обновлений не удалась: %w", err)
 	}
 
 	slog.Debug("checkForUpdates: RPC вернул обновления", "count", len(updates))

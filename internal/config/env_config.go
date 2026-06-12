@@ -41,10 +41,14 @@ func (c *EnvConfig) koanf() *koanf.Koanf {
 
 func (c *EnvConfig) Load() error {
 	allowedKeys := map[string]struct{}{
-		"ALR_LOG_LEVEL":       {},
-		"ALR_PAGER_STYLE":     {},
-		"ALR_AUTO_PULL":       {},
-		"ALR_PREFER_ALR_DEPS": {},
+		"ALR_LOG_LEVEL":        {},
+		"ALR_PAGER_STYLE":      {},
+		"ALR_AUTO_PULL":        {},
+		"ALR_PREFER_ALR_DEPS":  {},
+		"ALR_SITE_URL":         {},
+		"ALR_SITE_TIMEOUT":     {},
+		"ALR_SITE_DISABLE_RPC": {},
+		"ALR_SITE_PREFER_RPC":  {},
 	}
 	err := c.k.Load(env.Provider("ALR_", ".", func(s string) string {
 		_, ok := allowedKeys[s]

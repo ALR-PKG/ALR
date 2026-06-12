@@ -56,6 +56,10 @@ func (c *TestALRConfig) Repos() []types.Repo {
 	return []types.Repo{}
 }
 
+func (c *TestALRConfig) Site() types.Site {
+	return types.Site{}
+}
+
 func prepare(t *testing.T) *TestEnv {
 	t.Helper()
 

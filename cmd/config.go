@@ -37,6 +37,10 @@ var configKeys = []string{
 	"ignorePkgUpdates",
 	"updateSystemOnUpgrade",
 	"preferALRDeps",
+	"site.url",
+	"site.timeout",
+	"site.disableRPC",
+	"site.preferRPC",
 }
 
 func newConfigCmd() *cobra.Command {
@@ -141,6 +145,26 @@ func newConfigSetCmd() *cobra.Command {
 					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
 				}
 				deps.Cfg.User.SetPreferALRDeps(boolValue)
+			case "site.url":
+				deps.Cfg.User.SetSiteURL(value)
+			case "site.timeout":
+				intValue, err := strconv.Atoi(value)
+				if err != nil {
+					return fmt.Errorf("%s: %w", gotext.Get("invalid integer value for %s: %s", key, value), err)
+				}
+				deps.Cfg.User.SetSiteTimeout(intValue)
+			case "site.disableRPC":
+				boolValue, err := strconv.ParseBool(value)
+				if err != nil {
+					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
+				}
+				deps.Cfg.User.SetSiteDisableRPC(boolValue)
+			case "site.preferRPC":
+				boolValue, err := strconv.ParseBool(value)
+				if err != nil {
+					return fmt.Errorf("%s: %w", gotext.Get("invalid boolean value for %s: %s", key, value), err)
+				}
+				deps.Cfg.User.SetSitePreferRPC(boolValue)
 			case "repo", "repos":
 				return fmt.Errorf("%s", gotext.Get("use 'repo add/remove' commands to manage repositories"))
 			default:
@@ -205,6 +229,14 @@ func newConfigGetCmd() *cobra.Command {
 				fmt.Println(deps.Cfg.UpdateSystemOnUpgrade())
 			case "preferALRDeps":
 				fmt.Println(deps.Cfg.PreferALRDeps())
+			case "site.url":
+				fmt.Println(deps.Cfg.Site().URL)
+			case "site.timeout":
+				fmt.Println(deps.Cfg.Site().Timeout)
+			case "site.disableRPC":
+				fmt.Println(deps.Cfg.Site().DisableRPC)
+			case "site.preferRPC":
+				fmt.Println(deps.Cfg.Site().PreferRPC)
 			case "repo", "repos":
 				repos := deps.Cfg.Repos()
 				if len(repos) == 0 {

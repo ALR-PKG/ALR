@@ -75,7 +75,11 @@ func (o *OverridableField[T]) Resolve(overrides []string) {
 
 // Database serialization (JSON)
 func (f *OverridableField[T]) ToDB() ([]byte, error) {
-	return json.Marshal(f.data)
+	payload := overridableFieldJSONPayload[T]{
+		Data:     f.data,
+		Resolved: &f.resolved,
+	}
+	return json.Marshal(payload)
 }
 
 func (f *OverridableField[T]) FromDB(data []byte) error {
@@ -84,6 +88,20 @@ func (f *OverridableField[T]) FromDB(data []byte) error {
 		return nil
 	}
 
+	// Пробуем новый формат (payload с resolved и overrides)
+	var payload overridableFieldJSONPayload[T]
+	if err := json.Unmarshal(data, &payload); err == nil && (payload.Data != nil || payload.Resolved != nil) {
+		if payload.Data == nil {
+			payload.Data = make(map[string]T)
+		}
+		f.data = payload.Data
+		if payload.Resolved != nil {
+			f.resolved = *payload.Resolved
+		}
+		return nil
+	}
+
+	// Fallback на старый формат (просто map)
 	var temp map[string]T
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return err

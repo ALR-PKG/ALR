@@ -177,3 +177,31 @@ func (c *UserConfig) SetPreferALRDeps(v bool) {
 		panic(err)
 	}
 }
+
+func (c *UserConfig) SetSiteURL(v string) {
+	err := c.k.Set("site.url", v)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *UserConfig) SetSiteTimeout(v int) {
+	err := c.k.Set("site.timeout", v)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *UserConfig) SetSiteDisableRPC(v bool) {
+	err := c.k.Set("site.disableRPC", v)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *UserConfig) SetSitePreferRPC(v bool) {
+	err := c.k.Set("site.preferRPC", v)
+	if err != nil {
+		panic(err)
+	}
+}

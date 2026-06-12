@@ -18,8 +18,12 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
+	"slices"
+	"sort"
 	"text/template"
+	"time"
 
 	"github.com/jeandeaual/go-locale"
 	"github.com/leonelquinteros/gotext"
@@ -79,6 +83,7 @@ func newSearchCmd() *cobra.Command {
 				New(ctx).
 				WithConfig().
 				WithDB().
+				WithReposNoPull().
 				Build()
 			if err != nil {
 				return err
@@ -87,25 +92,75 @@ func newSearchCmd() *cobra.Command {
 
 			database := deps.DB
 
-			s := search.New(database)
-
 			name, _ = cmd.Flags().GetString("name")
 			description, _ = cmd.Flags().GetString("description")
 			repository, _ = cmd.Flags().GetString("repository")
 			provides, _ = cmd.Flags().GetString("provides")
 
-			packages, err := s.Search(
-				ctx,
-				search.NewSearchOptions().
-					WithName(name).
-					WithDescription(description).
-					WithRepository(repository).
-					WithProvides(provides).
-					Build(),
-			)
+			s := search.New(database)
+
+			searchOpts := search.NewSearchOptions().
+				WithName(name).
+				WithDescription(description).
+				WithRepository(repository).
+				WithProvides(provides).
+				Build()
+
+			packages, err := s.Search(ctx, searchOpts)
 			if err != nil {
 				return fmt.Errorf("%s: %w", gotext.Get("Error while executing search"), err)
 			}
+
+			// RPC-first поиск по имени/описанию, если сайт доступен.
+			// При одновременном указании name и description остаёмся на локальной БД,
+			// чтобы сохранить семантику AND.
+			if deps.Repos != nil && deps.Repos.HasRPC() && (name != "" || description != "") && !(name != "" && description != "") {
+				var rpcBy, rpcArg string
+				if name != "" {
+					rpcBy = "name"
+					rpcArg = name
+				} else {
+					rpcBy = "desc"
+					rpcArg = description
+				}
+
+				rpcPkgs, rpcErr := deps.Repos.RPCClient().SearchAllPackages(ctx, rpcBy, rpcArg)
+				if rpcErr != nil {
+					slog.Debug("search: RPC поиск не удался, используем только локальную БД", "error", rpcErr)
+				} else {
+					seen := make(map[string]struct{}, len(packages))
+					for _, pkg := range packages {
+						seen[pkg.Name+"+"+pkg.Repository] = struct{}{}
+					}
+
+					for _, p := range rpcPkgs {
+						pkg := *p.ToALRShPackage()
+						pkg.CachedAt = time.Now().Unix()
+
+						if repository != "" && pkg.Repository != repository {
+							continue
+						}
+						if provides != "" && !slices.Contains(pkg.Provides, provides) {
+							continue
+						}
+
+						key := pkg.Name + "+" + pkg.Repository
+						if _, ok := seen[key]; ok {
+							continue
+						}
+						seen[key] = struct{}{}
+						packages = append(packages, pkg)
+
+						if dbErr := database.InsertPackage(ctx, pkg); dbErr != nil {
+							slog.Debug("search: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", dbErr)
+						}
+					}
+				}
+			}
+
+			sort.Slice(packages, func(i, j int) bool {
+				return packages[i].Name < packages[j].Name
+			})
 
 			format, _ = cmd.Flags().GetString("format")
 			var tmpl *template.Template

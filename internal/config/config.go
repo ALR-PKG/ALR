@@ -63,9 +63,11 @@ func defaultConfigKoanf() *koanf.Koanf {
 		"updateSystemOnUpgrade": false,
 		"preferALRDeps":         true,
 		"site": types.Site{
-			URL:     "https://alr-pkg.ru",
-			Mirrors: []string{},
-			Timeout: 10,
+			URL:        "https://alr-pkg.ru",
+			Mirrors:    []string{},
+			Timeout:    10,
+			DisableRPC: false,
+			PreferRPC:  true,
 		},
 		"repo": []types.Repo{},
 	}
@@ -280,4 +282,6 @@ func (c *ALRConfig) UseRootCmd() bool            { return c.cfg.UseRootCmd }
 func (c *ALRConfig) UpdateSystemOnUpgrade() bool { return c.cfg.UpdateSystemOnUpgrade }
 func (c *ALRConfig) PreferALRDeps() bool         { return c.cfg.PreferALRDeps }
 func (c *ALRConfig) Site() types.Site            { return c.cfg.Site }
+func (c *ALRConfig) DisableRPC() bool            { return c.cfg.Site.DisableRPC }
+func (c *ALRConfig) PreferRPC() bool             { return c.cfg.Site.PreferRPC }
 func (c *ALRConfig) GetPaths() *Paths            { return c.paths }

@@ -225,7 +225,9 @@ func checkForUpdates(
 	rpcHandled := make(map[string]bool)
 	if repos != nil && repos.HasRPC() {
 		rpcUpdates, err := repos.CheckUpdates(ctx, installed, info)
-		if err == nil && len(rpcUpdates) > 0 {
+		if err != nil {
+			slog.Warn("RPC проверка обновлений не удалась, используем локальный fallback", "error", err)
+		} else {
 			rpcNames := make([]string, 0, len(rpcUpdates))
 			for _, u := range rpcUpdates {
 				rpcNames = append(rpcNames, u.Name)

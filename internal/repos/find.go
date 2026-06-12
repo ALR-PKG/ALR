@@ -56,9 +56,10 @@ func (rs *Repos) findInCache(pkgNames []string) (map[string][]alrsh.Package, []s
 }
 
 // findViaRPC ищет пакеты через ALR Site RPC API
-func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string][]alrsh.Package, []string) {
+// Возвращает найденные пакеты, список не найденных, и флаг успеха RPC-запроса
+func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string][]alrsh.Package, []string, bool) {
 	if rs.rpc == nil {
-		return nil, pkgNames
+		return nil, pkgNames, false
 	}
 
 	found := make(map[string][]alrsh.Package)
@@ -82,22 +83,34 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	rpcPkgs, err := rs.rpc.GetPackages(ctx, rpcNames)
 	if err != nil {
 		slog.Debug("FindPkgs: RPC запрос не удался, используем локальную БД", "error", err)
-		return nil, pkgNames
+		return nil, pkgNames, false
 	}
 	slog.Debug("FindPkgs: RPC вернул пакеты", "count", len(rpcPkgs))
 
-	// Создаём мапу имя → пакеты (ключ — оригинальное имя)
+	// Создаём мапу имя → пакеты (ключ — оригинальное имя запроса)
 	rpcResults := make(map[string][]rpc.Package)
 	for _, p := range rpcPkgs {
-		key := p.Name
-		if p.Repo != "" {
-			key = p.Name + "+" + p.Repo
+		// Сопоставляем с оригинальным именем запроса по имени пакета или basepkg_name
+		matched := false
+		for _, origName := range pkgNames {
+			rpcName := origName
+			if strings.Contains(origName, "/") {
+				parts := strings.SplitN(origName, "/", 2)
+				rpcName = parts[1] + "+" + parts[0]
+			}
+			if p.Name == origName || p.Name == rpcName {
+				rpcResults[origName] = append(rpcResults[origName], p)
+				matched = true
+				break
+			}
+			if p.BasePkgName == origName || p.BasePkgName == rpcName {
+				rpcResults[origName] = append(rpcResults[origName], p)
+				matched = true
+				break
+			}
 		}
-		// Сопоставляем с оригинальным именем (repo/pkg или pkg+repo)
-		if origName, ok := nameMap[key]; ok {
-			rpcResults[origName] = append(rpcResults[origName], p)
-		} else {
-			rpcResults[key] = append(rpcResults[key], p)
+		if !matched {
+			rpcResults[p.Name] = append(rpcResults[p.Name], p)
 		}
 	}
 
@@ -120,13 +133,16 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 		}
 	}
 
-	return found, notFound
+	return found, notFound, true
 }
 
 func (rs *Repos) FindPkgs(ctx context.Context, pkgs []string) (map[string][]alrsh.Package, []string, error) {
 	slog.Debug("FindPkgs: started", "packages", pkgs)
 	found := make(map[string][]alrsh.Package)
 	var notFound []string
+
+	// Загружаем список site-репозиториев (лениво, с кэшированием)
+	rs.loadSiteRepos(ctx)
 
 	// Сначала проверяем локальный кэш (пакеты, ранее полученные через RPC)
 	var cacheNotFound []string
@@ -142,8 +158,10 @@ func (rs *Repos) FindPkgs(ctx context.Context, pkgs []string) (map[string][]alrs
 
 	// Затем пробуем найти через RPC (для репозиториев, которые знает alr-site)
 	var rpcNotFound []string
+	var rpcSuccess bool
 	if len(cacheNotFound) > 0 && rs.rpc != nil {
-		rpcFound, remaining := rs.findViaRPC(ctx, cacheNotFound)
+		rpcFound, remaining, success := rs.findViaRPC(ctx, cacheNotFound)
+		rpcSuccess = success
 		for k, v := range rpcFound {
 			found[k] = v
 		}
@@ -151,6 +169,10 @@ func (rs *Repos) FindPkgs(ctx context.Context, pkgs []string) (map[string][]alrs
 	} else {
 		rpcNotFound = cacheNotFound
 	}
+
+	// Определяем, можем ли мы фильтровать site-репозитории
+	// Фильтруем только если RPC запрос был успешен И список site-репозиториев загружен
+	siteReposAvailable := rs.SiteReposErr() == nil
 
 	// Для оставшихся ищем в локальной БД (git-репозитории или fallback)
 	for _, pkgName := range rpcNotFound {
@@ -216,6 +238,20 @@ func (rs *Repos) FindPkgs(ctx context.Context, pkgs []string) (map[string][]alrs
 		// Filter by version if constraint is specified
 		if dep.HasVersionConstraint() && len(result) > 0 {
 			result = filterByVersion(result, dep)
+		}
+
+		// Если RPC работал и мы знаем список site-репозиториев,
+		// исключаем пакеты из site-репозиториев (для них git — только fallback при недоступности RPC)
+		if rpcSuccess && siteReposAvailable && len(result) > 0 {
+			var filtered []alrsh.Package
+			for _, pkg := range result {
+				if !rs.isSiteRepo(pkg.Repository) {
+					filtered = append(filtered, pkg)
+				} else {
+					slog.Debug("FindPkgs: исключаем пакет из site-репозитория (RPC активен)", "name", pkg.Name, "repo", pkg.Repository)
+				}
+			}
+			result = filtered
 		}
 
 		if len(result) == 0 {

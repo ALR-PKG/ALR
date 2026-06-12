@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"log/slog"
 
-
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 

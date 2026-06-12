@@ -29,7 +29,6 @@ import (
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/logger"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/translations"
-
 )
 
 func newInternalReposCmd() *cobra.Command {
