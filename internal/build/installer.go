@@ -19,8 +19,8 @@ package build
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"log/slog"
+	"regexp"
 
 	"git.alr-pkg.ru/xpamych/vercmp"
 	"github.com/leonelquinteros/gotext"

@@ -20,25 +20,25 @@ import "git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 
 // Package представляет пакет, возвращаемый RPC API
 type Package struct {
-	Name          string   `json:"name"`
-	BasePkgName   string   `json:"basepkg_name"`
-	Version       string   `json:"version"`
-	Release       int      `json:"release"`
-	Epoch         int      `json:"epoch"`
-	Repo          string   `json:"repo"`
-	Desc          string   `json:"desc"`
-	DescRu        string   `json:"desc_ru"`
-	Architectures []string `json:"architectures"`
-	Maintainer    string   `json:"maintainer"`
-	License       []string `json:"license"`
-	Provides      []string `json:"provides"`
-	Conflicts     []string `json:"conflicts"`
-	Depends       []string `json:"depends"`
-	BuildDepends  []string `json:"build_depends"`
-	OptDepends    []string `json:"opt_depends"`
-	Path          string     `json:"path"`
-	AlrShURL      string     `json:"alr_sh_url"`
-	LastModified  int64      `json:"last_modified"`
+	Name          string      `json:"name"`
+	BasePkgName   string      `json:"basepkg_name"`
+	Version       string      `json:"version"`
+	Release       int         `json:"release"`
+	Epoch         int         `json:"epoch"`
+	Repo          string      `json:"repo"`
+	Desc          string      `json:"desc"`
+	DescRu        string      `json:"desc_ru"`
+	Architectures []string    `json:"architectures"`
+	Maintainer    string      `json:"maintainer"`
+	License       []string    `json:"license"`
+	Provides      []string    `json:"provides"`
+	Conflicts     []string    `json:"conflicts"`
+	Depends       []string    `json:"depends"`
+	BuildDepends  []string    `json:"build_depends"`
+	OptDepends    []string    `json:"opt_depends"`
+	Path          string      `json:"path"`
+	AlrShURL      string      `json:"alr_sh_url"`
+	LastModified  int64       `json:"last_modified"`
 	ExtraFiles    []ExtraFile `json:"extra_files"`
 }
 
@@ -139,11 +139,32 @@ func (p *Package) ToALRShPackage() *alrsh.Package {
 		Conflicts:     p.Conflicts,
 	}
 
+	pkg.Description.Set("", p.Desc)
 	pkg.Description.SetResolved(p.Desc)
+	pkg.Maintainer.Set("", p.Maintainer)
 	pkg.Maintainer.SetResolved(p.Maintainer)
-	pkg.Depends.SetResolved(p.Depends)
-	pkg.BuildDepends.SetResolved(p.BuildDepends)
-	pkg.OptDepends.SetResolved(p.OptDepends)
+
+	if len(p.Depends) > 0 {
+		deps := make([]string, len(p.Depends))
+		copy(deps, p.Depends)
+		pkg.Depends.Set("", deps)
+		pkg.Depends.SetResolved(deps)
+	}
+
+	if len(p.BuildDepends) > 0 {
+		buildDeps := make([]string, len(p.BuildDepends))
+		copy(buildDeps, p.BuildDepends)
+		pkg.BuildDepends.Set("", buildDeps)
+		pkg.BuildDepends.SetResolved(buildDeps)
+	}
+
+	if len(p.OptDepends) > 0 {
+		optDeps := make([]string, len(p.OptDepends))
+		copy(optDeps, p.OptDepends)
+		pkg.OptDepends.Set("", optDeps)
+		pkg.OptDepends.SetResolved(optDeps)
+	}
+
 	pkg.AlrShURL = p.AlrShURL
 
 	// Копируем дополнительные файлы

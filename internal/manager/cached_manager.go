@@ -24,15 +24,15 @@ import (
 // CachedManager оборачивает Manager и кэширует результаты
 type CachedManager struct {
 	Manager
-	db         DBCacheInterface
-	cacheMu    sync.RWMutex
-	isAvailHit int
+	db          DBCacheInterface
+	cacheMu     sync.RWMutex
+	isAvailHit  int
 	isAvailMiss int
 }
 
 // DBCacheInterface интерфейс для работы с кэшем в БД
 type DBCacheInterface interface {
-	GetPackageAvailability(name, manager string) (isAvailable bool, found bool)
+	GetPackageAvailability(name, manager string) (isAvailable, found bool)
 	SetPackageAvailability(name, manager string, isAvailable bool) error
 }
 

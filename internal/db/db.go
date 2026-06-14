@@ -45,10 +45,10 @@ type Version struct {
 
 // PackageAvailabilityCache хранит информацию о доступности пакетов в репозиториях
 type PackageAvailabilityCache struct {
-	Name         string `xorm:"'name' pk"`
-	Manager      string `xorm:"'manager' pk"` // dnf, apt, pacman и т.д.
-	IsAvailable  bool   `xorm:"'is_available'"`
-	CheckedAt    int64  `xorm:"'checked_at'"`
+	Name        string `xorm:"'name' pk"`
+	Manager     string `xorm:"'manager' pk"` // dnf, apt, pacman и т.д.
+	IsAvailable bool   `xorm:"'is_available'"`
+	CheckedAt   int64  `xorm:"'checked_at'"`
 }
 
 type Config interface {
@@ -241,14 +241,14 @@ func (d *Database) SetPackageAvailability(name, manager string, isAvailable bool
 		IsAvailable: isAvailable,
 		CheckedAt:   time.Now().Unix(),
 	}
-	
+
 	// Проверяем, существует ли запись
 	var existing PackageAvailabilityCache
 	has, err := d.engine.Where("name = ? AND manager = ?", name, manager).Get(&existing)
 	if err != nil {
 		return err
 	}
-	
+
 	if has {
 		// Обновляем существующую запись
 		_, err = d.engine.Where("name = ? AND manager = ?", name, manager).Update(cache)
@@ -256,6 +256,6 @@ func (d *Database) SetPackageAvailability(name, manager string, isAvailable bool
 		// Вставляем новую запись
 		_, err = d.engine.Insert(cache)
 	}
-	
+
 	return err
 }

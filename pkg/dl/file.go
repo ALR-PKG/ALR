@@ -26,12 +26,12 @@ import (
 	"io"
 	"mime"
 	"net/http"
-	"time"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/mholt/archiver/v4"
 )

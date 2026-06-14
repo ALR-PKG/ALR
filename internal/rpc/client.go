@@ -83,7 +83,7 @@ func (c *Client) get(ctx context.Context, endpoint string, query url.Values, res
 }
 
 // post выполняет HTTP POST запрос с JSON телом и декодирует ответ
-func (c *Client) post(ctx context.Context, endpoint string, body any, result any) error {
+func (c *Client) post(ctx context.Context, endpoint string, body, result any) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("не удалось сериализовать тело запроса: %w", err)

@@ -19,9 +19,8 @@ package appbuilder
 import (
 	"context"
 	"errors"
-	"log/slog"
-
 	"fmt"
+	"log/slog"
 
 	"github.com/leonelquinteros/gotext"
 
