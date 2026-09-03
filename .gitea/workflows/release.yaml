@@ -54,6 +54,7 @@ jobs:
           IGNORE_ROOT_CHECK: 1
         run: |
           make build
+          make completions
 
       - name: Create tar.gz
         run: |
