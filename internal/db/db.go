@@ -203,7 +203,7 @@ func (d *Database) CountPkgs(_ context.Context, where string, args ...any) (int6
 // удовлетворяющих условию по имени (или всех, если prefix пустой).
 func (d *Database) GetMinCachedAt(ctx context.Context, prefix string) (int64, error) {
 	session := d.engine.Context(ctx)
-	sql := "SELECT MIN(cached_at) as min FROM packages WHERE cached_at IS NOT NULL"
+	sql := "SELECT MIN(cached_at) as min FROM " + d.engine.TableName(new(alrsh.Package)) + " WHERE cached_at > 0"
 	var args []any
 	if prefix != "" {
 		sql += " AND name LIKE ? ESCAPE ?"

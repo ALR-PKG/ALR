@@ -42,7 +42,7 @@ func (r *Repos) ListAllPackages(ctx context.Context) ([]alrsh.Package, error) {
 
 	siteCount, err := r.rpc.CountPackages(ctx, "name", "")
 	if err == nil {
-		localCount, err := r.db.CountPkgs(ctx, "cached_at IS NOT NULL")
+		localCount, err := r.db.CountPkgs(ctx, "cached_at > 0")
 		if err == nil && int64(siteCount) == localCount {
 			minCachedAt, err := r.db.GetMinCachedAt(ctx, "")
 			if err == nil && minCachedAt > time.Now().Add(-rpcListCacheTTL).Unix() {
@@ -87,9 +87,17 @@ func (r *Repos) SearchPackages(ctx context.Context, name string) ([]alrsh.Packag
 }
 
 func (r *Repos) mergeAndCachePackages(ctx context.Context, localPkgs []alrsh.Package, rpcPkgs []rpc.Package) []alrsh.Package {
+	// Пакеты из git-репозиториев (cached_at = 0) имеют приоритет над сайтом:
+	// их строки не трогаем. Сайт-кэш (cached_at > 0) обновляем, иначе
+	// cached_at протухнет по TTL и кэш перестанет работать навсегда.
+	gitKeys := make(map[string]struct{}, len(localPkgs))
 	seen := make(map[string]struct{}, len(localPkgs))
 	for _, pkg := range localPkgs {
-		seen[pkg.Name+"+"+pkg.Repository] = struct{}{}
+		key := pkg.Name + "+" + pkg.Repository
+		seen[key] = struct{}{}
+		if pkg.CachedAt == 0 {
+			gitKeys[key] = struct{}{}
+		}
 	}
 
 	now := time.Now().Unix()
@@ -98,11 +106,13 @@ func (r *Repos) mergeAndCachePackages(ctx context.Context, localPkgs []alrsh.Pac
 		pkg.CachedAt = now
 
 		key := pkg.Name + "+" + pkg.Repository
-		if _, ok := seen[key]; ok {
+		if _, ok := gitKeys[key]; ok {
 			continue
 		}
-		seen[key] = struct{}{}
-		localPkgs = append(localPkgs, pkg)
+		if _, ok := seen[key]; !ok {
+			seen[key] = struct{}{}
+			localPkgs = append(localPkgs, pkg)
+		}
 
 		if dbErr := r.db.InsertPackage(ctx, pkg); dbErr != nil {
 			slog.Debug("mergeAndCachePackages: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", dbErr)

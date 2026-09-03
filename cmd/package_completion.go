@@ -95,12 +95,18 @@ func completePackages(
 		return nil, fmt.Errorf("completion: ошибка получения пакетов: %w", err)
 	}
 
+	// Пакеты из git-репозиториев (cached_at = 0) не переопределяем сайтом;
+	// сайт-кэш (cached_at > 0) обновляем, чтобы cached_at не протух навсегда
+	gitKeys := make(map[string]struct{}, len(result))
 	for _, pkg := range result {
 		key := pkg.Name + "+" + pkg.Repository
 		if _, ok := seen[key]; ok {
 			continue
 		}
 		seen[key] = struct{}{}
+		if pkg.CachedAt == 0 {
+			gitKeys[key] = struct{}{}
+		}
 		out = append(out, key)
 	}
 
@@ -111,14 +117,15 @@ func completePackages(
 		if err != nil {
 			slog.Debug("completion: ошибка получения count с сайта", "error", err)
 		} else {
-			// Считаем только закэшированные пакеты (cached_at IS NOT NULL)
+			// Считаем только пакеты, закэшированные с сайта (cached_at > 0);
+			// у пакетов из git-репозиториев cached_at = 0
 			var localCount int64
 			if namePrefix != "" {
 				localCount, err = database.CountPkgs(ctx,
-					"cached_at IS NOT NULL AND name LIKE ? ESCAPE ?",
+					"cached_at > 0 AND name LIKE ? ESCAPE ?",
 					cliutils.EscapeLikePattern(namePrefix)+"%", "\\")
 			} else {
-				localCount, err = database.CountPkgs(ctx, "cached_at IS NOT NULL")
+				localCount, err = database.CountPkgs(ctx, "cached_at > 0")
 			}
 			if err != nil {
 				slog.Debug("completion: ошибка получения count из БД", "error", err)
@@ -156,11 +163,13 @@ func completePackages(
 					}
 
 					key := pkg.Name + "+" + pkg.Repository
-					if _, ok := seen[key]; ok {
+					if _, ok := gitKeys[key]; ok {
 						continue
 					}
-					seen[key] = struct{}{}
-					out = append(out, key)
+					if _, ok := seen[key]; !ok {
+						seen[key] = struct{}{}
+						out = append(out, key)
+					}
 
 					if dbErr := database.InsertPackage(ctx, *pkg); dbErr != nil {
 						slog.Debug("completion: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", dbErr)

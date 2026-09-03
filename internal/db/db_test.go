@@ -249,3 +249,44 @@ func TestJsonArrayContains(t *testing.T) {
 		t.Errorf("Expected provides to contain 'x'")
 	}
 }
+
+func TestCachedAtCriteria(t *testing.T) {
+	ctx := context.Background()
+	database := prepareDb()
+	defer database.Close()
+
+	// Пакет из git-репозитория: cached_at = 0
+	gitPkg := testPkg
+	gitPkg.Name = "git-pkg"
+	gitPkg.CachedAt = 0
+
+	// Пакет, закэшированный с сайта
+	sitePkg := testPkg
+	sitePkg.Name = "site-pkg"
+	sitePkg.CachedAt = 1700000000
+
+	if err := database.InsertPackage(ctx, gitPkg); err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+	if err := database.InsertPackage(ctx, sitePkg); err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+
+	// Smart caching считает только сайт-кэш: cached_at > 0
+	count, err := database.CountPkgs(ctx, "cached_at > 0")
+	if err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 site-cached package, got %d", count)
+	}
+
+	// GetMinCachedAt не должен учитывать git-пакеты с cached_at = 0
+	min, err := database.GetMinCachedAt(ctx, "")
+	if err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+	if min != 1700000000 {
+		t.Errorf("Expected min cached_at 1700000000, got %d", min)
+	}
+}
