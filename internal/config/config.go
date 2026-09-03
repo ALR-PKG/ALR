@@ -61,7 +61,7 @@ func defaultConfigKoanf() *koanf.Koanf {
 		"logLevel":              "info",
 		"autoPull":              true,
 		"updateSystemOnUpgrade": false,
-		"preferALRDeps":         true,
+		"preferALRDeps":         false,
 		"site": types.Site{
 			URL:        "https://alr-pkg.ru",
 			Mirrors:    []string{},
@@ -164,7 +164,7 @@ func (c *ALRConfig) migrateConfig() error {
 			needSave = true
 		}
 		if !c.System.k.Exists("preferALRDeps") {
-			c.System.SetPreferALRDeps(true)
+			c.System.SetPreferALRDeps(false)
 			needSave = true
 		}
 		if needSave {
