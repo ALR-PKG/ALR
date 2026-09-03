@@ -20,4 +20,6 @@ commit_msg.txt
 .directory
 
 # repowise API keys (local)
-.repowise/.env
+.repowise/
+.vscode
+.mcp.json
