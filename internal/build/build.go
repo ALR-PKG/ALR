@@ -172,6 +172,7 @@ type Config interface {
 	GetPaths() *config.Paths
 	PagerStyle() string
 	PreferALRDeps() bool
+	Site() types.Site
 }
 
 type FunctionsOutput struct {
