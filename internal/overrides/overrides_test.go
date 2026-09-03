@@ -92,6 +92,34 @@ func TestResolveName(t *testing.T) {
 	}
 }
 
+func TestResolveAltlinux(t *testing.T) {
+	altInfo := &distro.OSRelease{
+		ID: "altlinux",
+	}
+
+	names, err := overrides.Resolve(altInfo, &overrides.Opts{
+		Name:        "deps",
+		Overrides:   true,
+		LikeDistros: true,
+	})
+	if err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+
+	expected := []string{
+		"deps_amd64_altlinux",
+		"deps_altlinux",
+		"deps_amd64_alt",
+		"deps_alt",
+		"deps_amd64",
+		"deps",
+	}
+
+	if !reflect.DeepEqual(names, expected) {
+		t.Errorf("expected %v, got %v", expected, names)
+	}
+}
+
 func TestResolveArch(t *testing.T) {
 	os.Setenv("ALR_ARCH", "arm7")
 	defer os.Setenv("ALR_ARCH", "")

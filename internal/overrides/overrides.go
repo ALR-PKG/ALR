@@ -67,6 +67,10 @@ func Resolve(info *distro.OSRelease, opts *Opts) ([]string, error) {
 	}
 
 	distros := []string{info.ID}
+	if info.ID == "altlinux" {
+		// В репозитории пакетов для ALT Linux используется короткий суффикс _alt
+		distros = append(distros, "alt")
+	}
 	if opts.LikeDistros {
 		distros = append(distros, info.Like...)
 	}
