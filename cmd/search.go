@@ -29,6 +29,7 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
+	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
 	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/search"
@@ -181,6 +182,17 @@ func newSearchCmd() *cobra.Command {
 					fmt.Println()
 				} else {
 					fmt.Println(pkg.Name)
+				}
+			}
+
+			if tmpl == nil && len(packages) > 0 {
+				if siteURL := deps.Cfg.Site().URL; siteURL != "" {
+					query := name
+					if query == "" {
+						query = description
+					}
+					fmt.Println()
+					fmt.Println(gotext.Get("Full results on the site: %s", cliutils.SiteSearchURL(siteURL, query)))
 				}
 			}
 

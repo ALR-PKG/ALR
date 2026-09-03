@@ -22,7 +22,9 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
+	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
+	"git.alr-pkg.ru/Plemya-x/ALR/internal/constants"
 )
 
 func newVersionCmd() *cobra.Command {
@@ -31,6 +33,16 @@ func newVersionCmd() *cobra.Command {
 		Short: gotext.Get("Print the current ALR version and exit"),
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(config.Version)
+
+			siteURL := constants.DefaultSiteURL
+			deps, err := appbuilder.New(cmd.Context()).WithConfig().Build()
+			if err == nil {
+				defer deps.Defer()
+				if u := deps.Cfg.Site().URL; u != "" {
+					siteURL = u
+				}
+			}
+			fmt.Println(gotext.Get("Site: %s", siteURL))
 		},
 	}
 }

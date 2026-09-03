@@ -63,7 +63,7 @@ func defaultConfigKoanf() *koanf.Koanf {
 		"updateSystemOnUpgrade": false,
 		"preferALRDeps":         false,
 		"site": types.Site{
-			URL:        "https://alr-pkg.ru",
+			URL:        constants.DefaultSiteURL,
 			Mirrors:    []string{},
 			Timeout:    10,
 			DisableRPC: false,

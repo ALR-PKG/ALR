@@ -23,6 +23,7 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 
+	"git.alr-pkg.ru/Plemya-x/ALR/internal/constants"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
 )
 
@@ -35,7 +36,7 @@ func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "alr",
 		Short: "Any Linux Repository",
-		Long:  "Any Linux Repository — менеджер пакетов для любого Linux дистрибутива",
+		Long:  "Any Linux Repository — менеджер пакетов для любого Linux дистрибутива\nСайт: " + constants.DefaultSiteURL,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if trimmed := strings.TrimSpace(pmArgs); trimmed != "" {
 				parts := strings.Split(trimmed, " ")

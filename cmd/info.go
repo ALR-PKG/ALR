@@ -98,6 +98,9 @@ func newInfoCmd() *cobra.Command {
 				alrsh.ResolvePackage(&pkg, names)
 				view := alrsh.NewPackageView(pkg)
 				view.Resolved = !all
+				if siteURL := deps.Cfg.Site().URL; siteURL != "" {
+					view.SiteURL = cliutils.SitePackageURL(siteURL, pkg.Name)
+				}
 				err = yaml.NewEncoder(os.Stdout, yaml.UseJSONMarshaler(), yaml.OmitEmpty()).Encode(view)
 				if err != nil {
 					return fmt.Errorf("%s: %w", gotext.Get("Error encoding script variables"), err)

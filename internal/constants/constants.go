@@ -21,6 +21,8 @@ const (
 	UserConfigPath   = "~/.config/alr/alr.toml"
 	SystemCachePath  = "/var/cache/alr"
 	TempDir          = "/tmp/alr"
+	// DefaultSiteURL — адрес сайта ALR по умолчанию
+	DefaultSiteURL = "https://alr-pkg.ru"
 	// PrivilegedGroup - устарело, используйте GetPrivilegedGroup()
 	PrivilegedGroup = "wheel" // оставлено для обратной совместимости
 )

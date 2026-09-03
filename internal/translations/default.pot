@@ -372,11 +372,11 @@ msgstr ""
 msgid "Error resolving overrides"
 msgstr ""
 
-#: cmd/info.go:103
+#: cmd/info.go:106
 msgid "Error encoding script variables"
 msgstr ""
 
-#: cmd/info.go:113
+#: cmd/info.go:116
 msgid "Show all information, not just for the current distro"
 msgstr ""
 
@@ -545,23 +545,27 @@ msgstr ""
 msgid "Remove all mirrors from the repository"
 msgstr ""
 
-#: cmd/root.go:50
+#: cmd/root.go:51
 msgid "Arguments to be passed on to the package manager"
 msgstr ""
 
-#: cmd/root.go:51
+#: cmd/root.go:52
 msgid "Enable interactive questions and prompts"
 msgstr ""
 
-#: cmd/search.go:51
+#: cmd/search.go:52
 msgid "Search packages"
 msgstr ""
 
-#: cmd/search.go:111
+#: cmd/search.go:112
 msgid "Error while executing search"
 msgstr ""
 
 #: cmd/search.go:195
+msgid "Full results on the site: %s"
+msgstr ""
+
+#: cmd/search.go:207
 msgid "Search by provides"
 msgstr ""
 
@@ -597,84 +601,88 @@ msgstr ""
 msgid "Finished checking for updates"
 msgstr ""
 
-#: cmd/version.go:31
+#: cmd/version.go:33
 msgid "Print the current ALR version and exit"
 msgstr ""
 
-#: internal/build/build.go:355 internal/build/build.go:705
-#: internal/build/build.go:1186
+#: cmd/version.go:45
+msgid "Site: %s"
+msgstr ""
+
+#: internal/build/build.go:356 internal/build/build.go:706
+#: internal/build/build.go:1187
 msgid "Using cached package"
 msgstr ""
 
-#: internal/build/build.go:371
+#: internal/build/build.go:372
 msgid "Failed to clean build directory"
 msgstr ""
 
-#: internal/build/build.go:373
+#: internal/build/build.go:374
 msgid "Cleaned build directory for rebuild"
 msgstr ""
 
-#: internal/build/build.go:407
+#: internal/build/build.go:408
 msgid "The checksums array must be the same length as sources"
 msgstr ""
 
-#: internal/build/build.go:471
+#: internal/build/build.go:472
 msgid "Downloading sources"
 msgstr ""
 
-#: internal/build/build.go:990
+#: internal/build/build.go:991
 msgid "Resolving dependencies for packages"
 msgstr ""
 
-#: internal/build/build.go:992
+#: internal/build/build.go:993
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1050
+#: internal/build/build.go:1051
 msgid "Installation summary"
 msgstr ""
 
-#: internal/build/build.go:1077
+#: internal/build/build.go:1078
 msgid "Proceed with installation?"
 msgstr ""
 
-#: internal/build/build.go:1097
+#: internal/build/build.go:1098
 msgid "Installing system dependencies"
 msgstr ""
 
-#: internal/build/build.go:1109
+#: internal/build/build.go:1110
 msgid "Processing optional dependencies"
 msgstr ""
 
-#: internal/build/build.go:1141
+#: internal/build/build.go:1142
 msgid "Building %d packages"
 msgstr ""
 
-#: internal/build/build.go:1147
+#: internal/build/build.go:1148
 msgid "Package %s not found in tree, skipping"
 msgstr ""
 
-#: internal/build/build.go:1165
+#: internal/build/build.go:1166
 msgid "Package %s already installed, skipping"
 msgstr ""
 
-#: internal/build/build.go:1207
+#: internal/build/build.go:1208
 msgid "Building package %s-%s"
 msgstr ""
 
-#: internal/build/build.go:1209
+#: internal/build/build.go:1210
 msgid "Building dependency %s-%s"
 msgstr ""
 
-#: internal/build/build.go:1254
+#: internal/build/build.go:1255
 msgid "Installing target packages"
 msgstr ""
 
-#: internal/build/build.go:1273
+#: internal/build/build.go:1274
 msgid "Would you like to remove all build dependencies?"
 msgstr ""
 
-#: internal/build/build.go:1283
+#: internal/build/build.go:1284
 msgid "Failed to remove build dependencies: %v"
 msgstr ""
 
