@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -67,7 +68,11 @@ func (c *UserConfig) Load() error {
 	}
 
 	if err := c.k.Load(file.Provider(path), ktoml.Parser()); err != nil {
-		return err
+		// Битый конфиг не должен ронять весь CLI: предупреждаем
+		// и работаем с дефолтами. alr config set перезапишет файл.
+		slog.Warn("Пользовательский конфиг повреждён, используются значения по умолчанию",
+			"path", path, "error", err)
+		return nil
 	}
 
 	return c.k.Unmarshal("", c.cfg)
