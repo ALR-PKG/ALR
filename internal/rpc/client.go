@@ -36,10 +36,19 @@ type Client struct {
 	client  *http.Client
 }
 
+const (
+	// maxResponseSize — максимальный размер JSON-ответа RPC (64 МиБ)
+	maxResponseSize = 64 << 20
+	// maxErrorBodySize — сколько байт тела ошибки включать в текст ошибки
+	maxErrorBodySize = 4096
+	// maxPaginationPages — защита от бесконечного цикла пагинации
+	maxPaginationPages = 1000
+)
+
 // NewClient создаёт новый RPC клиент
 func NewClient(site types.Site) *Client {
 	timeout := time.Duration(site.Timeout) * time.Second
-	if timeout == 0 {
+	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
 
@@ -71,11 +80,11 @@ func (c *Client) get(ctx context.Context, endpoint string, query url.Values, res
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
 		return fmt.Errorf("RPC вернул статус %d: %s", resp.StatusCode, string(body))
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseSize)).Decode(result); err != nil {
 		return fmt.Errorf("не удалось декодировать ответ: %w", err)
 	}
 
@@ -102,11 +111,11 @@ func (c *Client) post(ctx context.Context, endpoint string, body, result any) er
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
 		return fmt.Errorf("RPC вернул статус %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseSize)).Decode(result); err != nil {
 		return fmt.Errorf("не удалось декодировать ответ: %w", err)
 	}
 
@@ -192,13 +201,13 @@ func (c *Client) ListAllPackages(ctx context.Context, repo string) ([]Package, e
 	var all []Package
 	page := 1
 
-	for {
+	for page <= maxPaginationPages {
 		pkgs, total, err := c.ListPackages(ctx, repo, page, pageSize)
 		if err != nil {
 			return nil, err
 		}
 		all = append(all, pkgs...)
-		if len(all) >= total {
+		if len(pkgs) == 0 || len(all) >= total {
 			break
 		}
 		page++
@@ -213,7 +222,7 @@ func (c *Client) SearchAllPackages(ctx context.Context, by, query string) ([]Pac
 	var all []Package
 	page := 1
 
-	for {
+	for page <= maxPaginationPages {
 		q := url.Values{}
 		q.Set("by", by)
 		q.Set("arg", query)

@@ -111,7 +111,7 @@ func completePackages(
 	}
 
 	// Smart caching для RPC пакетов
-	if rp != nil && rp.HasRPC() {
+	if rp != nil && rp.PreferRPC() {
 		useCache := false
 		siteCount, err := rp.RPCClient().CountPackages(ctx, "name", namePrefix)
 		if err != nil {
@@ -131,9 +131,9 @@ func completePackages(
 				slog.Debug("completion: ошибка получения count из БД", "error", err)
 			} else {
 				if int64(siteCount) == localCount {
-					// Проверяем свежесть кэша (не старше 24 часов)
+					// Проверяем свежесть кэша
 					minCachedAt, err := database.GetMinCachedAt(ctx, namePrefix)
-					if err == nil && minCachedAt > time.Now().Add(-24*time.Hour).Unix() {
+					if err == nil && minCachedAt > time.Now().Add(-repos.ListCacheTTL).Unix() {
 						useCache = true
 					}
 				}

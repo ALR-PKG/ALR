@@ -25,7 +25,8 @@ import (
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 )
 
-const rpcListCacheTTL = 24 * time.Hour
+// ListCacheTTL — срок свежести кэша списка пакетов с сайта
+const ListCacheTTL = 24 * time.Hour
 
 // ListAllPackages возвращает все доступные пакеты.
 // Если настроен RPC, используется smart caching: при свежем и полном кэше
@@ -36,7 +37,7 @@ func (r *Repos) ListAllPackages(ctx context.Context) ([]alrsh.Package, error) {
 		return nil, err
 	}
 
-	if r.rpc == nil {
+	if r.rpc == nil || !r.cfg.Site().PreferRPC {
 		return localPkgs, nil
 	}
 
@@ -45,7 +46,7 @@ func (r *Repos) ListAllPackages(ctx context.Context) ([]alrsh.Package, error) {
 		localCount, err := r.db.CountPkgs(ctx, "cached_at > 0")
 		if err == nil && int64(siteCount) == localCount {
 			minCachedAt, err := r.db.GetMinCachedAt(ctx, "")
-			if err == nil && minCachedAt > time.Now().Add(-rpcListCacheTTL).Unix() {
+			if err == nil && minCachedAt > time.Now().Add(-ListCacheTTL).Unix() {
 				return localPkgs, nil
 			}
 		}
@@ -73,7 +74,7 @@ func (r *Repos) SearchPackages(ctx context.Context, name string) ([]alrsh.Packag
 		return nil, err
 	}
 
-	if r.rpc == nil {
+	if r.rpc == nil || !r.cfg.Site().PreferRPC {
 		return localPkgs, nil
 	}
 
@@ -91,10 +92,10 @@ func (r *Repos) mergeAndCachePackages(ctx context.Context, localPkgs []alrsh.Pac
 	// их строки не трогаем. Сайт-кэш (cached_at > 0) обновляем, иначе
 	// cached_at протухнет по TTL и кэш перестанет работать навсегда.
 	gitKeys := make(map[string]struct{}, len(localPkgs))
-	seen := make(map[string]struct{}, len(localPkgs))
-	for _, pkg := range localPkgs {
+	indexes := make(map[string]int, len(localPkgs))
+	for i, pkg := range localPkgs {
 		key := pkg.Name + "+" + pkg.Repository
-		seen[key] = struct{}{}
+		indexes[key] = i
 		if pkg.CachedAt == 0 {
 			gitKeys[key] = struct{}{}
 		}
@@ -109,8 +110,11 @@ func (r *Repos) mergeAndCachePackages(ctx context.Context, localPkgs []alrsh.Pac
 		if _, ok := gitKeys[key]; ok {
 			continue
 		}
-		if _, ok := seen[key]; !ok {
-			seen[key] = struct{}{}
+		// Свежая версия с сайта заменяет устаревшую локальную и в выдаче
+		if idx, ok := indexes[key]; ok {
+			localPkgs[idx] = pkg
+		} else {
+			indexes[key] = len(localPkgs)
 			localPkgs = append(localPkgs, pkg)
 		}
 
