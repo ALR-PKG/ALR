@@ -42,6 +42,25 @@ ALR был создан потому, что упаковка программн
 
 ---
 
+## Сайт и RPC-режим
+
+ALR умеет работать с сайтом [alr-pkg.ru](https://alr-pkg.ru) напрямую, без клонирования git-репозиториев: поиск (`alr search`), список пакетов (`alr list`), проверка обновлений (`alr upgrade`) и автодополнение в shell используют RPC API сайта с локальным кэшированием и автоматическим откатом на локальную БД при недоступности сайта.
+
+Управление настройками сайта:
+
+```bash
+alr config set site.url https://alr-pkg.ru   # адрес сайта
+alr config set site.timeout 10               # таймаут запросов (сек)
+alr config set site.preferRPC true           # RPC-first для search/list/upgrade
+alr config set site.disableRPC false         # полностью отключить RPC
+```
+
+Те же настройки можно задать переменными окружения: `ALR_SITE_URL`, `ALR_SITE_TIMEOUT`, `ALR_SITE_PREFER_RPC`, `ALR_SITE_DISABLE_RPC`.
+
+Пользовательские настройки хранятся в `~/.config/alr/alr.toml` и имеют приоритет над системным `/etc/alr/alr.toml`. Управление — через `alr config set/get/show`.
+
+---
+
 ## Документация
 
 Документация находится в [Wiki](https://alr-pkg.ru/wiki/ALR).
