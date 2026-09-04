@@ -75,6 +75,9 @@ type Package struct {
 	// AlrShURL — прямая ссылка на alr.sh файл (для RPC режима без git clone)
 	AlrShURL string `sh:"-" xorm:"'alr_sh_url'" json:"-"`
 
+	// AlrShSHA256 — sha256 хеш alr.sh для верификации скачанного файла
+	AlrShSHA256 string `sh:"-" xorm:"'alr_sh_sha256'" json:"-"`
+
 	// CachedAt — время последнего кэширования пакета через RPC (unix timestamp)
 	CachedAt int64 `sh:"-" xorm:"'cached_at'" json:"-"`
 
@@ -90,6 +93,7 @@ type ExtraFile struct {
 	Name        string `json:"name"`
 	Path        string `json:"path"`
 	DownloadURL string `json:"download_url"`
+	SHA256      string `json:"sha256,omitempty"`
 }
 
 type Scripts struct {

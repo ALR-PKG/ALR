@@ -18,6 +18,8 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -155,4 +157,41 @@ func TestResolveScriptDownloadsFromTrustedHost(t *testing.T) {
 	// Файл с traversal в пути не скачан
 	_, err = os.Stat(filepath.Join(repodir, "evil.sh"))
 	assert.True(t, os.IsNotExist(err))
+}
+
+func TestResolveScriptChecksumVerification(t *testing.T) {
+	content := []byte("name='somepkg'")
+	sum := sha256.Sum256(content)
+	goodHash := hex.EncodeToString(sum[:])
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(content)
+	}))
+	defer srv.Close()
+
+	// Корректный хеш — файл принят
+	r, repodir := newTestResolver(t, types.Site{URL: srv.URL})
+	pkg := &alrsh.Package{
+		Name:        "somepkg",
+		Repository:  "alr-repo",
+		AlrShURL:    srv.URL + "/alr.sh",
+		AlrShSHA256: goodHash,
+	}
+	r.ResolveScript(context.Background(), pkg)
+	_, err := os.Stat(filepath.Join(repodir, "alr-repo", "somepkg", "alr.sh"))
+	require.NoError(t, err)
+
+	// Неверный хеш — файл не должен остаться
+	r2, repodir2 := newTestResolver(t, types.Site{URL: srv.URL})
+	pkg2 := &alrsh.Package{
+		Name:        "somepkg",
+		Repository:  "alr-repo",
+		AlrShURL:    srv.URL + "/alr.sh",
+		AlrShSHA256: "0000000000000000000000000000000000000000000000000000000000000000",
+	}
+	r2.ResolveScript(context.Background(), pkg2)
+	_, err = os.Stat(filepath.Join(repodir2, "alr-repo", "somepkg", "alr.sh"))
+	assert.True(t, os.IsNotExist(err))
+	_, err = os.Stat(filepath.Join(repodir2, "alr-repo", "somepkg", "alr.sh.tmp"))
+	assert.True(t, os.IsNotExist(err), "временный файл должен быть удалён")
 }

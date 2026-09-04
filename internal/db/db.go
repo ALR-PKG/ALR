@@ -37,7 +37,7 @@ import (
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
 )
 
-const CurrentVersion = 7
+const CurrentVersion = 8
 
 type Version struct {
 	Version int `xorm:"'version'"`

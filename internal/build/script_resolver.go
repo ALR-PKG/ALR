@@ -18,6 +18,8 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -82,7 +84,7 @@ func (s *ScriptResolver) ResolveScript(
 			return &ScriptInfo{Repository: repository, Script: script}
 		}
 		slog.Debug("ScriptResolver: alr.sh не найден локально, скачиваем по URL", "pkg", pkg.Name, "url", pkg.AlrShURL)
-		if err := s.downloadFile(ctx, pkg.AlrShURL, script); err == nil {
+		if err := s.downloadFile(ctx, pkg.AlrShURL, script, pkg.AlrShSHA256); err == nil {
 			slog.Debug("ScriptResolver: alr.sh успешно скачан", "pkg", pkg.Name, "path", script)
 			// Скачиваем дополнительные файлы из директории пакета (кроме alr.sh)
 			for _, ef := range pkg.ExtraFiles {
@@ -98,7 +100,7 @@ func (s *ScriptResolver) ResolveScript(
 					slog.Warn("ScriptResolver: небезопасный путь доп. файла", "pkg", pkg.Name, "file", ef.Name, "error", err)
 					continue
 				}
-				if err := s.downloadFile(ctx, ef.DownloadURL, destPath); err != nil {
+				if err := s.downloadFile(ctx, ef.DownloadURL, destPath, ef.SHA256); err != nil {
 					slog.Warn("ScriptResolver: не удалось скачать доп. файл", "pkg", pkg.Name, "file", ef.Name, "error", err)
 				} else {
 					slog.Debug("ScriptResolver: доп. файл скачан", "pkg", pkg.Name, "file", ef.Name)
@@ -161,8 +163,9 @@ func safeJoin(base string, elems ...string) (string, error) {
 	return joined, nil
 }
 
-// downloadFile скачивает файл по HTTP и сохраняет по указанному пути
-func (s *ScriptResolver) downloadFile(ctx context.Context, url, destPath string) error {
+// downloadFile скачивает файл по HTTP и сохраняет по указанному пути.
+// Если expectedSHA256 не пустой, содержимое проверяется по хешу до установки на место
+func (s *ScriptResolver) downloadFile(ctx context.Context, url, destPath, expectedSHA256 string) error {
 	// Создаём директорию если нужно
 	dir := filepath.Dir(destPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -206,10 +209,37 @@ func (s *ScriptResolver) downloadFile(ctx context.Context, url, destPath string)
 	}
 	f.Close()
 
+	if expectedSHA256 != "" {
+		if err := verifySHA256(tmpPath, expectedSHA256); err != nil {
+			os.Remove(tmpPath)
+			return err
+		}
+	}
+
 	if err := os.Rename(tmpPath, destPath); err != nil {
 		os.Remove(tmpPath)
 		return fmt.Errorf("не удалось переименовать файл: %w", err)
 	}
 
+	return nil
+}
+
+// verifySHA256 сравнивает sha256 файла с ожидаемым хешом
+func verifySHA256(path, expected string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("не удалось открыть файл для проверки хеша: %w", err)
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return fmt.Errorf("не удалось вычислить хеш: %w", err)
+	}
+
+	actual := hex.EncodeToString(h.Sum(nil))
+	if !strings.EqualFold(actual, expected) {
+		return fmt.Errorf("хеш скачанного файла не совпадает: ожидался %s, получен %s", expected, actual)
+	}
 	return nil
 }

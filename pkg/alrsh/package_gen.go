@@ -46,6 +46,7 @@ type packageResolved struct {
 	AutoReqSkipList  []string          `json:"auto_req_skiplist,omitempty"`
 	AutoProvSkipList []string          `json:"auto_prov_skiplist,omitempty"`
 	AlrShURL         string            `json:"-"`
+	AlrShSHA256      string            `json:"-"`
 	CachedAt         int64             `json:"-"`
 	ExtraFiles       []ExtraFile       `json:"extra_files,omitempty"`
 	FireJailed       bool              `json:"firejailed"`
@@ -82,6 +83,7 @@ func PackageToResolved(src *Package) packageResolved {
 		AutoReqSkipList:  src.AutoReqSkipList.Resolved(),
 		AutoProvSkipList: src.AutoProvSkipList.Resolved(),
 		AlrShURL:         src.AlrShURL,
+		AlrShSHA256:      src.AlrShSHA256,
 		CachedAt:         src.CachedAt,
 		ExtraFiles:       src.ExtraFiles,
 		FireJailed:       src.FireJailed.Resolved(),

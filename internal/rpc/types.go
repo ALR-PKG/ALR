@@ -38,6 +38,7 @@ type Package struct {
 	OptDepends    []string    `json:"opt_depends"`
 	Path          string      `json:"path"`
 	AlrShURL      string      `json:"alr_sh_url"`
+	AlrShSHA256   string      `json:"alr_sh_sha256"`
 	LastModified  int64       `json:"last_modified"`
 	ExtraFiles    []ExtraFile `json:"extra_files"`
 }
@@ -47,6 +48,7 @@ type ExtraFile struct {
 	Name        string `json:"name"`
 	Path        string `json:"path"`
 	DownloadURL string `json:"download_url"`
+	SHA256      string `json:"sha256"`
 }
 
 // ReposResponse — ответ от /rpc/v1/repos
@@ -166,6 +168,7 @@ func (p *Package) ToALRShPackage() *alrsh.Package {
 	}
 
 	pkg.AlrShURL = p.AlrShURL
+	pkg.AlrShSHA256 = p.AlrShSHA256
 
 	// Копируем дополнительные файлы
 	if len(p.ExtraFiles) > 0 {
@@ -175,6 +178,7 @@ func (p *Package) ToALRShPackage() *alrsh.Package {
 				Name:        ef.Name,
 				Path:        ef.Path,
 				DownloadURL: ef.DownloadURL,
+				SHA256:      ef.SHA256,
 			}
 		}
 	}
