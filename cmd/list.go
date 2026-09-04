@@ -109,7 +109,7 @@ func newListCmd() *cobra.Command {
 
 			var result []alrsh.Package
 
-			if deps.Repos != nil && deps.Repos.HasRPC() {
+			if deps.Repos != nil && deps.Repos.PreferRPC() {
 				if len(args) == 0 {
 					result, err = deps.Repos.ListAllPackages(ctx)
 				} else {

@@ -115,7 +115,7 @@ func newSearchCmd() *cobra.Command {
 			// RPC-first поиск по имени/описанию, если сайт доступен.
 			// При одновременном указании name и description остаёмся на локальной БД,
 			// чтобы сохранить семантику AND.
-			if deps.Repos != nil && deps.Repos.HasRPC() && (name != "" || description != "") && !(name != "" && description != "") {
+			if deps.Repos != nil && deps.Repos.PreferRPC() && (name != "" || description != "") && !(name != "" && description != "") {
 				var rpcBy, rpcArg string
 				if name != "" {
 					rpcBy = "name"

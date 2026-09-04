@@ -68,6 +68,14 @@ func (r *Repos) HasRPC() bool {
 	return r.rpc != nil
 }
 
+// PreferRPC возвращает true если RPC настроен и предпочтителен для
+// поиска, листинга и проверки обновлений. При site.preferRPC=false
+// эти операции идут через локальную БД, а RPC используется только
+// для получения пакетов, отсутствующих локально
+func (r *Repos) PreferRPC() bool {
+	return r.rpc != nil && r.cfg.Site().PreferRPC
+}
+
 // RPCClient возвращает RPC клиент (nil если не настроен)
 func (r *Repos) RPCClient() *rpc.Client {
 	return r.rpc

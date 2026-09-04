@@ -223,7 +223,7 @@ func checkForUpdates(
 	total := len(pkgNames)
 
 	rpcHandled := make(map[string]bool)
-	if repos != nil && repos.HasRPC() {
+	if repos != nil && repos.PreferRPC() {
 		rpcUpdates, err := repos.CheckUpdates(ctx, installed, info)
 		if err != nil {
 			slog.Warn("RPC проверка обновлений не удалась, используем локальный fallback", "error", err)
@@ -234,7 +234,9 @@ func checkForUpdates(
 			}
 
 			rpcPkgs, err := repos.RPCClient().GetPackages(ctx, rpcNames)
-			if err == nil {
+			if err != nil {
+				slog.Warn("RPC получение данных пакетов не удалось, обновления будут проверены локально", "error", err)
+			} else {
 				rpcPkgMap := make(map[string]*alrsh.Package, len(rpcPkgs))
 				for i := range rpcPkgs {
 					p := &rpcPkgs[i]
