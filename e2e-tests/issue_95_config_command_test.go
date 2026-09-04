@@ -33,15 +33,15 @@ func TestE2EIssue95ConfigCommand(t *testing.T) {
 			defaultPrepare(t, r)
 			execShouldNoError(t, r, "sh", "-c", "alr config show | grep \"autoPull: true\"")
 			execShouldNoError(t, r, "sh", "-c", "alr config get | grep \"autoPull: true\"")
-			execShouldError(t, r, "sh", "-c", "cat /etc/alr/alr.toml | grep \"autoPull\"")
 			execShouldNoError(t, r, "alr", "config", "get", "autoPull")
 			execShouldError(t, r, "alr", "config", "set", "autoPull")
-			execShouldNoError(t, r, "sudo", "alr", "config", "set", "autoPull", "false")
+			// config set пишет в пользовательский конфиг ~/.config/alr/alr.toml
+			execShouldNoError(t, r, "alr", "config", "set", "autoPull", "false")
 			execShouldNoError(t, r, "sh", "-c", "alr config show | grep \"autoPull: false\"")
 			execShouldNoError(t, r, "sh", "-c", "alr config get | grep \"autoPull: false\"")
-			execShouldNoError(t, r, "sh", "-c", "cat /etc/alr/alr.toml | grep \"autoPull = false\"")
+			execShouldNoError(t, r, "sh", "-c", "cat ~/.config/alr/alr.toml | grep \"autoPull\"")
 			execShouldNoError(t, r, "alr", "config", "set", "autoPull", "true")
-			execShouldNoError(t, r, "sh", "-c", "cat /etc/alr/alr.toml | grep \"autoPull = true\"")
+			execShouldNoError(t, r, "sh", "-c", "cat ~/.config/alr/alr.toml | grep \"autoPull = true\"")
 		},
 	)
 }
