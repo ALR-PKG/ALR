@@ -35,7 +35,7 @@ const rpcCacheTTL = 1 * time.Hour
 
 // findInCache ищет пакеты в локальной SQLite БД (кэш от предыдущих RPC-запросов).
 // Возвращает найденные пакеты и список имён, которых нет в кэше или кэш устарел.
-func (rs *Repos) findInCache(pkgNames []string) (map[string][]alrsh.Package, []string) {
+func (rs *Repos) findInCache(ctx context.Context, pkgNames []string) (map[string][]alrsh.Package, []string) {
 	found := make(map[string][]alrsh.Package)
 	var notFound []string
 	cutoff := time.Now().Add(-rpcCacheTTL).Unix()
@@ -44,7 +44,15 @@ func (rs *Repos) findInCache(pkgNames []string) (map[string][]alrsh.Package, []s
 		if name == "" {
 			continue
 		}
-		result, err := rs.db.GetPkgs(context.Background(), "name = ? AND cached_at > ?", name, cutoff)
+		dep := depver.Parse(name)
+		where, args := nameToQuery(dep.Name)
+		where += " AND cached_at > ?"
+		args = append(args, cutoff)
+
+		result, err := rs.db.GetPkgs(ctx, where, args...)
+		if err == nil && dep.HasVersionConstraint() && len(result) > 0 {
+			result = filterByVersion(result, dep)
+		}
 		if err == nil && len(result) > 0 {
 			found[name] = result
 			slog.Debug("FindPkgs: пакет найден в локальном кэше", "name", name)
@@ -53,6 +61,21 @@ func (rs *Repos) findInCache(pkgNames []string) (map[string][]alrsh.Package, []s
 		}
 	}
 	return found, notFound
+}
+
+// nameToQuery строит WHERE-условие поиска по имени пакета
+// с учётом форм repo/pkg и pkg+repo
+func nameToQuery(searchName string) (string, []any) {
+	switch {
+	case strings.Contains(searchName, "/"):
+		parts := strings.SplitN(searchName, "/", 2)
+		return "name = ? AND repository = ?", []any{parts[1], parts[0]}
+	case strings.Contains(searchName, "+"):
+		parts := strings.SplitN(searchName, "+", 2)
+		return "name = ? AND repository = ?", []any{parts[0], parts[1]}
+	default:
+		return "name = ?", []any{searchName}
+	}
 }
 
 // findViaRPC ищет пакеты через ALR Site RPC API
@@ -65,13 +88,15 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	found := make(map[string][]alrsh.Package)
 	var notFound []string
 
-	// Преобразуем repo/pkg → pkg+repo для RPC API
+	// Преобразуем repo/pkg → pkg+repo для RPC API,
+	// версионные ограничения (pkg>=1.0) срезаем — фильтруем после ответа
 	rpcNames := make([]string, 0, len(pkgNames))
 	nameMap := make(map[string]string) // rpcName → originalName
 	for _, name := range pkgNames {
-		rpcName := name
-		if strings.Contains(name, "/") {
-			parts := strings.SplitN(name, "/", 2)
+		searchName := depver.Parse(name).Name
+		rpcName := searchName
+		if strings.Contains(searchName, "/") {
+			parts := strings.SplitN(searchName, "/", 2)
 			rpcName = parts[1] + "+" + parts[0]
 		}
 		rpcNames = append(rpcNames, rpcName)
@@ -93,17 +118,18 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 		// Сопоставляем с оригинальным именем запроса по имени пакета или basepkg_name
 		matched := false
 		for _, origName := range pkgNames {
-			rpcName := origName
-			if strings.Contains(origName, "/") {
-				parts := strings.SplitN(origName, "/", 2)
+			origSearch := depver.Parse(origName).Name
+			rpcName := origSearch
+			if strings.Contains(origSearch, "/") {
+				parts := strings.SplitN(origSearch, "/", 2)
 				rpcName = parts[1] + "+" + parts[0]
 			}
-			if p.Name == origName || p.Name == rpcName {
+			if p.Name == origSearch || p.Name == rpcName {
 				rpcResults[origName] = append(rpcResults[origName], p)
 				matched = true
 				break
 			}
-			if p.BasePkgName == origName || p.BasePkgName == rpcName {
+			if p.BasePkgName == origSearch || p.BasePkgName == rpcName {
 				rpcResults[origName] = append(rpcResults[origName], p)
 				matched = true
 				break
@@ -116,18 +142,27 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 
 	for _, name := range pkgNames {
 		if pkgs, ok := rpcResults[name]; ok && len(pkgs) > 0 {
+			dep := depver.Parse(name)
 			var result []alrsh.Package
 			for _, p := range pkgs {
 				pkg := *p.ToALRShPackage()
 				pkg.CachedAt = time.Now().Unix()
-				result = append(result, pkg)
 				// Сохраняем пакет в локальную БД для кэширования и tab completion
 				if err := rs.db.InsertPackage(ctx, pkg); err != nil {
 					slog.Debug("FindPkgs: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", err)
 				}
+				// В кэш пишем всё, а в результат отдаём только подходящие по версии
+				if dep.HasVersionConstraint() && !dep.Satisfies(pkg.Version) {
+					continue
+				}
+				result = append(result, pkg)
 			}
-			found[name] = result
-			slog.Debug("FindPkgs: пакет найден через RPC", "name", name)
+			if len(result) > 0 {
+				found[name] = result
+				slog.Debug("FindPkgs: пакет найден через RPC", "name", name)
+			} else {
+				notFound = append(notFound, name)
+			}
 		} else {
 			notFound = append(notFound, name)
 		}
@@ -147,7 +182,7 @@ func (rs *Repos) FindPkgs(ctx context.Context, pkgs []string) (map[string][]alrs
 	// Сначала проверяем локальный кэш (пакеты, ранее полученные через RPC)
 	var cacheNotFound []string
 	if rs.rpc != nil {
-		cacheFound, remaining := rs.findInCache(pkgs)
+		cacheFound, remaining := rs.findInCache(ctx, pkgs)
 		for k, v := range cacheFound {
 			found[k] = v
 		}
