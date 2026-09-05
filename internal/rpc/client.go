@@ -181,7 +181,11 @@ func (c *Client) ListPackages(ctx context.Context, repo string, page, limit int)
 	return resp.Results, resp.Total, nil
 }
 
-// CountPackages получает количество пакетов
+// CountPackages получает количество пакетов.
+// Контракт сервера: by=name — префиксное сравнение (соответствует локальному
+// `name LIKE 'query%'` в SQLite), пустой query — все пакеты активных
+// репозиториев. От этих семантик зависит smart-кэш в ListAllPackages
+// и автодополнении: счётчики сайта и локального кэша должны совпадать
 func (c *Client) CountPackages(ctx context.Context, by, query string) (int, error) {
 	q := url.Values{}
 	q.Set("by", by)
