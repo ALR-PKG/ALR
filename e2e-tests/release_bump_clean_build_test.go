@@ -42,7 +42,7 @@ func TestE2EReleaseBumpCleanBuild(t *testing.T) {
 			execShouldNoError(t, r, "sudo", "alr", "in", "bar-pkg")
 
 			// Проверяем что пакет установлен
-			execShouldNoError(t, r, "sh", "-c", "alr list -i | grep -q bar-pkg")
+			execShouldNoError(t, r, "sh", "-c", "alr list -I | grep -q bar-pkg")
 
 			// Обновляем репозиторий до версии с тем же version но другим release
 			// (в тестовом репозитории commit d9a3541561 должен иметь другой release)
@@ -77,20 +77,20 @@ func TestE2EReinstallSameRelease(t *testing.T) {
 			execShouldNoError(t, r, "sudo", "alr", "in", "foo-pkg")
 
 			// Проверяем что пакет установлен
-			execShouldNoError(t, r, "sh", "-c", "alr list -i | grep -q foo-pkg")
+			execShouldNoError(t, r, "sh", "-c", "alr list -I | grep -q foo-pkg")
 
 			// Удаляем пакет
 			execShouldNoError(t, r, "sudo", "alr", "rm", "foo-pkg")
 
 			// Проверяем что пакет удален
-			execShouldNoError(t, r, "sh", "-c", "! alr list -i | grep -q foo-pkg")
+			execShouldNoError(t, r, "sh", "-c", "! alr list -I | grep -q foo-pkg")
 
 			// Переустанавливаем пакет (тот же release)
 			// Должен использоваться кэш собранного пакета
 			execShouldNoError(t, r, "sudo", "alr", "in", "foo-pkg")
 
 			// Проверяем что пакет снова установлен
-			execShouldNoError(t, r, "sh", "-c", "alr list -i | grep -q foo-pkg")
+			execShouldNoError(t, r, "sh", "-c", "alr list -I | grep -q foo-pkg")
 		},
 	)
 }

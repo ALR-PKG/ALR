@@ -40,10 +40,11 @@ func TestE2ETargetPackageInstall(t *testing.T) {
 			execShouldNoError(t, r, "sudo", "alr", "in", "foo-pkg")
 
 			// Проверяем что пакет установлен (должен быть в списке установленных)
-			execShouldNoError(t, r, "sh", "-c", "alr list -i | grep -q foo-pkg")
+			execShouldNoError(t, r, "sh", "-c", "alr list -I | grep -q foo-pkg")
 
 			// Проверяем что файлы пакета действительно установлены в систему
-			execShouldNoError(t, r, "sh", "-c", "which foo-pkg >/dev/null 2>&1 || test -f /usr/bin/foo-pkg")
+			// (foo-pkg из тестового репозитория устанавливает файл /opt/foo)
+			execShouldNoError(t, r, "sh", "-c", "test -f /opt/foo")
 		},
 	)
 }
@@ -65,7 +66,7 @@ func TestE2ETargetPackageUpgrade(t *testing.T) {
 			execShouldNoError(t, r, "sudo", "alr", "in", "bar-pkg")
 
 			// Проверяем что пакет установлен
-			execShouldNoError(t, r, "sh", "-c", "alr list -i | grep -q bar-pkg")
+			execShouldNoError(t, r, "sh", "-c", "alr list -I | grep -q bar-pkg")
 
 			// Обновляем репозиторий до новой версии
 			execShouldNoError(t, r, "sudo", "alr", "repo", "set-ref", "alr-repo", "d9a3541561")
