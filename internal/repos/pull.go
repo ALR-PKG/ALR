@@ -44,6 +44,7 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
+	"git.alr-pkg.ru/Plemya-x/ALR/internal/fsutils"
 	"git.alr-pkg.ru/Plemya-x/ALR/internal/shutils/handlers"
 	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
 )
@@ -237,6 +238,13 @@ func (rs *Repos) pullRepoFromURL(ctx context.Context, rawRepoUrl string, repo *t
 		return err
 	}
 	repoFS = w.Filesystem
+
+	// Нормализуем права на кэш репозитория для привилегированной группы:
+	// git создаёт pack-файлы с правами 0600, и пользователи из группы
+	// wheel/sudo не смогут ни прочитать, ни обновить кэш
+	if err := fsutils.EnsureGroupAccess(repoDir); err != nil {
+		slog.Debug("Pull: не удалось нормализовать права кэша репозитория", "repo", repo.Name, "error", err)
+	}
 
 	new, err := r.Head()
 	if err != nil {
