@@ -402,7 +402,7 @@ msgstr "Ошибка при определении языка системы"
 
 #: cmd/info.go:94
 msgid "Error resolving overrides"
-msgstr "Ошибка устранения переорпеделений"
+msgstr "Ошибка устранения переопределений"
 
 #: cmd/info.go:106
 msgid "Error encoding script variables"
