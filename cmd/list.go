@@ -156,12 +156,17 @@ func newListCmd() *cobra.Command {
 						}
 
 						if i := strings.LastIndex(version, "-"); i != -1 {
-							verInfo.Version = version[:i]
-							verInfo.Release, err = overrides.ParseReleasePlatformSpecific(version[i+1:], info)
+							rel, err := overrides.ParseReleasePlatformSpecific(version[i+1:], info)
 							if err != nil {
-								slog.Error(gotext.Get("Failed to parse release"), "err", err)
-								return fmt.Errorf("%s: %w", gotext.Get("Failed to parse release"), err)
+								// Системный пакет, случайно совпавший с форматом
+								// имени ALR (например, libstdc++6 с релизом
+								// 1ubuntu1) — пропускаем, не роняя команду
+								slog.Debug("list: не удалось разобрать релиз системного пакета, пропускаем",
+									"pkg", pkgName, "version", version, "err", err)
+								continue
 							}
+							verInfo.Version = version[:i]
+							verInfo.Release = rel
 						}
 
 						installedAlrPackages[fmt.Sprintf("%s/%s", repoName, packageName)] = verInfo
