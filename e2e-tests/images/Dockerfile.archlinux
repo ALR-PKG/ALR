@@ -1,0 +1,13 @@
+FROM docker.io/library/archlinux:latest
+
+RUN pacman -Syu --noconfirm sudo git bash which \
+    && pacman -Scc --noconfirm \
+    && useradd -m -s /bin/bash -G wheel alr \
+    && echo 'alr ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/alr
+
+COPY alr-test-setup /bin/alr-test-setup
+RUN chmod 755 /bin/alr-test-setup
+
+USER alr
+WORKDIR /home/alr
+CMD ["sleep", "infinity"]

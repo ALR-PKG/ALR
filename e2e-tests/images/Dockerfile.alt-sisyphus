@@ -1,0 +1,14 @@
+FROM docker.io/library/alt:sisyphus
+
+RUN apt-get update \
+    && apt-get install -y sudo git bash rpm-build \
+    && rm -rf /var/cache/apt /var/lib/apt/lists/* \
+    && useradd -m -s /bin/bash -G wheel alr \
+    && echo 'alr ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/alr
+
+COPY alr-test-setup /bin/alr-test-setup
+RUN chmod 755 /bin/alr-test-setup
+
+USER alr
+WORKDIR /home/alr
+CMD ["sleep", "infinity"]

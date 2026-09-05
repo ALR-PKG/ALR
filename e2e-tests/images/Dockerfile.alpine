@@ -1,0 +1,12 @@
+FROM docker.io/library/alpine:latest
+
+RUN apk add --no-cache bash sudo git ca-certificates shadow \
+    && useradd -m -s /bin/bash -G wheel alr \
+    && echo 'alr ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/alr
+
+COPY alr-test-setup /bin/alr-test-setup
+RUN chmod 755 /bin/alr-test-setup
+
+USER alr
+WORKDIR /home/alr
+CMD ["sleep", "infinity"]

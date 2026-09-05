@@ -20,11 +20,22 @@ package e2etests_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"go.alt-gnome.ru/capytest"
 	"go.alt-gnome.ru/capytest/providers/podman"
 )
+
+// e2eImage возвращает полное имя тестового образа. Префикс реестра
+// можно переопределить через ALR_E2E_IMAGE_PREFIX.
+func e2eImage(name string) string {
+	prefix := os.Getenv("ALR_E2E_IMAGE_PREFIX")
+	if prefix == "" {
+		prefix = "git.alr-pkg.ru/plemya-x/alr-e2e-test-image"
+	}
+	return fmt.Sprintf("%s-%s:latest", prefix, name)
+}
 
 var ALL_SYSTEMS []string = []string{
 	"ubuntu-24.04",
@@ -85,13 +96,24 @@ func runMatrixSuite(t *testing.T, name string, images []string, test func(t *tes
 	t.Helper()
 	for _, image := range images {
 		ts := capytest.NewTestSuite(t, podman.Provider(
-			podman.WithImage(fmt.Sprintf("ghcr.io/maks1ms/alr-e2e-test-image-%s", image)),
-			podman.WithVolumes("./alr:/tmp/alr"),
+			podman.WithImage(e2eImage(image)),
+			podman.WithVolumes("./alr:/tmp/alr-bin"),
+			// podman прокидывает proxy-переменные хоста в контейнер;
+			// прокси хоста (127.0.0.1) из контейнера недоступен — отключаем
+			podman.WithEnvVars(
+				"http_proxy=", "https_proxy=", "all_proxy=",
+				"HTTP_PROXY=", "HTTPS_PROXY=", "ALL_PROXY=",
+			),
 			podman.WithPrivileged(true),
 		))
 		ts.BeforeEach(func(t *testing.T, r capytest.Runner) {
 			execShouldNoError(t, r, "/bin/alr-test-setup", "alr-install")
 			execShouldNoError(t, r, "/bin/alr-test-setup", "passwordless-sudo-setup")
+			// RPC-режим по умолчанию включён и ходит на боевой сайт —
+			// отключаем его, чтобы e2e-тесты не зависели от сети.
+			// Выставляем и для root (sudo-вызовы), и для тестового пользователя.
+			execShouldNoError(t, r, "sudo", "alr", "config", "set", "site.disableRPC", "true")
+			execShouldNoError(t, r, "alr", "config", "set", "site.disableRPC", "true")
 		})
 		ts.Run(fmt.Sprintf("%s/%s", name, image), test)
 	}

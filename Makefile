@@ -116,3 +116,9 @@ prepare-for-e2e-test: clean build
 
 e2e-test: prepare-for-e2e-test
 	go test -tags=e2e ./...
+
+e2e-images-build:
+	cd e2e-tests/images && sh build.sh
+
+e2e-images-push:
+	cd e2e-tests/images && PUSH=1 sh build.sh $(E2E_IMAGE_PREFIXES)

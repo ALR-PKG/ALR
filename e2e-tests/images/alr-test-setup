@@ -1,0 +1,39 @@
+#!/bin/sh
+# ALR - Any Linux Repository
+# Copyright (C) 2026 The ALR Authors
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# alr-test-setup — подготовка e2e-окружения внутри тестового контейнера.
+# Выполняется от пользователя alr (USER в образе), sudo уже passwordless.
+set -e
+
+case "$1" in
+alr-install)
+	# /tmp/alr-bin — свежесобранный бинарник, смонтированный из e2e-tests/alr
+	# (нельзя монтировать в /tmp/alr — это рабочая директория сборок ALR)
+	sudo install -m 0755 /tmp/alr-bin /usr/local/bin/alr
+	;;
+passwordless-sudo-setup)
+	# sudoers настраивается при сборке образа, здесь только проверка
+	if ! sudo -n true 2>/dev/null; then
+		echo "alr-test-setup: passwordless sudo не настроен" >&2
+		exit 1
+	fi
+	;;
+*)
+	echo "usage: alr-test-setup {alr-install|passwordless-sudo-setup}" >&2
+	exit 1
+	;;
+esac

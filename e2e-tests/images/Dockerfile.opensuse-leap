@@ -1,0 +1,15 @@
+FROM docker.io/opensuse/leap:latest
+
+RUN zypper --non-interactive install sudo git bash which rpm-build \
+    && zypper clean --all \
+    && (getent group wheel || groupadd wheel) \
+    && useradd -m -s /bin/bash -G wheel alr \
+    && echo 'alr ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/alr \
+    && echo 'Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' > /etc/sudoers.d/zz-secure-path
+
+COPY alr-test-setup /bin/alr-test-setup
+RUN chmod 755 /bin/alr-test-setup
+
+USER alr
+WORKDIR /home/alr
+CMD ["sleep", "infinity"]
