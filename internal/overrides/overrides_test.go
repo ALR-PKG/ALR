@@ -266,3 +266,17 @@ func TestReleasePlatformSpecific(t *testing.T) {
 		assert.Equal(t, 1, release)
 	}
 }
+
+func TestResolvePosixLocale(t *testing.T) {
+	// При LANG=C / LANG=C.UTF-8 / POSIX системный язык определяется как
+	// "C" или "POSIX" — это не BCP 47 тег, Resolve не должен падать,
+	// а должен трактовать локаль как английскую
+	for _, lang := range []string{"C", "POSIX"} {
+		names, err := overrides.Resolve(info, &overrides.Opts{
+			Overrides: true,
+			Languages: []string{lang},
+		})
+		assert.NoError(t, err, "lang: %s", lang)
+		assert.Contains(t, names, "centos_en", "lang: %s", lang)
+	}
+}

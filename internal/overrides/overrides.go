@@ -160,6 +160,11 @@ func parseLangs(langs []string, tags []language.Tag) ([]string, error) {
 		out[i] = base.String()
 	}
 	for i, lang := range langs {
+		// Локали C/POSIX (например, из LANG=C.UTF-8) — не BCP 47 теги,
+		// трактуем их как английский
+		if lang == "C" || lang == "POSIX" {
+			lang = "en"
+		}
 		tag, err := language.Parse(lang)
 		if err != nil {
 			return nil, err
