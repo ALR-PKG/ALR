@@ -77,37 +77,42 @@ func (s *ScriptResolver) ResolveScript(
 		script = scriptPath
 	}
 
-	// Если скрипт не существует локально, но есть прямая ссылка через RPC — скачиваем
-	if _, err := os.Stat(script); err != nil && pkg.AlrShURL != "" {
+	// Скачиваем или обновляем скрипт по прямой ссылке через RPC
+	if pkg.AlrShURL != "" {
 		if err := s.validateDownloadURL(pkg.AlrShURL); err != nil {
 			slog.Warn("ScriptResolver: отказ в скачивании alr.sh", "pkg", pkg.Name, "url", pkg.AlrShURL, "error", err)
 			return &ScriptInfo{Repository: repository, Script: script}
 		}
-		slog.Debug("ScriptResolver: alr.sh не найден локально, скачиваем по URL", "pkg", pkg.Name, "url", pkg.AlrShURL)
-		if err := s.downloadFile(ctx, pkg.AlrShURL, script, pkg.AlrShSHA256); err == nil {
-			slog.Debug("ScriptResolver: alr.sh успешно скачан", "pkg", pkg.Name, "path", script)
-			// Скачиваем дополнительные файлы из директории пакета (кроме alr.sh)
-			for _, ef := range pkg.ExtraFiles {
-				if ef.Name == "alr.sh" {
-					continue
-				}
-				if err := s.validateDownloadURL(ef.DownloadURL); err != nil {
-					slog.Warn("ScriptResolver: отказ в скачивании доп. файла", "pkg", pkg.Name, "file", ef.Name, "error", err)
-					continue
-				}
-				destPath, err := safeJoin(repodir, repository, filepath.Dir(ef.Path), ef.Name)
-				if err != nil {
-					slog.Warn("ScriptResolver: небезопасный путь доп. файла", "pkg", pkg.Name, "file", ef.Name, "error", err)
-					continue
-				}
-				if err := s.downloadFile(ctx, ef.DownloadURL, destPath, ef.SHA256); err != nil {
-					slog.Warn("ScriptResolver: не удалось скачать доп. файл", "pkg", pkg.Name, "file", ef.Name, "error", err)
-				} else {
-					slog.Debug("ScriptResolver: доп. файл скачан", "pkg", pkg.Name, "file", ef.Name)
-				}
+		if needsDownload(script, pkg.AlrShSHA256) {
+			slog.Debug("ScriptResolver: скачиваем alr.sh по URL", "pkg", pkg.Name, "url", pkg.AlrShURL)
+			if err := s.downloadFile(ctx, pkg.AlrShURL, script, pkg.AlrShSHA256); err == nil {
+				slog.Debug("ScriptResolver: alr.sh успешно скачан", "pkg", pkg.Name, "path", script)
+			} else {
+				slog.Warn("ScriptResolver: не удалось скачать alr.sh, будет использован fallback на git", "pkg", pkg.Name, "error", err)
 			}
-		} else {
-			slog.Warn("ScriptResolver: не удалось скачать alr.sh, будет использован fallback на git", "pkg", pkg.Name, "error", err)
+		}
+		// Скачиваем или обновляем дополнительные файлы из директории пакета (кроме alr.sh)
+		for _, ef := range pkg.ExtraFiles {
+			if ef.Name == "alr.sh" {
+				continue
+			}
+			if err := s.validateDownloadURL(ef.DownloadURL); err != nil {
+				slog.Warn("ScriptResolver: отказ в скачивании доп. файла", "pkg", pkg.Name, "file", ef.Name, "error", err)
+				continue
+			}
+			destPath, err := safeJoin(repodir, repository, filepath.Dir(ef.Path), ef.Name)
+			if err != nil {
+				slog.Warn("ScriptResolver: небезопасный путь доп. файла", "pkg", pkg.Name, "file", ef.Name, "error", err)
+				continue
+			}
+			if !needsDownload(destPath, ef.SHA256) {
+				continue
+			}
+			if err := s.downloadFile(ctx, ef.DownloadURL, destPath, ef.SHA256); err != nil {
+				slog.Warn("ScriptResolver: не удалось скачать доп. файл", "pkg", pkg.Name, "file", ef.Name, "error", err)
+			} else {
+				slog.Debug("ScriptResolver: доп. файл скачан", "pkg", pkg.Name, "file", ef.Name)
+			}
 		}
 	}
 
@@ -161,6 +166,19 @@ func safeJoin(base string, elems ...string) (string, error) {
 	}
 
 	return joined, nil
+}
+
+// needsDownload определяет, нужно ли скачивать файл: он отсутствует
+// локально, либо задан ожидаемый sha256 и хеш локального файла не совпадает.
+// Если ожидаемый хеш не задан, существующий файл считается актуальным
+func needsDownload(path, expectedSHA256 string) bool {
+	if _, err := os.Stat(path); err != nil {
+		return true
+	}
+	if expectedSHA256 == "" {
+		return false
+	}
+	return verifySHA256(path, expectedSHA256) != nil
 }
 
 // downloadFile скачивает файл по HTTP и сохраняет по указанному пути.

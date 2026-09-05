@@ -195,3 +195,101 @@ func TestResolveScriptChecksumVerification(t *testing.T) {
 	_, err = os.Stat(filepath.Join(repodir2, "alr-repo", "somepkg", "alr.sh.tmp"))
 	assert.True(t, os.IsNotExist(err), "временный файл должен быть удалён")
 }
+
+func TestResolveScriptRefreshesStaleScript(t *testing.T) {
+	oldContent := []byte("name='somepkg'\nversion='1.0'")
+	newContent := []byte("name='somepkg'\nversion='2.0'")
+	newSum := sha256.Sum256(newContent)
+	newHash := hex.EncodeToString(newSum[:])
+
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.Write(newContent)
+	}))
+	defer srv.Close()
+
+	r, repodir := newTestResolver(t, types.Site{URL: srv.URL})
+
+	// Локально лежит устаревший alr.sh от предыдущего скачивания
+	scriptPath := filepath.Join(repodir, "alr-repo", "somepkg", "alr.sh")
+	require.NoError(t, os.MkdirAll(filepath.Dir(scriptPath), 0o755))
+	require.NoError(t, os.WriteFile(scriptPath, oldContent, 0o644))
+
+	pkg := &alrsh.Package{
+		Name:        "somepkg",
+		Repository:  "alr-repo",
+		AlrShURL:    srv.URL + "/alr.sh",
+		AlrShSHA256: newHash,
+	}
+
+	r.ResolveScript(context.Background(), pkg)
+
+	got, err := os.ReadFile(scriptPath)
+	require.NoError(t, err)
+	assert.Equal(t, newContent, got, "устаревший alr.sh должен быть перекачан")
+	assert.Equal(t, 1, hits)
+}
+
+func TestResolveScriptKeepsFreshScript(t *testing.T) {
+	content := []byte("name='somepkg'\nversion='2.0'")
+	sum := sha256.Sum256(content)
+	hash := hex.EncodeToString(sum[:])
+
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.Write([]byte("name='other'"))
+	}))
+	defer srv.Close()
+
+	r, repodir := newTestResolver(t, types.Site{URL: srv.URL})
+
+	scriptPath := filepath.Join(repodir, "alr-repo", "somepkg", "alr.sh")
+	require.NoError(t, os.MkdirAll(filepath.Dir(scriptPath), 0o755))
+	require.NoError(t, os.WriteFile(scriptPath, content, 0o644))
+
+	pkg := &alrsh.Package{
+		Name:        "somepkg",
+		Repository:  "alr-repo",
+		AlrShURL:    srv.URL + "/alr.sh",
+		AlrShSHA256: hash,
+	}
+
+	r.ResolveScript(context.Background(), pkg)
+
+	assert.Equal(t, 0, hits, "свежий alr.sh не должен перекачиваться")
+	got, err := os.ReadFile(scriptPath)
+	require.NoError(t, err)
+	assert.Equal(t, content, got)
+}
+
+func TestResolveScriptKeepsLocalOnRefreshFailure(t *testing.T) {
+	oldContent := []byte("name='somepkg'\nversion='1.0'")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	r, repodir := newTestResolver(t, types.Site{URL: srv.URL})
+
+	scriptPath := filepath.Join(repodir, "alr-repo", "somepkg", "alr.sh")
+	require.NoError(t, os.MkdirAll(filepath.Dir(scriptPath), 0o755))
+	require.NoError(t, os.WriteFile(scriptPath, oldContent, 0o644))
+
+	pkg := &alrsh.Package{
+		Name:        "somepkg",
+		Repository:  "alr-repo",
+		AlrShURL:    srv.URL + "/alr.sh",
+		AlrShSHA256: "0000000000000000000000000000000000000000000000000000000000000000",
+	}
+
+	info := r.ResolveScript(context.Background(), pkg)
+
+	// При неудачном обновлении локальный файл должен остаться на месте
+	got, err := os.ReadFile(scriptPath)
+	require.NoError(t, err)
+	assert.Equal(t, oldContent, got)
+	assert.Equal(t, scriptPath, info.Script)
+}
