@@ -1097,7 +1097,7 @@ func (i *Builder) InstallPkgs(
 	if len(tree.AllSystemDeps) > 0 {
 		slog.Info(gotext.Get("Installing system dependencies"), "count", len(tree.AllSystemDeps))
 		err = i.installerExecutor.Install(ctx, tree.AllSystemDeps, &manager.Opts{
-			NoConfirm: userConfirmed, // true после подтверждения, иначе используем Interactive
+			NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to install system dependencies: %w", err)
@@ -1193,7 +1193,7 @@ func (i *Builder) InstallPkgs(
 				// Устанавливаем кешированный пакет сразу
 				if len(cachedDeps) > 0 {
 					err = i.installerExecutor.InstallLocal(ctx, GetBuiltPaths(cachedDeps), &manager.Opts{
-						NoConfirm: userConfirmed, // true после подтверждения
+						NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 					})
 					if err != nil {
 						return nil, fmt.Errorf("failed to install cached %s: %w", pkgName, err)
@@ -1239,7 +1239,7 @@ func (i *Builder) InstallPkgs(
 		// Устанавливаем собранный пакет сразу, чтобы он был доступен для следующих
 		if len(res) > 0 && !node.IsTarget {
 			err = i.installerExecutor.InstallLocal(ctx, GetBuiltPaths(res), &manager.Opts{
-				NoConfirm: userConfirmed, // true после подтверждения
+				NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to install %s: %w", pkgName, err)
@@ -1254,7 +1254,7 @@ func (i *Builder) InstallPkgs(
 	if len(targetDeps) > 0 {
 		slog.Info(gotext.Get("Installing target packages"))
 		err = i.installerExecutor.InstallLocal(ctx, GetBuiltPaths(targetDeps), &manager.Opts{
-			NoConfirm: userConfirmed, // true после подтверждения
+			NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 		})
 		if err != nil {
 			return nil, err
