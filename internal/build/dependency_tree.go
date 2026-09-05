@@ -100,8 +100,12 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 			return fmt.Errorf("failed to find packages: %w", err)
 		}
 
-		// Проверяем preferALRDeps
-		if b.cfg != nil && !b.cfg.PreferALRDeps() && b.mgr != nil {
+		// Проверяем preferALRDeps: системный пакет предпочитается ALR-пакету.
+		// Применяем только к зависимостям (parentPkg != ""): целевые пакеты,
+		// которые пользователь явно просит установить/обновить через ALR,
+		// системной замене не подлежат — иначе, например, upgrade уходит
+		// в системный менеджер и фактически не выполняется
+		if parentPkg != "" && b.cfg != nil && !b.cfg.PreferALRDeps() && b.mgr != nil {
 			for pkgName := range found {
 				available, err := b.mgr.ListAvailable(pkgName)
 				if err != nil {
