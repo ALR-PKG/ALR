@@ -65,6 +65,8 @@ func NewRootCmd() *cobra.Command {
 		newHelperCmd(),
 		newSearchCmd(),
 		newRepoCmd(),
+		newLegacyAddRepoCmd(),
+		newLegacyRemoveRepoCmd(),
 		newDBusCmd(),
 		newConfigCmd(),
 		newInternalBuildCmd(),

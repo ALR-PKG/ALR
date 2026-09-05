@@ -58,70 +58,72 @@ func newRepoRemoveCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: repoNameCompletion,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := utils.CheckUserPrivileges(); err != nil {
-				return err
-			}
-
-			name := args[0]
-
-			ctx := cmd.Context()
-
-			deps, err := appbuilder.
-				New(ctx).
-				WithConfig().
-				Build()
-			if err != nil {
-				return err
-			}
-			defer deps.Defer()
-
-			cfg := deps.Cfg
-
-			found := false
-			index := 0
-			reposSlice := cfg.Repos()
-			for i, repo := range reposSlice {
-				if repo.Name == name {
-					index = i
-					found = true
-				}
-			}
-			if !found {
-				return fmt.Errorf("%s", gotext.Get("Repo \"%s\" does not exist", name))
-			}
-
-			cfg.SetRepos(slices.Delete(reposSlice, index, index+1))
-
-			err = os.RemoveAll(filepath.Join(cfg.GetPaths().RepoDir, name))
-			if err != nil {
-				return fmt.Errorf("%s: %w", gotext.Get("Error removing repo directory"), err)
-			}
-			err = cfg.System.Save()
-			if err != nil {
-				return fmt.Errorf("%s: %w", gotext.Get("Error saving config"), err)
-			}
-
-			deps, err = appbuilder.
-				New(ctx).
-				UseConfig(cfg).
-				WithDB().
-				Build()
-			if err != nil {
-				return err
-			}
-			defer deps.Defer()
-
-			err = deps.DB.DeletePkgs(ctx, "repository = ?", name)
-			if err != nil {
-				return fmt.Errorf("%s: %w", gotext.Get("Error removing packages from database"), err)
-			}
-
-			return nil
+			return runRepoRemove(cmd, args[0])
 		},
 	}
 
 	addFlagCompletion(cmd)
 	return cmd
+}
+
+func runRepoRemove(cmd *cobra.Command, name string) error {
+	if err := utils.CheckUserPrivileges(); err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+
+	deps, err := appbuilder.
+		New(ctx).
+		WithConfig().
+		Build()
+	if err != nil {
+		return err
+	}
+	defer deps.Defer()
+
+	cfg := deps.Cfg
+
+	found := false
+	index := 0
+	reposSlice := cfg.Repos()
+	for i, repo := range reposSlice {
+		if repo.Name == name {
+			index = i
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("%s", gotext.Get("Repo \"%s\" does not exist", name))
+	}
+
+	cfg.SetRepos(slices.Delete(reposSlice, index, index+1))
+
+	err = os.RemoveAll(filepath.Join(cfg.GetPaths().RepoDir, name))
+	if err != nil {
+		return fmt.Errorf("%s: %w", gotext.Get("Error removing repo directory"), err)
+	}
+	err = cfg.System.Save()
+	if err != nil {
+		return fmt.Errorf("%s: %w", gotext.Get("Error saving config"), err)
+	}
+
+	deps, err = appbuilder.
+		New(ctx).
+		UseConfig(cfg).
+		WithDB().
+		Build()
+	if err != nil {
+		return err
+	}
+	defer deps.Defer()
+
+	err = deps.DB.DeletePkgs(ctx, "repository = ?", name)
+	if err != nil {
+		return fmt.Errorf("%s: %w", gotext.Get("Error removing packages from database"), err)
+	}
+
+	return nil
 }
 
 func newRepoAddCmd() *cobra.Command {
@@ -130,63 +132,64 @@ func newRepoAddCmd() *cobra.Command {
 		Short: gotext.Get("Add a new repository"),
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := utils.CheckUserPrivileges(); err != nil {
-				return err
-			}
-
-			name := args[0]
-			repoURL := args[1]
-
-			ctx := cmd.Context()
-
-			deps, err := appbuilder.
-				New(ctx).
-				WithConfig().
-				Build()
-			if err != nil {
-				return err
-			}
-			defer deps.Defer()
-
-			cfg := deps.Cfg
-
-			reposSlice := cfg.Repos()
-			for _, repo := range reposSlice {
-				if repo.URL == repoURL || repo.Name == name {
-					return fmt.Errorf("%s", gotext.Get("Repo \"%s\" already exists", repo.Name))
-				}
-			}
-
-			newRepo := types.Repo{
-				Name: name,
-				URL:  repoURL,
-			}
-
-			r, close, err := build.GetSafeReposExecutor()
-			if err != nil {
-				return err
-			}
-			defer close()
-
-			newRepo, err = r.PullOneAndUpdateFromConfig(ctx, &newRepo)
-			if err != nil {
-				return err
-			}
-
-			reposSlice = append(reposSlice, newRepo)
-			cfg.SetRepos(reposSlice)
-
-			err = cfg.System.Save()
-			if err != nil {
-				return fmt.Errorf("%s: %w", gotext.Get("Error saving config"), err)
-			}
-
-			return nil
+			return runRepoAdd(cmd, args[0], args[1])
 		},
 	}
 
 	addFlagCompletion(cmd)
 	return cmd
+}
+
+func runRepoAdd(cmd *cobra.Command, name, repoURL string) error {
+	if err := utils.CheckUserPrivileges(); err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+
+	deps, err := appbuilder.
+		New(ctx).
+		WithConfig().
+		Build()
+	if err != nil {
+		return err
+	}
+	defer deps.Defer()
+
+	cfg := deps.Cfg
+
+	reposSlice := cfg.Repos()
+	for _, repo := range reposSlice {
+		if repo.URL == repoURL || repo.Name == name {
+			return fmt.Errorf("%s", gotext.Get("Repo \"%s\" already exists", repo.Name))
+		}
+	}
+
+	newRepo := types.Repo{
+		Name: name,
+		URL:  repoURL,
+	}
+
+	r, close, err := build.GetSafeReposExecutor()
+	if err != nil {
+		return err
+	}
+	defer close()
+
+	newRepo, err = r.PullOneAndUpdateFromConfig(ctx, &newRepo)
+	if err != nil {
+		return err
+	}
+
+	reposSlice = append(reposSlice, newRepo)
+	cfg.SetRepos(reposSlice)
+
+	err = cfg.System.Save()
+	if err != nil {
+		return fmt.Errorf("%s: %w", gotext.Get("Error saving config"), err)
+	}
+
+	return nil
 }
 
 func newRepoSetRefCmd() *cobra.Command {
