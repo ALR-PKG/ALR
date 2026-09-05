@@ -63,19 +63,26 @@ func (rs *Repos) findInCache(ctx context.Context, pkgNames []string) (map[string
 	return found, notFound
 }
 
+// splitRepoQualifier разбирает имя пакета с квалификатором репозитория:
+// "repo/pkg" → ("pkg", "repo"), "pkg+repo" → ("pkg", "repo"), "pkg" → ("pkg", "")
+func splitRepoQualifier(name string) (string, string) {
+	if i := strings.Index(name, "/"); i > 0 {
+		return name[i+1:], name[:i]
+	}
+	if i := strings.Index(name, "+"); i > 0 {
+		return name[:i], name[i+1:]
+	}
+	return name, ""
+}
+
 // nameToQuery строит WHERE-условие поиска по имени пакета
 // с учётом форм repo/pkg и pkg+repo
 func nameToQuery(searchName string) (string, []any) {
-	switch {
-	case strings.Contains(searchName, "/"):
-		parts := strings.SplitN(searchName, "/", 2)
-		return "name = ? AND repository = ?", []any{parts[1], parts[0]}
-	case strings.Contains(searchName, "+"):
-		parts := strings.SplitN(searchName, "+", 2)
-		return "name = ? AND repository = ?", []any{parts[0], parts[1]}
-	default:
-		return "name = ?", []any{searchName}
+	pkgName, repo := splitRepoQualifier(searchName)
+	if repo != "" {
+		return "name = ? AND repository = ?", []any{pkgName, repo}
 	}
+	return "name = ?", []any{searchName}
 }
 
 // findViaRPC ищет пакеты через ALR Site RPC API
@@ -91,16 +98,14 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	// Преобразуем repo/pkg → pkg+repo для RPC API,
 	// версионные ограничения (pkg>=1.0) срезаем — фильтруем после ответа
 	rpcNames := make([]string, 0, len(pkgNames))
-	nameMap := make(map[string]string) // rpcName → originalName
 	for _, name := range pkgNames {
 		searchName := depver.Parse(name).Name
+		pkgName, repo := splitRepoQualifier(searchName)
 		rpcName := searchName
 		if strings.Contains(searchName, "/") {
-			parts := strings.SplitN(searchName, "/", 2)
-			rpcName = parts[1] + "+" + parts[0]
+			rpcName = pkgName + "+" + repo
 		}
 		rpcNames = append(rpcNames, rpcName)
-		nameMap[rpcName] = name
 	}
 
 	// Отправляем batch-запрос на RPC
@@ -115,21 +120,17 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	// Создаём мапу имя → пакеты (ключ — оригинальное имя запроса)
 	rpcResults := make(map[string][]rpc.Package)
 	for _, p := range rpcPkgs {
-		// Сопоставляем с оригинальным именем запроса по имени пакета или basepkg_name
+		// Сопоставляем с оригинальным именем запроса по имени пакета или
+		// basepkg_name; если в запросе есть квалификатор репозитория
+		// (repo/pkg или pkg+repo), проверяем и его
 		matched := false
 		for _, origName := range pkgNames {
 			origSearch := depver.Parse(origName).Name
-			rpcName := origSearch
-			if strings.Contains(origSearch, "/") {
-				parts := strings.SplitN(origSearch, "/", 2)
-				rpcName = parts[1] + "+" + parts[0]
+			pkgName, repo := splitRepoQualifier(origSearch)
+			if repo != "" && p.Repo != repo {
+				continue
 			}
-			if p.Name == origSearch || p.Name == rpcName {
-				rpcResults[origName] = append(rpcResults[origName], p)
-				matched = true
-				break
-			}
-			if p.BasePkgName == origSearch || p.BasePkgName == rpcName {
+			if p.Name == pkgName || p.BasePkgName == pkgName {
 				rpcResults[origName] = append(rpcResults[origName], p)
 				matched = true
 				break
