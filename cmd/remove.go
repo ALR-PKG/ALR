@@ -102,31 +102,31 @@ func removePackageCompletion(cmd *cobra.Command, args []string, toComplete strin
 	// Собираем установленные ALR пакеты в формате name+repo
 	installedAlr := make(map[string]struct{})
 	for pkgName := range installed {
-		matches := build.RegexpALRPackageName.FindStringSubmatch(pkgName)
-		if matches != nil {
-			packageName := matches[build.RegexpALRPackageName.SubexpIndex("package")]
-			repoName := matches[build.RegexpALRPackageName.SubexpIndex("repo")]
-			installedAlr[packageName+"+"+repoName] = struct{}{}
+		if build.RegexpALRPackageName.MatchString(pkgName) {
+			installedAlr[pkgName] = struct{}{}
 		}
 	}
 
-	if prefix != "" {
-		dbPkgs, err := completePackages(ctx, deps.DB, nil, prefix)
-		if err != nil {
-			slog.Debug("completion: ошибка получения пакетов", "error", err)
-			return nil, cobra.ShellCompDirectiveError
+	// Выводим короткие имена установленных ALR пакетов (без суффикса +repo)
+	appendShortName := func(key string) {
+		name := build.StripRepoSuffix(key)
+		if _, exists := seen[name]; !exists {
+			seen[name] = struct{}{}
+			out = append(out, name)
 		}
-		for _, key := range dbPkgs {
-			if _, ok := installedAlr[key]; ok {
-				if _, exists := seen[key]; !exists {
-					seen[key] = struct{}{}
-					out = append(out, key)
-				}
-			}
-		}
-	} else {
-		for key := range installedAlr {
-			out = append(out, key)
+	}
+
+	// Сверяемся с БД: показываем только установленные пакеты,
+	// которые реально есть в ALR-репозиториях. Это отсекает системные
+	// пакеты с "+" в имени (например, libstdc++6), попадающие под регэксп.
+	dbPkgs, err := completePackages(ctx, deps.DB, nil, prefix)
+	if err != nil {
+		slog.Debug("completion: ошибка получения пакетов", "error", err)
+		return nil, cobra.ShellCompDirectiveError
+	}
+	for _, key := range dbPkgs {
+		if _, ok := installedAlr[key]; ok {
+			appendShortName(key)
 		}
 	}
 

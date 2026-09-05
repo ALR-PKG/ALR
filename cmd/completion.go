@@ -25,6 +25,8 @@ import (
 
 // addFlagCompletion добавляет автодополнение флагов команды.
 // При нажатии Tab без "-" показывает доступные флаги вместо файлов.
+// Если у команды есть собственная ValidArgsFunction, её варианты
+// (например, имена пакетов) добавляются к списку флагов.
 func addFlagCompletion(cmd *cobra.Command) {
 	origFn := cmd.ValidArgsFunction
 	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -52,6 +54,10 @@ func addFlagCompletion(cmd *cobra.Command) {
 			cmd.Flags().VisitAll(addFlags)
 			if parent := cmd.Parent(); parent != nil {
 				parent.Flags().VisitAll(addFlags)
+			}
+			if origFn != nil {
+				items, _ := origFn(cmd, args, toComplete)
+				flags = append(flags, items...)
 			}
 			return flags, cobra.ShellCompDirectiveNoFileComp
 		}
