@@ -25,7 +25,7 @@
 #
 # Пример:
 #   PUSH=1 ./build.sh \
-#     git.alr-pkg.ru/plemya-x/alr-e2e-test-image \
+#     git.alr-pkg.ru/alr/alr-e2e-test-image \
 #     cr.gitverse.ru/alr/alr-e2e-test-image
 #
 # Итоговое имя образа: <prefix>-<distro>:latest

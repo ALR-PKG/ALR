@@ -32,7 +32,7 @@ import (
 func e2eImage(name string) string {
 	prefix := os.Getenv("ALR_E2E_IMAGE_PREFIX")
 	if prefix == "" {
-		prefix = "git.alr-pkg.ru/plemya-x/alr-e2e-test-image"
+		prefix = "git.alr-pkg.ru/alr/alr-e2e-test-image"
 	}
 	return fmt.Sprintf("%s-%s:latest", prefix, name)
 }

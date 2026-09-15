@@ -28,7 +28,7 @@ ALR собирает пакеты сам, внешне вызываются то
 
 ```sh
 PUSH=1 ./build.sh \
-  git.alr-pkg.ru/plemya-x/alr-e2e-test-image \
+  git.alr-pkg.ru/alr/alr-e2e-test-image \
   cr.gitverse.ru/alr/alr-e2e-test-image
 ```
 
@@ -37,6 +37,6 @@ PUSH=1 ./build.sh \
 ## Какой образ используют тесты
 
 `e2e-tests/common_test.go` берёт префикс из переменной окружения
-`ALR_E2E_IMAGE_PREFIX` (по умолчанию `git.alr-pkg.ru/plemya-x/alr-e2e-test-image`).
+`ALR_E2E_IMAGE_PREFIX` (по умолчанию `git.alr-pkg.ru/alr/alr-e2e-test-image`).
 
 Перед прогоном e2e соберите свежий бинарник: `make prepare-for-e2e-test`.
