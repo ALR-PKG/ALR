@@ -54,6 +54,17 @@ jobs:
         run: |
           echo "${{ secrets.E2E_REGISTRY_TOKEN }}" | podman login git.alr-pkg.ru -u xpamych --password-stdin
 
+      # Вложенный podman: первый старт контейнера падает из-за
+      # cgroup-делегации (crun: controller `pids` is not available),
+      # каждая попытка включает очередной контроллер — прогреваем.
+      - name: Warm up nested podman
+        run: |
+          for i in 1 2 3 4 5; do
+            if podman run --rm --privileged git.alr-pkg.ru/alr/alr-e2e-test-image-ubuntu-24.04:latest true; then
+              break
+            fi
+          done
+
       - name: Run E2E tests
         env:
           IGNORE_ROOT_CHECK: 1
