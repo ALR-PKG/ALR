@@ -50,6 +50,10 @@ jobs:
       #       /var/lib/containers/storage
       #     key: ${{ runner.os }}-primes            
 
+      - name: Login to git.alr-pkg.ru registry
+        run: |
+          echo "${{ secrets.E2E_REGISTRY_TOKEN }}" | podman login git.alr-pkg.ru -u xpamych --password-stdin
+
       - name: Run E2E tests
         env:
           IGNORE_ROOT_CHECK: 1
