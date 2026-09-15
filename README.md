@@ -71,15 +71,15 @@ alr config set site.disableRPC false         # полностью отключи
 
 Репозитории alr - это git-хранилища, которые содержат каталог для каждого пакета с файлом `alr.sh` внутри. Файл `alr.sh` содержит все инструкции по сборке пакета и информацию о нем. Скрипты `alr.sh` аналогичны скриптам Aur PKGBUILD. 
 
-Например, репозиторий с ALR [alr-default](https://git.alr-pkg.ru/Plemya-x/alr-default.git)
+Например, репозиторий с ALR [alr-default](https://git.alr-pkg.ru/ALR/alr-default.git)
 ```
-alr repo add alr-default https://git.alr-pkg.ru/Plemya-x/alr-default.git
+alr repo add alr-default https://git.alr-pkg.ru/ALR/alr-default.git
 ```
-Репозиторий пакетов [alr-repo](https://git.alr-pkg.ru/Plemya-x/alr-repo.git) можно подключить так:
+Репозиторий пакетов [alr-repo](https://git.alr-pkg.ru/ALR/alr-repo.git) можно подключить так:
 ```
-alr repo add  alr-repo https://git.alr-pkg.ru/Plemya-x/alr-repo.git
+alr repo add  alr-repo https://git.alr-pkg.ru/ALR/alr-repo.git
 ```
-Репозиторий Linux-Gaming [alr-LG](https://git.alr-pkg.ru/Plemya-x/alr-LG.git) можно подключить так:
+Репозиторий Linux-Gaming [alr-RG](https://git.alr-pkg.ru/ALR/alr-RG.git) можно подключить так:
 ```
 alr repo add alr-LG https://git.linux-gaming.ru/Linux-Gaming/alr-LG.git
 ```

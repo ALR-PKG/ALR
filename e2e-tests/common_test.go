@@ -73,7 +73,7 @@ func execShouldError(t *testing.T, r capytest.Runner, cmd string, args ...string
 }
 
 const REPO_NAME_FOR_E2E_TESTS = "alr-repo"
-const REPO_URL_FOR_E2E_TESTS = "https://git.alr-pkg.ru/Plemya-x/repo-for-tests.git"
+const REPO_URL_FOR_E2E_TESTS = "https://git.alr-pkg.ru/ALR/repo-for-tests.git"
 
 func defaultPrepare(t *testing.T, r capytest.Runner) {
 	execShouldNoError(t, r,

@@ -3,7 +3,7 @@ module git.alr-pkg.ru/ALR/ALR
 go 1.24.4
 
 require (
-	git.alr-pkg.ru/Plemya-x/fakeroot v0.0.3
+	git.alr-pkg.ru/ALR/fakeroot v0.0.4
 	git.alr-pkg.ru/xpamych/vercmp v0.0.2
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/purell v1.2.0
@@ -34,6 +34,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.10.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.alt-gnome.ru/capytest v0.0.3-0.20250706082755-f20413e052f9
@@ -132,7 +133,6 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/therootcompany/xz v1.0.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect

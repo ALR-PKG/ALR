@@ -76,7 +76,7 @@ jobs:
       - name: Checkout alr-default repository
         uses: actions/checkout@v4
         with:
-          repository: Plemya-x/alr-default
+          repository: ALR/alr-default
           token: ${{ secrets.GITEAPUBLIC }}
           path: alr-default
 

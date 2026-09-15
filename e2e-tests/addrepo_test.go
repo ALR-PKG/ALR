@@ -30,7 +30,7 @@ func TestE2EAlrAddRepo(t *testing.T) {
 		"add-repo-remove-repo",
 		COMMON_SYSTEMS,
 		func(t *testing.T, r capytest.Runner) {
-			execShouldNoError(t, r, "sudo", "alr", "addrepo", "--name", "alr-repo", "--url", "https://git.alr-pkg.ru/Plemya-x/alr-repo.git")
+			execShouldNoError(t, r, "sudo", "alr", "addrepo", "--name", "alr-repo", "--url", "https://git.alr-pkg.ru/ALR/alr-repo.git")
 			execShouldNoError(t, r, "bash", "-c", "cat /etc/alr/alr.toml")
 			execShouldNoError(t, r, "sudo", "alr", "removerepo", "--name", "alr-repo")
 

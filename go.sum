@@ -17,8 +17,8 @@ cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0Zeo
 dario.cat/mergo v1.0.1 h1:Ra4+bf83h2ztPIQYNP99R6m+Y7KfnARDfID+a+vLl4s=
 dario.cat/mergo v1.0.1/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-git.alr-pkg.ru/Plemya-x/fakeroot v0.0.3 h1:TFTWfsufvCsyUOA7uinRIzTFdHKeK5tfsb68eRB41Z4=
-git.alr-pkg.ru/Plemya-x/fakeroot v0.0.3/go.mod h1:UCsbQd0ePBESCefhW8Aa6DZBx2hJh2DuIDqE96bJ7aU=
+git.alr-pkg.ru/ALR/fakeroot v0.0.4 h1:Y6Bnxg0hgpJaKr9VVnPZpmaWZFOfWAzge7ueKywDlvM=
+git.alr-pkg.ru/ALR/fakeroot v0.0.4/go.mod h1:Jc/folnkkwRjDHIqbsMNa2LBhQYA5b4ADNLIjxEkEpM=
 git.alr-pkg.ru/xpamych/vercmp v0.0.2 h1:saDPAnFeftgYFhaRndHdPV/ic8uSuy9h81e6uZ3TdPo=
 git.alr-pkg.ru/xpamych/vercmp v0.0.2/go.mod h1:7EA9JFLEVvCQMZ+TaAFhoN+K19u26N16mhAf/GUm1Fk=
 gitea.com/xorm/sqlfiddle v0.0.0-20180821085327-62ce714f951a h1:lSA0F4e9A2NcQSqGqTOXqu2aRi/XEQxDCBwM8yJtE6s=
