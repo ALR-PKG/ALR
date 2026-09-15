@@ -1,5 +1,7 @@
 FROM docker.io/library/archlinux:latest
 
+LABEL org.opencontainers.image.source="https://git.alr-pkg.ru/ALR/ALR"
+
 RUN pacman -Syu --noconfirm sudo git bash which \
     && pacman -Scc --noconfirm \
     && useradd -m -s /bin/bash -G wheel alr \

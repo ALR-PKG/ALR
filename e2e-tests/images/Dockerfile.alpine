@@ -1,5 +1,7 @@
 FROM docker.io/library/alpine:latest
 
+LABEL org.opencontainers.image.source="https://git.alr-pkg.ru/ALR/ALR"
+
 RUN apk add --no-cache bash sudo git ca-certificates shadow \
     && useradd -m -s /bin/bash -G wheel alr \
     && echo 'alr ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/alr

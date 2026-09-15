@@ -1,5 +1,7 @@
 FROM docker.io/library/ubuntu:latest
 
+LABEL org.opencontainers.image.source="https://git.alr-pkg.ru/ALR/ALR"
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends sudo git bash ca-certificates \
     && rm -rf /var/lib/apt/lists/* \

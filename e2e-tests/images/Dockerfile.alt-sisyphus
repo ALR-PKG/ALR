@@ -1,5 +1,7 @@
 FROM docker.io/library/alt:sisyphus
 
+LABEL org.opencontainers.image.source="https://git.alr-pkg.ru/ALR/ALR"
+
 RUN apt-get update \
     && apt-get install -y sudo git bash rpm-build \
     && rm -rf /var/cache/apt /var/lib/apt/lists/* \

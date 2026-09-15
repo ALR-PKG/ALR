@@ -1,5 +1,7 @@
 FROM docker.io/library/fedora:latest
 
+LABEL org.opencontainers.image.source="https://git.alr-pkg.ru/ALR/ALR"
+
 RUN dnf install -y sudo git bash which rpm-build \
     && dnf clean all \
     && useradd -m -s /bin/bash -G wheel alr \
