@@ -100,7 +100,7 @@ jobs:
         run: |
           cd alr-default
           git config user.name "gitea"
-          git config user.email "admin@plemya-x.ru"
+          git config user.email "admin@alr-pkg.ru"
           git add alr-bin/alr.sh
           git commit -m "Обновление alr-bin до версии ${{ env.VERSION }}"
           git push
