@@ -31,9 +31,9 @@ import (
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/shutils/decoder"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/shutils/decoder"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 type BuildVars struct {

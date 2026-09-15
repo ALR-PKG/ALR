@@ -22,7 +22,7 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/gen"
+	"git.alr-pkg.ru/ALR/ALR/internal/gen"
 )
 
 func newGenCmd() *cobra.Command {

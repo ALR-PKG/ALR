@@ -24,11 +24,11 @@ import (
 
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/db"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/repos"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/db"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/repos"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 type AppDeps struct {

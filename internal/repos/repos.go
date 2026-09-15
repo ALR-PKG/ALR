@@ -22,11 +22,11 @@ import (
 	"log/slog"
 	"sync"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	database "git.alr-pkg.ru/Plemya-x/ALR/internal/db"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/rpc"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	database "git.alr-pkg.ru/ALR/ALR/internal/db"
+	"git.alr-pkg.ru/ALR/ALR/internal/rpc"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type Config interface {

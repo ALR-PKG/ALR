@@ -27,8 +27,8 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	"git.alr-pkg.ru/ALR/ALR/internal/utils"
 )
 
 func execWithPrivileges(name string, args ...string) *exec.Cmd {

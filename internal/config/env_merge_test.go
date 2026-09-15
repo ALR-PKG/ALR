@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 // Env-переменные должны переопределять дефолты после мержа koanf,

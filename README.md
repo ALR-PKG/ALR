@@ -3,7 +3,7 @@
 </p>
 <b></b>
 
-[![Go Report Card](https://goreportcard.com/badge/git.alr-pkg.ru/Plemya-x/ALR)](https://goreportcard.com/report/git.alr-pkg.ru/Plemya-x/ALR) ![Test coverage](./assets/coverage-badge.svg) ![ru translate](./assets/i18n-ru-badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/git.alr-pkg.ru/ALR/ALR)](https://goreportcard.com/report/git.alr-pkg.ru/ALR/ALR) ![Test coverage](./assets/coverage-badge.svg) ![ru translate](./assets/i18n-ru-badge.svg)
 
 # ALR (Any Linux Repository)
 
@@ -20,10 +20,10 @@ ALR написан на чистом Go и после сборки не имее
 Установочный скрипт автоматически загрузит и установит соответствующий пакет ALR в вашей системе. Чтобы использовать его, просто выполните следующую команду:
 
 ```bash
-curl -fsSL https://git.alr-pkg.ru/Plemya-x/ALR/raw/branch/master/scripts/install.sh | bash
+curl -fsSL https://git.alr-pkg.ru/ALR/ALR/raw/branch/master/scripts/install.sh | bash
 ```
 
-**ВАЖНО**: При этом скрипт будет загружен и запущен [скрипт](https://git.alr-pkg.ru/Plemya-x/ALR/src/branch/master/scripts/install.sh). Пожалуйста, просматривайте любые скрипты, которые вы скачиваете из Интернета (включая этот), прежде чем запускать их.
+**ВАЖНО**: При этом скрипт будет загружен и запущен [скрипт](https://git.alr-pkg.ru/ALR/ALR/src/branch/master/scripts/install.sh). Пожалуйста, просматривайте любые скрипты, которые вы скачиваете из Интернета (включая этот), прежде чем запускать их.
 
 ### Сборка из исходного кода
 

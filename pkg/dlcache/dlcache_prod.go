@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
+	"git.alr-pkg.ru/ALR/ALR/internal/utils"
 )
 
 // createDir создает директорию с правильными правами для production

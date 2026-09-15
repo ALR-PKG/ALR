@@ -24,10 +24,10 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
+	"git.alr-pkg.ru/ALR/ALR/internal/build"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/utils"
 )
 
 func newRemoveCmd() *cobra.Command {

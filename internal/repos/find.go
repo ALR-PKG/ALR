@@ -26,9 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/rpc"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/depver"
+	"git.alr-pkg.ru/ALR/ALR/internal/rpc"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/depver"
 )
 
 const rpcCacheTTL = 1 * time.Hour

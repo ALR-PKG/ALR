@@ -27,10 +27,10 @@ import (
 	"strings"
 	"syscall"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/cmd"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/logger"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/translations"
+	"git.alr-pkg.ru/ALR/ALR/cmd"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/logger"
+	"git.alr-pkg.ru/ALR/ALR/internal/translations"
 	"github.com/mattn/go-isatty"
 )
 

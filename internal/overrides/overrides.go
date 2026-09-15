@@ -28,8 +28,8 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/language"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cpu"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/cpu"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 type Opts struct {

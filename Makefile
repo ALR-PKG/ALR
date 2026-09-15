@@ -33,7 +33,7 @@ ifeq ($(GENERATE),1)
 else
 	@echo "Skipping go generate (GENERATE=0)"
 endif
-	go build -ldflags="-X 'git.alr-pkg.ru/Plemya-x/ALR/internal/config.Version=$(GIT_VERSION)'" -o $@
+	go build -ldflags="-X 'git.alr-pkg.ru/ALR/ALR/internal/config.Version=$(GIT_VERSION)'" -o $@
 
 FORCE:
 

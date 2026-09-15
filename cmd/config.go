@@ -25,7 +25,7 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
 )
 
 var configKeys = []string{

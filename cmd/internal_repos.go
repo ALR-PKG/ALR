@@ -25,10 +25,10 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/logger"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/translations"
+	"git.alr-pkg.ru/ALR/ALR/internal/build"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	"git.alr-pkg.ru/ALR/ALR/internal/logger"
+	"git.alr-pkg.ru/ALR/ALR/internal/translations"
 )
 
 func newInternalReposCmd() *cobra.Command {

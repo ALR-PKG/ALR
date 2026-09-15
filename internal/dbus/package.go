@@ -25,10 +25,10 @@ import (
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/godbus/dbus/v5/prop"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/build"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 // DBusPackage реализует ru.alr-pkg.ALR.Package интерфейс

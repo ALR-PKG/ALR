@@ -22,8 +22,8 @@ import (
 	"log/slog"
 	"time"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
 // DependencyNode представляет узел в дереве зависимостей

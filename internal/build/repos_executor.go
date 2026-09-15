@@ -19,8 +19,8 @@ package build
 import (
 	"context"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/repos"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/repos"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type reposExecutor struct{ r *repos.Repos }

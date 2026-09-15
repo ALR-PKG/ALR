@@ -28,8 +28,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/dlcache"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/pkg/dlcache"
 )
 
 type TestALRConfig struct {

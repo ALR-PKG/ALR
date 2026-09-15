@@ -21,8 +21,8 @@ import (
 	"log/slog"
 	"time"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/rpc"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/internal/rpc"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
 // ListCacheTTL — срок свежести кэша списка пакетов с сайта

@@ -26,8 +26,8 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/introspect"
 
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
 )
 
 // Service управляет D-Bus соединением и экспортирует объекты ALR

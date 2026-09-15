@@ -1,4 +1,4 @@
-module git.alr-pkg.ru/Plemya-x/ALR
+module git.alr-pkg.ru/ALR/ALR
 
 go 1.24.4
 

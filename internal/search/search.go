@@ -22,7 +22,7 @@ package search
 import (
 	"context"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
 type PackagesProvider interface {

@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/db"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/repos"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/rpc"
+	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
+	"git.alr-pkg.ru/ALR/ALR/internal/db"
+	"git.alr-pkg.ru/ALR/ALR/internal/repos"
+	"git.alr-pkg.ru/ALR/ALR/internal/rpc"
 )
 
 // completePackages возвращает список пакетов в формате name+repo для автодополнения.

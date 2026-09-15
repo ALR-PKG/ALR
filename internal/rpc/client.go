@@ -26,8 +26,8 @@ import (
 	"net/url"
 	"time"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 // Client — HTTP клиент для ALR Site RPC API

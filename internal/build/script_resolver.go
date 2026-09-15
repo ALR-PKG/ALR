@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
 // maxDownloadSize — максимальный размер файла, скачиваемого с сайта

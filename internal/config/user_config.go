@@ -30,8 +30,8 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/constants"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/constants"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type UserConfig struct {

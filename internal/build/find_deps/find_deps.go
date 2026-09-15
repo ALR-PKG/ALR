@@ -22,8 +22,8 @@ import (
 
 	"github.com/goreleaser/nfpm/v2"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type ProvReqFinder interface {

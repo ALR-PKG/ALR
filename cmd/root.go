@@ -23,8 +23,8 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/constants"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/constants"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
 )
 
 var (

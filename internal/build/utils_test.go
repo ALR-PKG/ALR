@@ -19,8 +19,8 @@ package build
 import (
 	"testing"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 type mockInput struct {

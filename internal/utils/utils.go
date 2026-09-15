@@ -23,7 +23,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/fsutils"
+	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 )
 
 func NoNewPrivs() error {

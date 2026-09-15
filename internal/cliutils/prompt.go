@@ -28,8 +28,8 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/pager"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/internal/pager"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
 // YesNoPrompt asks the user a yes or no question, using def as the default answer

@@ -43,10 +43,10 @@ import (
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/fsutils"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/shutils/handlers"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
+	"git.alr-pkg.ru/ALR/ALR/internal/shutils/handlers"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type actionType uint8

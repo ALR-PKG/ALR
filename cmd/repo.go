@@ -26,10 +26,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/build"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	"git.alr-pkg.ru/ALR/ALR/internal/utils"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 func newRepoCmd() *cobra.Command {

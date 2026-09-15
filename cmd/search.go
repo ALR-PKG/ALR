@@ -29,12 +29,12 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/search"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
+	"git.alr-pkg.ru/ALR/ALR/internal/search"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 func newSearchCmd() *cobra.Command {

@@ -33,13 +33,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/stats"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/stats"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type BuildInput struct {

@@ -23,9 +23,9 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
-	alrdbus "git.alr-pkg.ru/Plemya-x/ALR/internal/dbus"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/logger"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/translations"
+	alrdbus "git.alr-pkg.ru/ALR/ALR/internal/dbus"
+	"git.alr-pkg.ru/ALR/ALR/internal/logger"
+	"git.alr-pkg.ru/ALR/ALR/internal/translations"
 )
 
 func newInternalDBusServiceCmd() *cobra.Command {

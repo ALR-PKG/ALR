@@ -28,9 +28,9 @@ import (
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cpu"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/shutils/helpers"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/cpu"
+	"git.alr-pkg.ru/ALR/ALR/internal/shutils/helpers"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 func newHelperCmd() *cobra.Command {

@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/dl"
+	"git.alr-pkg.ru/ALR/ALR/pkg/dl"
 )
 
 func TestGitDownloaderMatchUrl(t *testing.T) {

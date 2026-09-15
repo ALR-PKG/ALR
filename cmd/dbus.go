@@ -26,7 +26,7 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/cobra"
 
-	alrdbus "git.alr-pkg.ru/Plemya-x/ALR/internal/dbus"
+	alrdbus "git.alr-pkg.ru/ALR/ALR/internal/dbus"
 )
 
 func newDBusCmd() *cobra.Command {

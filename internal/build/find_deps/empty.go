@@ -23,7 +23,7 @@ import (
 	"github.com/goreleaser/nfpm/v2"
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type EmptyFindProvReq struct{}

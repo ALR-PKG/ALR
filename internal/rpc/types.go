@@ -16,7 +16,7 @@
 
 package rpc
 
-import "git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+import "git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 
 // Package представляет пакет, возвращаемый RPC API
 type Package struct {

@@ -38,17 +38,17 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	database "git.alr-pkg.ru/Plemya-x/ALR/internal/db"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/repos"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/search"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/build"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	database "git.alr-pkg.ru/ALR/ALR/internal/db"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
+	"git.alr-pkg.ru/ALR/ALR/internal/repos"
+	"git.alr-pkg.ru/ALR/ALR/internal/search"
+	"git.alr-pkg.ru/ALR/ALR/internal/utils"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 func newUpgradeCmd() *cobra.Command {
