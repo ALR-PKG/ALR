@@ -120,7 +120,7 @@ func TestPull(t *testing.T) {
 	err := rs.Pull(e.Ctx, []types.Repo{
 		{
 			Name: "default",
-			URL:  "https://git.alr-pkg.ru/Plemya-x/xpamych-alr-repo.git",
+			URL:  "https://git.alr-pkg.ru/ALR/alr-repo.git",
 		},
 	})
 	if err != nil {
