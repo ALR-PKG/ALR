@@ -116,3 +116,12 @@ msgstr "Cleaned build directory for rebuild"
 
 msgid "Start typing to filter packages"
 msgstr "Start typing to filter packages"
+
+msgid "Clearing build directory"
+msgstr "Clearing build directory"
+
+msgid "Unable to remove build directory"
+msgstr "Unable to remove build directory"
+
+msgid "Unable to create build directory"
+msgstr "Unable to create build directory"

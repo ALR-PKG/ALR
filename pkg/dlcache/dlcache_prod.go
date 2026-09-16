@@ -27,9 +27,9 @@ import (
 
 // createDir создает директорию с правильными правами для production
 func createDir(itemPath string, mode os.FileMode) error {
-	// Используем специальную функцию для создания каталогов с setgid битом только для /tmp/alr/ и /var/cache/alr/
-	// Проверяем с слешем в конце, чтобы исключить тестовые директории вроде /tmp/alr-test-XXX
-	if strings.HasPrefix(itemPath, "/tmp/alr/") || strings.HasPrefix(itemPath, "/var/cache/alr/") {
+	// Используем специальную функцию для создания каталогов с setgid битом только для /var/cache/alr/
+	// Проверяем с слешем в конце, чтобы исключить похожие тестовые директории
+	if strings.HasPrefix(itemPath, "/var/cache/alr/") {
 		return utils.EnsureTempDirWithRootOwner(itemPath, mode)
 	} else {
 		return os.MkdirAll(itemPath, mode)

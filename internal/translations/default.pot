@@ -264,51 +264,26 @@ msgid "Unable to remove cache item (%s)"
 msgstr ""
 
 #: cmd/fix.go:100
-msgid "Clearing temporary directory"
+msgid "Clearing build directory"
 msgstr ""
 
-#: cmd/fix.go:105
-msgid ""
-"Unable to remove temporary directory (%s) as current user, trying with sudo"
+#: cmd/fix.go:104
+msgid "Unable to remove build directory"
 msgstr ""
 
 #: cmd/fix.go:108
-msgid "Unable to remove temporary directory"
+msgid "Unable to create build directory"
 msgstr ""
 
-#: cmd/fix.go:115
-msgid "Unable to create temporary directory"
-msgstr ""
-
-#: cmd/fix.go:121
-msgid "Unable to create download directory"
-msgstr ""
-
-#: cmd/fix.go:127
-msgid "Unable to create packages directory"
-msgstr ""
-
-#: cmd/fix.go:131
-msgid "Fixing permissions on temporary files"
-msgstr ""
-
-#: cmd/fix.go:138
-msgid "Unable to fix file ownership"
-msgstr ""
-
-#: cmd/fix.go:143
-msgid "Unable to fix file permissions"
-msgstr ""
-
-#: cmd/fix.go:148
+#: cmd/fix.go:111
 msgid "Rebuilding cache"
 msgstr ""
 
-#: cmd/fix.go:149
+#: cmd/fix.go:112
 msgid "Creating cache directory"
 msgstr ""
 
-#: cmd/fix.go:152
+#: cmd/fix.go:115
 msgid "Unable to create new cache directory"
 msgstr ""
 
@@ -420,11 +395,11 @@ msgstr ""
 msgid "No packages for upgrade"
 msgstr ""
 
-#: cmd/list.go:90 cmd/list.go:199
+#: cmd/list.go:90 cmd/list.go:204
 msgid "Error parsing format template"
 msgstr ""
 
-#: cmd/list.go:96 cmd/list.go:203
+#: cmd/list.go:96 cmd/list.go:208
 msgid "Error executing template"
 msgstr ""
 
@@ -440,11 +415,7 @@ msgstr ""
 msgid "Error listing installed packages"
 msgstr ""
 
-#: cmd/list.go:162 cmd/list.go:163
-msgid "Failed to parse release"
-msgstr ""
-
-#: cmd/list.go:213
+#: cmd/list.go:218
 msgid "Format output using a Go template"
 msgstr ""
 
@@ -472,77 +443,95 @@ msgstr ""
 msgid "Remove an existing repository"
 msgstr ""
 
-#: cmd/repo.go:90 cmd/repo.go:425 cmd/repo.go:519
+#: cmd/repo.go:97 cmd/repo.go:428 cmd/repo.go:522
 msgid "Repo \"%s\" does not exist"
 msgstr ""
 
-#: cmd/repo.go:97
+#: cmd/repo.go:104
 msgid "Error removing repo directory"
 msgstr ""
 
-#: cmd/repo.go:101 cmd/repo.go:181 cmd/repo.go:233 cmd/repo.go:290
-#: cmd/repo.go:362 cmd/repo.go:463 cmd/repo.go:527
+#: cmd/repo.go:108 cmd/repo.go:189 cmd/repo.go:236 cmd/repo.go:293
+#: cmd/repo.go:365 cmd/repo.go:466 cmd/repo.go:530
 msgid "Error saving config"
 msgstr ""
 
-#: cmd/repo.go:116
+#: cmd/repo.go:123
 msgid "Error removing packages from database"
 msgstr ""
 
-#: cmd/repo.go:130
+#: cmd/repo.go:132
 msgid "Add a new repository"
 msgstr ""
 
-#: cmd/repo.go:156
+#: cmd/repo.go:164
 msgid "Repo \"%s\" already exists"
 msgstr ""
 
-#: cmd/repo.go:195
+#: cmd/repo.go:198
 msgid "Set the reference of the repository"
 msgstr ""
 
-#: cmd/repo.go:238 cmd/repo.go:295
+#: cmd/repo.go:241 cmd/repo.go:298
 msgid "Error pulling repositories"
 msgstr ""
 
-#: cmd/repo.go:252
+#: cmd/repo.go:255
 msgid "Set the main url of the repository"
 msgstr ""
 
-#: cmd/repo.go:309
+#: cmd/repo.go:312
 msgid "Manage mirrors of repos"
 msgstr ""
 
-#: cmd/repo.go:325
+#: cmd/repo.go:328
 msgid "Add a mirror URL to repository"
 msgstr ""
 
-#: cmd/repo.go:381
+#: cmd/repo.go:384
 msgid "Remove mirror from the repository"
 msgstr ""
 
-#: cmd/repo.go:450
+#: cmd/repo.go:453
 msgid "No mirrors containing \"%s\" found in repo \"%s\""
 msgstr ""
 
-#: cmd/repo.go:452
+#: cmd/repo.go:455
 msgid "URL \"%s\" does not exist in repo \"%s\""
 msgstr ""
 
-#: cmd/repo.go:467 cmd/repo.go:531
+#: cmd/repo.go:470 cmd/repo.go:534
 msgid "Removed %d mirrors from repo \"%s\"\n"
 msgstr ""
 
-#: cmd/repo.go:474
+#: cmd/repo.go:477
 msgid "Ignore if mirror does not exist"
 msgstr ""
 
-#: cmd/repo.go:475
+#: cmd/repo.go:478
 msgid "Match partial URL (e.g., github.com instead of full URL)"
 msgstr ""
 
-#: cmd/repo.go:484
+#: cmd/repo.go:487
 msgid "Remove all mirrors from the repository"
+msgstr ""
+
+#: cmd/repo_legacy.go:40 cmd/repo_legacy.go:76
+msgid ""
+"This command is deprecated and would be removed in the future, use \"%s\" "
+"instead!"
+msgstr ""
+
+#: cmd/repo_legacy.go:47
+msgid "Name of the new repo"
+msgstr ""
+
+#: cmd/repo_legacy.go:48
+msgid "URL of the new repo"
+msgstr ""
+
+#: cmd/repo_legacy.go:83
+msgid "Name of the repo to be deleted"
 msgstr ""
 
 #: cmd/root.go:51
@@ -597,7 +586,7 @@ msgstr ""
 msgid "Checking for ALR package updates..."
 msgstr ""
 
-#: cmd/upgrade.go:384
+#: cmd/upgrade.go:386
 msgid "Finished checking for updates"
 msgstr ""
 
@@ -860,69 +849,69 @@ msgstr ""
 msgid "ERROR"
 msgstr ""
 
-#: internal/repos/pull.go:109
+#: internal/repos/pull.go:110
 msgid "Trying mirror"
 msgstr ""
 
-#: internal/repos/pull.go:115
+#: internal/repos/pull.go:116
 msgid "Failed to pull from URL"
 msgstr ""
 
-#: internal/repos/pull.go:179
+#: internal/repos/pull.go:180
 msgid "Pulling repository"
 msgstr ""
 
-#: internal/repos/pull.go:219
+#: internal/repos/pull.go:220
 msgid "Repository up to date"
 msgstr ""
 
-#: internal/repos/pull.go:231
+#: internal/repos/pull.go:232
 msgid "Checking out repository..."
 msgstr ""
 
-#: internal/repos/pull.go:248
+#: internal/repos/pull.go:256
 msgid "Processing repository packages (full)..."
 msgstr ""
 
-#: internal/repos/pull.go:254
+#: internal/repos/pull.go:262
 msgid "Processing repository changes..."
 msgstr ""
 
-#: internal/repos/pull.go:263
+#: internal/repos/pull.go:271
 msgid "Git repository does not appear to be a valid ALR repo"
 msgstr ""
 
-#: internal/repos/pull.go:279
+#: internal/repos/pull.go:287
 msgid ""
 "ALR repo's minimum ALR version is greater than the current version. Try "
 "updating ALR if something doesn't work."
 msgstr ""
 
-#: internal/repos/pull.go:447
+#: internal/repos/pull.go:455
 msgid "Failed to get deleted file from old commit"
 msgstr ""
 
-#: internal/repos/pull.go:453
+#: internal/repos/pull.go:461
 msgid "Failed to read deleted file"
 msgstr ""
 
-#: internal/repos/pull.go:472
+#: internal/repos/pull.go:480
 msgid "Failed to get updated file from new commit"
 msgstr ""
 
-#: internal/repos/pull.go:478
+#: internal/repos/pull.go:486
 msgid "Failed to read updated file"
 msgstr ""
 
-#: internal/repos/pull.go:502 internal/repos/pull.go:538
+#: internal/repos/pull.go:510 internal/repos/pull.go:546
 msgid "Processing repository packages..."
 msgstr ""
 
-#: internal/repos/pull.go:534
+#: internal/repos/pull.go:542
 msgid "No alr.sh files found in repository"
 msgstr ""
 
-#: internal/repos/pull.go:601
+#: internal/repos/pull.go:609
 msgid "Repository packages processed"
 msgstr ""
 

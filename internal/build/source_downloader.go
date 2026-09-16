@@ -23,7 +23,6 @@ import (
 	"os"
 	"strings"
 
-	"git.alr-pkg.ru/ALR/ALR/internal/constants"
 	"git.alr-pkg.ru/ALR/ALR/pkg/dl"
 	"git.alr-pkg.ru/ALR/ALR/pkg/dlcache"
 )
@@ -75,9 +74,9 @@ func (s *SourceDownloader) DownloadSources(
 			}
 		}
 
-		// Используем временную директорию для загрузок
+		// Используем системный кэш для загрузок
 		// dlcache.New добавит свой подкаталог "dl" внутри
-		opts.DlCache = dlcache.New(constants.TempDir)
+		opts.DlCache = dlcache.New(s.cfg.GetPaths().CacheDir)
 
 		err := dl.Download(ctx, opts)
 		if err != nil {

@@ -288,57 +288,26 @@ msgid "Unable to remove cache item (%s)"
 msgstr "Невозможно удалить элемент кэша (%s)"
 
 #: cmd/fix.go:100
-msgid "Clearing temporary directory"
-msgstr "Очистка временной директории"
+msgid "Clearing build directory"
+msgstr "Очистка каталога сборки"
 
-#: cmd/fix.go:105
-msgid ""
-"Unable to remove temporary directory (%s) as current user, trying with sudo"
-msgstr ""
-"Невозможно удалить временную директорию (%s) от текущего пользователя, "
-"попытка через sudo"
+#: cmd/fix.go:104
+msgid "Unable to remove build directory"
+msgstr "Не удалось удалить каталог сборки"
 
 #: cmd/fix.go:108
-#, fuzzy
-msgid "Unable to remove temporary directory"
-msgstr "Невозможно открыть каталог кэша"
+msgid "Unable to create build directory"
+msgstr "Не удалось создать каталог сборки"
 
-#: cmd/fix.go:115
-#, fuzzy
-msgid "Unable to create temporary directory"
-msgstr "Не удалось создать каталог конфигурации ALR"
-
-#: cmd/fix.go:121
-#, fuzzy
-msgid "Unable to create download directory"
-msgstr "Не удалось создать каталог конфигурации ALR"
-
-#: cmd/fix.go:127
-#, fuzzy
-msgid "Unable to create packages directory"
-msgstr "Не удалось создать каталог кэша пакетов"
-
-#: cmd/fix.go:131
-msgid "Fixing permissions on temporary files"
-msgstr "Исправление прав доступа к временным файлам"
-
-#: cmd/fix.go:138
-msgid "Unable to fix file ownership"
-msgstr ""
-
-#: cmd/fix.go:143
-msgid "Unable to fix file permissions"
-msgstr ""
-
-#: cmd/fix.go:148
+#: cmd/fix.go:111
 msgid "Rebuilding cache"
 msgstr "Восстановление кэша"
 
-#: cmd/fix.go:149
+#: cmd/fix.go:112
 msgid "Creating cache directory"
 msgstr "Создание директории кэша"
 
-#: cmd/fix.go:152
+#: cmd/fix.go:115
 msgid "Unable to create new cache directory"
 msgstr "Не удалось создать новый каталог кэша"
 
@@ -454,11 +423,11 @@ msgstr "Ошибка при получении пакетов для обнов�
 msgid "No packages for upgrade"
 msgstr "Нет пакетов к обновлению"
 
-#: cmd/list.go:90 cmd/list.go:199
+#: cmd/list.go:90 cmd/list.go:204
 msgid "Error parsing format template"
 msgstr "Ошибка при разборе шаблона"
 
-#: cmd/list.go:96 cmd/list.go:203
+#: cmd/list.go:96 cmd/list.go:208
 msgid "Error executing template"
 msgstr "Ошибка при выполнении шаблона"
 
@@ -474,11 +443,7 @@ msgstr "Не удалось обнаружить поддерживаемый м
 msgid "Error listing installed packages"
 msgstr "Ошибка при составлении списка установленных пакетов"
 
-#: cmd/list.go:162 cmd/list.go:163
-msgid "Failed to parse release"
-msgstr "Не удалось разобрать релиз"
-
-#: cmd/list.go:213
+#: cmd/list.go:218
 msgid "Format output using a Go template"
 msgstr "Формат выходных данных с использованием шаблона Go"
 
@@ -506,78 +471,98 @@ msgstr "Управление репозиториями"
 msgid "Remove an existing repository"
 msgstr "Удалить существующий репозиторий"
 
-#: cmd/repo.go:90 cmd/repo.go:425 cmd/repo.go:519
+#: cmd/repo.go:97 cmd/repo.go:428 cmd/repo.go:522
 msgid "Repo \"%s\" does not exist"
 msgstr "Репозиторий \"%s\" не существует"
 
-#: cmd/repo.go:97
+#: cmd/repo.go:104
 msgid "Error removing repo directory"
 msgstr "Ошибка при удалении каталога репозитория"
 
-#: cmd/repo.go:101 cmd/repo.go:181 cmd/repo.go:233 cmd/repo.go:290
-#: cmd/repo.go:362 cmd/repo.go:463 cmd/repo.go:527
+#: cmd/repo.go:108 cmd/repo.go:189 cmd/repo.go:236 cmd/repo.go:293
+#: cmd/repo.go:365 cmd/repo.go:466 cmd/repo.go:530
 msgid "Error saving config"
 msgstr "Ошибка при сохранении конфигурации"
 
-#: cmd/repo.go:116
+#: cmd/repo.go:123
 msgid "Error removing packages from database"
 msgstr "Ошибка при удалении пакетов из базы данных"
 
-#: cmd/repo.go:130
+#: cmd/repo.go:132
 msgid "Add a new repository"
 msgstr "Добавить новый репозиторий"
 
-#: cmd/repo.go:156
+#: cmd/repo.go:164
 msgid "Repo \"%s\" already exists"
 msgstr "Репозиторий \"%s\" уже существует"
 
-#: cmd/repo.go:195
+#: cmd/repo.go:198
 msgid "Set the reference of the repository"
 msgstr "Установить ссылку на версию репозитория"
 
-#: cmd/repo.go:238 cmd/repo.go:295
+#: cmd/repo.go:241 cmd/repo.go:298
 msgid "Error pulling repositories"
 msgstr "Ошибка при извлечении репозиториев"
 
-#: cmd/repo.go:252
+#: cmd/repo.go:255
 msgid "Set the main url of the repository"
 msgstr "Установить главный URL репозитория"
 
-#: cmd/repo.go:309
+#: cmd/repo.go:312
 msgid "Manage mirrors of repos"
 msgstr "Управление зеркалами репозитория"
 
-#: cmd/repo.go:325
+#: cmd/repo.go:328
 msgid "Add a mirror URL to repository"
 msgstr "Добавить зеркало репозитория"
 
-#: cmd/repo.go:381
+#: cmd/repo.go:384
 msgid "Remove mirror from the repository"
 msgstr "Удалить зеркало из репозитория"
 
-#: cmd/repo.go:450
+#: cmd/repo.go:453
 msgid "No mirrors containing \"%s\" found in repo \"%s\""
 msgstr "В репозитории \"%s\" не найдено зеркал, содержащих \"%s\""
 
-#: cmd/repo.go:452
+#: cmd/repo.go:455
 msgid "URL \"%s\" does not exist in repo \"%s\""
 msgstr "URL \"%s\" не существует в репозитории \"%s\""
 
-#: cmd/repo.go:467 cmd/repo.go:531
+#: cmd/repo.go:470 cmd/repo.go:534
 msgid "Removed %d mirrors from repo \"%s\"\n"
 msgstr "Удалено %d зеркал из репозитория \"%s\"\n"
 
-#: cmd/repo.go:474
+#: cmd/repo.go:477
 msgid "Ignore if mirror does not exist"
 msgstr "Игнорировать, если зеркала не существует"
 
-#: cmd/repo.go:475
+#: cmd/repo.go:478
 msgid "Match partial URL (e.g., github.com instead of full URL)"
 msgstr "Соответствует частичному URL (например, github.com вместо полного URL)"
 
-#: cmd/repo.go:484
+#: cmd/repo.go:487
 msgid "Remove all mirrors from the repository"
 msgstr "Удалить все зеркала из репозитория"
+
+#: cmd/repo_legacy.go:40 cmd/repo_legacy.go:76
+msgid ""
+"This command is deprecated and would be removed in the future, use \"%s\" "
+"instead!"
+msgstr ""
+"Эта команда устарела и будет удалена в будущем, используйте вместо нее "
+"\"%s\"!"
+
+#: cmd/repo_legacy.go:47
+msgid "Name of the new repo"
+msgstr "Название нового репозитория"
+
+#: cmd/repo_legacy.go:48
+msgid "URL of the new repo"
+msgstr "URL-адрес нового репозитория"
+
+#: cmd/repo_legacy.go:83
+msgid "Name of the repo to be deleted"
+msgstr "Название репозитория для удаления"
 
 #: cmd/root.go:51
 msgid "Arguments to be passed on to the package manager"
@@ -632,7 +617,7 @@ msgstr "Действия не требуются."
 msgid "Checking for ALR package updates..."
 msgstr "Проверка обновлений ALR пакетов..."
 
-#: cmd/upgrade.go:384
+#: cmd/upgrade.go:386
 msgid "Finished checking for updates"
 msgstr "Проверка обновлений завершена"
 
@@ -910,39 +895,39 @@ msgstr "ОТЛАДКА"
 msgid "ERROR"
 msgstr "ОШИБКА"
 
-#: internal/repos/pull.go:109
+#: internal/repos/pull.go:110
 msgid "Trying mirror"
 msgstr "Пробую зеркало"
 
-#: internal/repos/pull.go:115
+#: internal/repos/pull.go:116
 msgid "Failed to pull from URL"
 msgstr "Не удалось извлечь из URL"
 
-#: internal/repos/pull.go:179
+#: internal/repos/pull.go:180
 msgid "Pulling repository"
 msgstr "Скачивание репозитория"
 
-#: internal/repos/pull.go:219
+#: internal/repos/pull.go:220
 msgid "Repository up to date"
 msgstr "Репозиторий уже обновлён"
 
-#: internal/repos/pull.go:231
+#: internal/repos/pull.go:232
 msgid "Checking out repository..."
 msgstr "Переключение репозитория..."
 
-#: internal/repos/pull.go:248
+#: internal/repos/pull.go:256
 msgid "Processing repository packages (full)..."
 msgstr "Обработка пакетов репозитория (полная)..."
 
-#: internal/repos/pull.go:254
+#: internal/repos/pull.go:262
 msgid "Processing repository changes..."
 msgstr "Обработка изменений репозитория..."
 
-#: internal/repos/pull.go:263
+#: internal/repos/pull.go:271
 msgid "Git repository does not appear to be a valid ALR repo"
 msgstr "Репозиторий Git не поддерживается репозиторием ALR"
 
-#: internal/repos/pull.go:279
+#: internal/repos/pull.go:287
 msgid ""
 "ALR repo's minimum ALR version is greater than the current version. Try "
 "updating ALR if something doesn't work."
@@ -950,31 +935,31 @@ msgstr ""
 "Минимальная версия ALR для ALR-репозитория выше текущей версии. Попробуйте "
 "обновить ALR, если что-то не работает."
 
-#: internal/repos/pull.go:447
+#: internal/repos/pull.go:455
 msgid "Failed to get deleted file from old commit"
 msgstr "Не удалось получить удалённый файл из старого коммита"
 
-#: internal/repos/pull.go:453
+#: internal/repos/pull.go:461
 msgid "Failed to read deleted file"
 msgstr "Не удалось прочитать удалённый файл"
 
-#: internal/repos/pull.go:472
+#: internal/repos/pull.go:480
 msgid "Failed to get updated file from new commit"
 msgstr "Не удалось получить обновлённый файл из нового коммита"
 
-#: internal/repos/pull.go:478
+#: internal/repos/pull.go:486
 msgid "Failed to read updated file"
 msgstr "Не удалось прочитать обновлённый файл"
 
-#: internal/repos/pull.go:502 internal/repos/pull.go:538
+#: internal/repos/pull.go:510 internal/repos/pull.go:546
 msgid "Processing repository packages..."
 msgstr "Обработка пакетов репозитория..."
 
-#: internal/repos/pull.go:534
+#: internal/repos/pull.go:542
 msgid "No alr.sh files found in repository"
 msgstr "Файлы alr.sh не найдены в репозитории"
 
-#: internal/repos/pull.go:601
+#: internal/repos/pull.go:609
 msgid "Repository packages processed"
 msgstr "Пакеты репозитория обработаны"
 
@@ -1001,6 +986,30 @@ msgstr "%s: выполнено!\n"
 #: pkg/dl/progress_tui.go:106
 msgid "%s %s downloading at %s/s\n"
 msgstr "%s %s загружается — %s/с\n"
+
+#~ msgid "Clearing temporary directory"
+#~ msgstr "Очистка временной директории"
+
+#~ msgid ""
+#~ "Unable to remove temporary directory (%s) as current user, trying with "
+#~ "sudo"
+#~ msgstr ""
+#~ "Невозможно удалить временную директорию (%s) от текущего пользователя, "
+#~ "попытка через sudo"
+
+#, fuzzy
+#~ msgid "Unable to create temporary directory"
+#~ msgstr "Не удалось создать каталог конфигурации ALR"
+
+#, fuzzy
+#~ msgid "Unable to create packages directory"
+#~ msgstr "Не удалось создать каталог кэша пакетов"
+
+#~ msgid "Fixing permissions on temporary files"
+#~ msgstr "Исправление прав доступа к временным файлам"
+
+#~ msgid "Failed to parse release"
+#~ msgstr "Не удалось разобрать релиз"
 
 #~ msgid "<key> <value>"
 #~ msgstr "<ключ> <значение>"
@@ -1056,13 +1065,6 @@ msgstr "%s %s загружается — %s/с\n"
 #~ msgid "OPTIONS"
 #~ msgstr "ПАРАМЕТРЫ"
 
-msgid ""
-"This command is deprecated and would be removed in the future, use \"%s\" "
-"instead!"
-msgstr ""
-"Эта команда устарела и будет удалена в будущем, используйте вместо нее "
-"\"%s\"!"
-
 #~ msgid "Show help"
 #~ msgstr "Показать справку"
 
@@ -1078,20 +1080,8 @@ msgstr ""
 #~ msgid "<name> <ref>"
 #~ msgstr "<имя> <ссылка_на_версию>"
 
-msgid "Name of the new repo"
-msgstr "Название нового репозитория"
-
-msgid "URL of the new repo"
-msgstr "URL-адрес нового репозитория"
-
-msgid "Name of the repo to be deleted"
-msgstr "Название репозитория для удаления"
-
 #~ msgid "Checked packages for updates"
 #~ msgstr "Проверено пакетов на обновления"
-
-#~ msgid "Clearing cache directory"
-#~ msgstr "Очистка каталога кэша"
 
 #~ msgid "Error on dropping capabilities"
 #~ msgstr "Ошибка при понижении привилегий"
