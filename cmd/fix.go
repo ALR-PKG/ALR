@@ -97,52 +97,15 @@ func newFixCmd() *cobra.Command {
 				}
 			}
 
-			slog.Info(gotext.Get("Clearing temporary directory"))
-			tmpDir := "/tmp/alr"
-			if _, err := os.Stat(tmpDir); err == nil {
-				err = os.RemoveAll(tmpDir)
-				if err != nil {
-					slog.Warn(gotext.Get("Unable to remove temporary directory (%s) as current user, trying with sudo", tmpDir))
-					sudoCmd := execWithPrivileges("rm", "-rf", tmpDir)
-					if sudoErr := sudoCmd.Run(); sudoErr != nil {
-						slog.Error(gotext.Get("Unable to remove temporary directory"), "error", err)
-					}
+			slog.Info(gotext.Get("Clearing build directory"))
+			buildDir := paths.PkgsDir
+			if _, err := os.Stat(buildDir); err == nil {
+				if err := os.RemoveAll(buildDir); err != nil {
+					return fmt.Errorf("%s: %w", gotext.Get("Unable to remove build directory"), err)
 				}
 			}
-
-			err = utils.EnsureTempDirWithRootOwner(tmpDir, 0o2775)
-			if err != nil {
-				slog.Warn(gotext.Get("Unable to create temporary directory"), "error", err)
-			}
-
-			dlDir := filepath.Join(tmpDir, "dl")
-			err = utils.EnsureTempDirWithRootOwner(dlDir, 0o2775)
-			if err != nil {
-				slog.Warn(gotext.Get("Unable to create download directory"), "error", err)
-			}
-
-			pkgsDir := filepath.Join(tmpDir, "pkgs")
-			err = utils.EnsureTempDirWithRootOwner(pkgsDir, 0o2775)
-			if err != nil {
-				slog.Warn(gotext.Get("Unable to create packages directory"), "error", err)
-			}
-
-			if _, err := os.Stat(tmpDir); err == nil {
-				slog.Info(gotext.Get("Fixing permissions on temporary files"))
-
-				entries, err := os.ReadDir(tmpDir)
-				if err == nil && len(entries) > 0 {
-					group := utils.GetPrivilegedGroup()
-					fixCmd := execWithPrivileges("chown", "-R", "root:"+group, tmpDir)
-					if fixErr := fixCmd.Run(); fixErr != nil {
-						slog.Warn(gotext.Get("Unable to fix file ownership"), "error", fixErr)
-					}
-
-					fixCmd = execWithPrivileges("chmod", "-R", "2775", tmpDir)
-					if fixErr := fixCmd.Run(); fixErr != nil {
-						slog.Warn(gotext.Get("Unable to fix file permissions"), "error", fixErr)
-					}
-				}
+			if err := os.MkdirAll(buildDir, 0o755); err != nil {
+				return fmt.Errorf("%s: %w", gotext.Get("Unable to create build directory"), err)
 			}
 
 			slog.Info(gotext.Get("Rebuilding cache"))

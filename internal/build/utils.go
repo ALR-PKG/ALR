@@ -66,7 +66,7 @@ func prepareDirs(dirs types.Directories) error {
 		return err
 	}
 
-	// Создаем директории с правильным владельцем для /tmp/alr с setgid битом
+	// Создаем директории с правильным владельцем и setgid битом
 	err = utils.EnsureTempDirWithRootOwner(dirs.SrcDir, 0o2775)
 	if err != nil {
 		return err

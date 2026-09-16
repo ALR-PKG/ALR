@@ -23,11 +23,11 @@ import (
 	"strings"
 )
 
-// EnsureTempDirWithRootOwner создает каталог в /tmp/alr или /var/cache/alr с правами для привилегированной группы
-// Все каталоги в /tmp/alr и /var/cache/alr принадлежат root:привилегированная_группа с правами 2775
+// EnsureTempDirWithRootOwner создает каталог в /var/cache/alr с правами для привилегированной группы
+// Все каталоги в /var/cache/alr принадлежат root:привилегированная_группа с правами 2775
 // Для других каталогов использует стандартные права
 func EnsureTempDirWithRootOwner(path string, mode os.FileMode) error {
-	needsElevation := strings.HasPrefix(path, "/tmp/alr") || strings.HasPrefix(path, "/var/cache/alr")
+	needsElevation := strings.HasPrefix(path, "/var/cache/alr")
 
 	if needsElevation {
 		// В CI или если мы уже root, не нужно использовать sudo
