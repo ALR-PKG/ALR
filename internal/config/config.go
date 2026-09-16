@@ -120,7 +120,15 @@ func (c *ALRConfig) Load() error {
 	c.paths.UserConfigPath = constants.SystemConfigPath
 	c.paths.CacheDir = constants.SystemCachePath
 	c.paths.RepoDir = filepath.Join(c.paths.CacheDir, "repo")
-	c.paths.PkgsDir = filepath.Join(constants.TempDir, "pkgs") // Перемещаем в /tmp/alr/pkgs
+	userCacheDir, err := os.UserCacheDir()
+	if err != nil {
+		// Фолбэк для сред без HOME/XDG (сервисные аккаунты):
+		// системный каталог, права обеспечит fsutils
+		userCacheDir = constants.SystemCachePath
+		c.paths.PkgsDir = filepath.Join(userCacheDir, "build")
+	} else {
+		c.paths.PkgsDir = filepath.Join(userCacheDir, "alr", "build")
+	}
 	c.paths.DBPath = filepath.Join(c.paths.CacheDir, "alr.db")
 
 	// Проверяем существование кэш-директории, но не пытаемся создать
