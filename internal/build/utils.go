@@ -39,6 +39,7 @@ import (
 	"github.com/goreleaser/nfpm/v2/files"
 
 	"git.alr-pkg.ru/ALR/ALR/internal/cpu"
+	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/manager"
 	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
 	"git.alr-pkg.ru/ALR/ALR/internal/utils"
@@ -46,6 +47,10 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
+
+// минимум свободного места для сборки — 2 ГиБ; тяжёлым пакетам (Rust/Tauri)
+// может не хватить, но катастрофического ENOSPC посреди сборки не будет
+const minBuildSpace = 2 << 30
 
 // Функция prepareDirs подготавливает директории для сборки.
 func prepareDirs(dirs types.Directories) error {
@@ -63,6 +68,10 @@ func prepareDirs(dirs types.Directories) error {
 	// Создаем базовую директорию для пакета с setgid битом
 	err = utils.EnsureTempDirWithRootOwner(dirs.BaseDir, 0o2775)
 	if err != nil {
+		return err
+	}
+
+	if err := fsutils.CheckFreeSpace(dirs.BaseDir, minBuildSpace); err != nil {
 		return err
 	}
 
