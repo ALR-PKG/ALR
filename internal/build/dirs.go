@@ -19,7 +19,7 @@ package build
 import (
 	"path/filepath"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type BaseDirProvider interface {

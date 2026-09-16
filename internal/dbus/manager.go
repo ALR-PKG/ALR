@@ -24,9 +24,9 @@ import (
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/godbus/dbus/v5/prop"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/search"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/search"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
 // DBusManager реализует ru.alr-pkg.ALR.Manager интерфейс

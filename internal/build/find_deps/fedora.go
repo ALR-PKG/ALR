@@ -28,7 +28,7 @@ import (
 	"github.com/goreleaser/nfpm/v2"
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type FedoraFindProvReq struct{}
@@ -78,19 +78,22 @@ func rpmFindDependenciesFedora(ctx context.Context, pkgInfo *nfpm.Info, dirs typ
 }
 
 func (o *FedoraFindProvReq) FindProvides(ctx context.Context, pkgInfo *nfpm.Info, dirs types.Directories, skiplist []string) error {
+	args := []string{
+		"--define=_use_internal_dependency_generator 1",
+		"--provides",
+	}
+	if len(skiplist) > 0 {
+		args = append(args, fmt.Sprintf(
+			"--define=__provides_exclude_from %s",
+			strings.Join(skiplist, "|"),
+		))
+	}
 	return rpmFindDependenciesFedora(
 		ctx,
 		pkgInfo,
 		dirs,
 		"/usr/lib/rpm/rpmdeps",
-		[]string{
-			"--define=_use_internal_dependency_generator 1",
-			"--provides",
-			fmt.Sprintf(
-				"--define=__provides_exclude_from %s\"",
-				strings.Join(skiplist, "|"),
-			),
-		},
+		args,
 		func(dep string) {
 			slog.Info(gotext.Get("Provided dependency found"), "dep", dep)
 			pkgInfo.Overridables.Provides = append(pkgInfo.Overridables.Provides, dep)
@@ -98,19 +101,22 @@ func (o *FedoraFindProvReq) FindProvides(ctx context.Context, pkgInfo *nfpm.Info
 }
 
 func (o *FedoraFindProvReq) FindRequires(ctx context.Context, pkgInfo *nfpm.Info, dirs types.Directories, skiplist []string) error {
+	args := []string{
+		"--define=_use_internal_dependency_generator 1",
+		"--requires",
+	}
+	if len(skiplist) > 0 {
+		args = append(args, fmt.Sprintf(
+			"--define=__requires_exclude_from %s",
+			strings.Join(skiplist, "|"),
+		))
+	}
 	return rpmFindDependenciesFedora(
 		ctx,
 		pkgInfo,
 		dirs,
 		"/usr/lib/rpm/rpmdeps",
-		[]string{
-			"--define=_use_internal_dependency_generator 1",
-			"--requires",
-			fmt.Sprintf(
-				"--define=__requires_exclude_from %s",
-				strings.Join(skiplist, "|"),
-			),
-		},
+		args,
 		func(dep string) {
 			slog.Info(gotext.Get("Required dependency found"), "dep", dep)
 			pkgInfo.Overridables.Depends = append(pkgInfo.Overridables.Depends, dep)

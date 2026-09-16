@@ -113,3 +113,6 @@ msgstr "Failed to clean build directory"
 
 msgid "Cleaned build directory for rebuild"
 msgstr "Cleaned build directory for rebuild"
+
+msgid "Start typing to filter packages"
+msgstr "Start typing to filter packages"

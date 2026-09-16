@@ -37,12 +37,14 @@ func TestE2EIssue94TwiceBuild(t *testing.T) {
 
 			var stderr bytes.Buffer
 
-			r.Command("sudo", "alr", "in", "test-94-app").
+			// ALR_LOG_LEVEL=INFO нужен, т.к. в non-TTY режиме уровень логов понижается до WARN.
+			// Сообщение о сборке локализовано (по факту всегда ru): slog.Info("Building dependency %s-%s").
+			r.Command("sudo", "env", "ALR_LOG_LEVEL=INFO", "alr", "in", "test-94-app").
 				WithCaptureStderr(&stderr).
 				ExpectSuccess().
 				Run(t)
 
-			assert.Equal(t, 1, strings.Count(stderr.String(), "Building package name=test-94-dep"))
+			assert.Equal(t, 1, strings.Count(stderr.String(), "Сборка зависимости test-94-dep"))
 		},
 	)
 }

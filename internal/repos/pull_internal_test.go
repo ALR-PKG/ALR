@@ -25,10 +25,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/db"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/db"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type TestALRConfig struct{}
@@ -46,6 +46,10 @@ func (c *TestALRConfig) Repos() []types.Repo {
 			URL:  "https://test",
 		},
 	}
+}
+
+func (c *TestALRConfig) Site() types.Site {
+	return types.Site{}
 }
 
 func createReadCloserFromString(input string) io.ReadCloser {

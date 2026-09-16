@@ -27,9 +27,9 @@ import (
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/shutils/decoder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/shutils/handlers"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/shutils/decoder"
+	"git.alr-pkg.ru/ALR/ALR/internal/shutils/handlers"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 const testScript = `

@@ -18,13 +18,12 @@ package finddeps
 
 import (
 	"context"
-	"os"
 	"os/exec"
 
 	"github.com/goreleaser/nfpm/v2"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type ProvReqFinder interface {
@@ -41,7 +40,7 @@ func New(info *distro.OSRelease, pkgFormat string) *ProvReqService {
 		finder: &EmptyFindProvReq{},
 	}
 	if pkgFormat == "rpm" {
-		if _, err := os.Stat("/usr/lib/rpm/find-provides"); err == nil {
+		if info.ID == "altlinux" {
 			s.finder = &ALTLinuxFindProvReq{}
 		} else if _, err := exec.LookPath("/usr/lib/rpm/rpmdeps"); err == nil {
 			s.finder = &FedoraFindProvReq{}

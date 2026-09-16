@@ -24,7 +24,7 @@ import (
 	"reflect"
 	"strings"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/shutils/decoder"
+	"git.alr-pkg.ru/ALR/ALR/internal/shutils/decoder"
 )
 
 type PackageNames struct {
@@ -72,8 +72,28 @@ type Package struct {
 	AutoReqSkipList  OverridableField[[]string] `sh:"auto_req_skiplist" xorm:"-" json:"auto_req_skiplist,omitempty"`
 	AutoProvSkipList OverridableField[[]string] `sh:"auto_prov_skiplist" xorm:"-" json:"auto_prov_skiplist,omitempty"`
 
+	// AlrShURL — прямая ссылка на alr.sh файл (для RPC режима без git clone)
+	AlrShURL string `sh:"-" xorm:"'alr_sh_url'" json:"-"`
+
+	// AlrShSHA256 — sha256 хеш alr.sh для верификации скачанного файла
+	AlrShSHA256 string `sh:"-" xorm:"'alr_sh_sha256'" json:"-"`
+
+	// CachedAt — время последнего кэширования пакета через RPC (unix timestamp)
+	CachedAt int64 `sh:"-" xorm:"'cached_at'" json:"-"`
+
+	// ExtraFiles — дополнительные файлы из директории пакета (.desktop, .service и т.д.)
+	ExtraFiles []ExtraFile `sh:"-" xorm:"json 'extra_files'" json:"extra_files,omitempty"`
+
 	FireJailed       OverridableField[bool]              `sh:"firejailed" xorm:"-" json:"firejailed"`
 	FireJailProfiles OverridableField[map[string]string] `sh:"firejail_profiles" xorm:"-" json:"firejail_profiles,omitempty"`
+}
+
+// ExtraFile — дополнительный файл из директории пакета
+type ExtraFile struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	DownloadURL string `json:"download_url"`
+	SHA256      string `json:"sha256,omitempty"`
 }
 
 type Scripts struct {

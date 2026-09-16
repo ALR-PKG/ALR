@@ -31,9 +31,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/dl"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/dlcache"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/pkg/dl"
+	"git.alr-pkg.ru/ALR/ALR/pkg/dlcache"
 )
 
 type TestALRConfig struct{}
@@ -91,7 +91,7 @@ func TestDownloadWithoutCache(t *testing.T) {
 		},
 		{
 			name: "git download",
-			path: "git+%s/git-downloader/git/Plemya-x/alr-repo",
+			path: "git+%s/git-downloader/git/ALR/alr-repo",
 			expected: func(t *testing.T, err error, tmpdir string) {
 				assert.NoError(t, err)
 

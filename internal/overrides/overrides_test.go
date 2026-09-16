@@ -27,8 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/language"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 var info = &distro.OSRelease{
@@ -83,6 +83,34 @@ func TestResolveName(t *testing.T) {
 		"deps_rhel",
 		"deps_amd64_fedora",
 		"deps_fedora",
+		"deps_amd64",
+		"deps",
+	}
+
+	if !reflect.DeepEqual(names, expected) {
+		t.Errorf("expected %v, got %v", expected, names)
+	}
+}
+
+func TestResolveAltlinux(t *testing.T) {
+	altInfo := &distro.OSRelease{
+		ID: "altlinux",
+	}
+
+	names, err := overrides.Resolve(altInfo, &overrides.Opts{
+		Name:        "deps",
+		Overrides:   true,
+		LikeDistros: true,
+	})
+	if err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+
+	expected := []string{
+		"deps_amd64_altlinux",
+		"deps_altlinux",
+		"deps_amd64_alt",
+		"deps_alt",
 		"deps_amd64",
 		"deps",
 	}
@@ -236,5 +264,19 @@ func TestReleasePlatformSpecific(t *testing.T) {
 		release, err := overrides.ParseReleasePlatformSpecific(tc.expected, tc.info)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, release)
+	}
+}
+
+func TestResolvePosixLocale(t *testing.T) {
+	// При LANG=C / LANG=C.UTF-8 / POSIX системный язык определяется как
+	// "C" или "POSIX" — это не BCP 47 тег, Resolve не должен падать,
+	// а должен трактовать локаль как английскую
+	for _, lang := range []string{"C", "POSIX"} {
+		names, err := overrides.Resolve(info, &overrides.Opts{
+			Overrides: true,
+			Languages: []string{lang},
+		})
+		assert.NoError(t, err, "lang: %s", lang)
+		assert.Contains(t, names, "centos_en", "lang: %s", lang)
 	}
 }

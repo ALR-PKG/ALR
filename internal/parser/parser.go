@@ -19,7 +19,7 @@ package parser
 import (
 	"fmt"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/shutils/decoder"
+	"git.alr-pkg.ru/ALR/ALR/internal/shutils/decoder"
 )
 
 type PackageNames struct {

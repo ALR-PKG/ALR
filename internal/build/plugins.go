@@ -27,7 +27,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/logger"
+	"git.alr-pkg.ru/ALR/ALR/internal/logger"
 )
 
 var pluginMap = map[string]plugin.Plugin{

@@ -22,18 +22,20 @@ ADD_LICENSE_BIN := go run github.com/google/addlicense@4caba19b7ed7818bb86bc4cd2
 GOLANGCI_LINT_BIN := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
 XGOTEXT_BIN := go run github.com/Tom5521/xgotext@v1.2.0
 
-.PHONY: build install clean clear uninstall check-no-root
+.PHONY: build install clean clear uninstall check-no-root completions
 
 build: check-no-root $(BIN)
 
 export CGO_ENABLED := 0
-$(BIN):
+$(BIN): FORCE
 ifeq ($(GENERATE),1)
 	go generate ./...
 else
 	@echo "Skipping go generate (GENERATE=0)"
 endif
-	go build -ldflags="-X 'git.alr-pkg.ru/Plemya-x/ALR/internal/config.Version=$(GIT_VERSION)'" -o $@
+	go build -ldflags="-X 'git.alr-pkg.ru/ALR/ALR/internal/config.Version=$(GIT_VERSION)'" -o $@
+
+FORCE:
 
 check-no-root:
 	@if [ "$$IGNORE_ROOT_CHECK" != "1" ] && [ "`whoami`" = "root" ]; then \
@@ -41,6 +43,13 @@ check-no-root:
 		echo "Set IGNORE_ROOT_CHECK=1 to override" 1>&2; \
 		exit 1; \
 	fi
+
+# Скрипты автодополнения генерируются из бинарника (Cobra),
+# чтобы не расходиться с актуальным деревом команд
+completions: $(BIN)
+	./$(BIN) completion bash > $(BASH_COMPLETION)
+	./$(BIN) completion zsh > $(ZSH_COMPLETION)
+	./$(BIN) completion fish > $(FISH_COMPLETION)
 
 install: \
 	$(INSTALLED_BIN) \
@@ -107,3 +116,9 @@ prepare-for-e2e-test: clean build
 
 e2e-test: prepare-for-e2e-test
 	go test -tags=e2e ./...
+
+e2e-images-build:
+	cd e2e-tests/images && sh build.sh
+
+e2e-images-push:
+	cd e2e-tests/images && PUSH=1 sh build.sh $(E2E_IMAGE_PREFIXES)

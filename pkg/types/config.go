@@ -30,6 +30,16 @@ type Config struct {
 	LogLevel              string   `json:"logLevel" koanf:"logLevel"`
 	UpdateSystemOnUpgrade bool     `json:"updateSystemOnUpgrade" koanf:"updateSystemOnUpgrade"`
 	PreferALRDeps         bool     `json:"preferALRDeps" koanf:"preferALRDeps"`
+	Site                  Site     `json:"site" koanf:"site"`
+}
+
+// Site represents the ALR site RPC configuration
+type Site struct {
+	URL        string   `json:"url" koanf:"url"`
+	Mirrors    []string `json:"mirrors" koanf:"mirrors"`
+	Timeout    int      `json:"timeout" koanf:"timeout"`
+	DisableRPC bool     `json:"disableRPC" koanf:"disableRPC"`
+	PreferRPC  bool     `json:"preferRPC" koanf:"preferRPC"`
 }
 
 // Repo represents a ALR repo within a configuration file

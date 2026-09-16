@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package cmd
 
 import (
 	"context"
@@ -35,35 +35,34 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/leonelquinteros/gotext"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	database "git.alr-pkg.ru/Plemya-x/ALR/internal/db"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/search"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/utils"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/build"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	database "git.alr-pkg.ru/ALR/ALR/internal/db"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
+	"git.alr-pkg.ru/ALR/ALR/internal/repos"
+	"git.alr-pkg.ru/ALR/ALR/internal/search"
+	"git.alr-pkg.ru/ALR/ALR/internal/utils"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
-func UpgradeCmd() *cli.Command {
-	return &cli.Command{
-		Name:    "upgrade",
-		Usage:   gotext.Get("Upgrade all installed packages"),
+func newUpgradeCmd() *cobra.Command {
+	var clean bool
+
+	cmd := &cobra.Command{
+		Use:     "upgrade",
+		Short:   gotext.Get("Upgrade all installed packages"),
 		Aliases: []string{"up"},
-		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:    "clean",
-				Aliases: []string{"c"},
-				Usage:   gotext.Get("Build package from scratch even if there's an already built package available"),
-			},
-		},
-		Action: utils.RootNeededAction(func(c *cli.Context) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := utils.CheckUserPrivileges(); err != nil {
+				return err
+			}
+
 			installer, installerClose, err := build.GetSafeInstaller()
 			if err != nil {
 				return err
@@ -76,7 +75,7 @@ func UpgradeCmd() *cli.Command {
 			}
 			defer scripterClose()
 
-			ctx := c.Context
+			ctx := cmd.Context()
 
 			deps, err := appbuilder.
 				New(ctx).
@@ -91,15 +90,14 @@ func UpgradeCmd() *cli.Command {
 			}
 			defer deps.Defer()
 
-			// Обновляем систему, если это включено в конфигурации
 			if deps.Cfg.UpdateSystemOnUpgrade() {
 				slog.Info(gotext.Get("Updating system packages..."))
 				err = deps.Manager.UpgradeAll(&manager.Opts{
-					NoConfirm: !c.Bool("interactive"),
+					NoConfirm: !interactive,
 					Args:      manager.Args,
 				})
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error updating system packages"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error updating system packages"), err)
 				}
 				slog.Info(gotext.Get("System packages updated successfully"))
 			}
@@ -118,10 +116,10 @@ func UpgradeCmd() *cli.Command {
 			}
 
 			slog.Debug(fmt.Sprintf("[TIME: %s] Starting checkForUpdates", time.Now().Format("15:04:05.000")))
-			updates, err := checkForUpdates(ctx, deps.Manager, deps.DB, deps.Info, deps.Cfg)
+			updates, err := checkForUpdates(ctx, deps.Manager, deps.DB, deps.Info, deps.Cfg, deps.Repos)
 			slog.Debug(fmt.Sprintf("[TIME: %s] Finished checkForUpdates", time.Now().Format("15:04:05.000")), "updates_count", len(updates))
 			if err != nil {
-				return cliutils.FormatCliExit(gotext.Get("Error checking for updates"), err)
+				return fmt.Errorf("%s: %w", gotext.Get("Error checking for updates"), err)
 			}
 
 			if len(updates) > 0 {
@@ -130,8 +128,8 @@ func UpgradeCmd() *cli.Command {
 					ctx,
 					&build.BuildArgs{
 						Opts: &types.BuildOpts{
-							Clean:       c.Bool("clean"),
-							Interactive: c.Bool("interactive"),
+							Clean:       clean,
+							Interactive: interactive,
 						},
 						Info:       deps.Info,
 						PkgFormat_: build.GetPkgFormat(deps.Manager),
@@ -139,15 +137,20 @@ func UpgradeCmd() *cli.Command {
 					mapUpdatesToPackageNames(updates),
 				)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error checking for updates"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error checking for updates"), err)
 				}
 			} else {
 				slog.Info(gotext.Get("There is nothing to do."))
 			}
 
 			return nil
-		}),
+		},
 	}
+
+	cmd.Flags().BoolVarP(&clean, "clean", "c", false, gotext.Get("Build package from scratch even if there's an already built package available"))
+
+	addFlagCompletion(cmd)
+	return cmd
 }
 
 func mapUpdatesToPackageNames(updates []UpdateInfo) []string {
@@ -180,6 +183,7 @@ func checkForUpdates(
 	db *database.Database,
 	info *distro.OSRelease,
 	cfg build.Config,
+	repos *repos.Repos,
 ) ([]UpdateInfo, error) {
 	slog.Debug("checkForUpdates: starting", "time", time.Now().Format("15:04:05.000"))
 
@@ -193,23 +197,19 @@ func checkForUpdates(
 
 	s := search.New(db)
 
-	// Предварительно получаем индексы групп захвата для производительности
 	pkgIdx := build.RegexpALRPackageName.SubexpIndex("package")
 	repoIdx := build.RegexpALRPackageName.SubexpIndex("repo")
 
 	slog.Info(gotext.Get("Checking for ALR package updates..."), "count", len(pkgNames))
 
-	// RGB градиент для прогресс-бара (красный → желтый → синий)
 	gradientColor := func(pos float64) string {
 		var r, g, b int
 		if pos < 0.5 {
-			// Красный → жёлтый
 			t := pos * 2
 			r = int(239 + t*(234-239))
 			g = int(68 + t*(179-68))
 			b = int(68 + t*(8-68))
 		} else {
-			// Жёлтый → синий
 			t := (pos - 0.5) * 2
 			r = int(234 + t*(59-234))
 			g = int(179 + t*(130-179))
@@ -222,7 +222,52 @@ func checkForUpdates(
 	checked := 0
 	total := len(pkgNames)
 
+	rpcHandled := make(map[string]bool)
+	if repos != nil && repos.PreferRPC() {
+		rpcUpdates, err := repos.CheckUpdates(ctx, installed, info)
+		if err != nil {
+			slog.Warn("RPC проверка обновлений не удалась, используем локальный fallback", "error", err)
+		} else {
+			rpcNames := make([]string, 0, len(rpcUpdates))
+			for _, u := range rpcUpdates {
+				rpcNames = append(rpcNames, u.Name)
+			}
+
+			rpcPkgs, err := repos.RPCClient().GetPackages(ctx, rpcNames)
+			if err != nil {
+				slog.Warn("RPC получение данных пакетов не удалось, обновления будут проверены локально", "error", err)
+			} else {
+				rpcPkgMap := make(map[string]*alrsh.Package, len(rpcPkgs))
+				for i := range rpcPkgs {
+					p := &rpcPkgs[i]
+					pkg := p.ToALRShPackage()
+					rpcPkgMap[p.Name] = pkg
+				}
+
+				for _, u := range rpcUpdates {
+					pkg, ok := rpcPkgMap[u.Name]
+					if !ok {
+						continue
+					}
+					fullName := fmt.Sprintf("%s+%s", u.Name, u.Repo)
+					rpcHandled[fullName] = true
+					checked++
+
+					out = append(out, UpdateInfo{
+						Package:     pkg,
+						FromVersion: u.FromVersion,
+						ToVersion:   u.ToVersion,
+					})
+				}
+			}
+		}
+	}
+
 	for _, pkgName := range pkgNames {
+		if rpcHandled[pkgName] {
+			continue
+		}
+
 		checked++
 
 		matches := build.RegexpALRPackageName.FindStringSubmatch(pkgName)
@@ -256,17 +301,13 @@ func checkForUpdates(
 				repoVer = fmt.Sprintf("%d:%s-%s", pkg.Epoch, pkg.Version, releaseStr)
 			}
 
-			// Формируем полное имя пакета как в installed (pkg.Name + репозиторий)
 			fullPkgName := fmt.Sprintf("%s+%s", pkg.Name, repoName)
 
-			// Получаем установленную версию по полному имени из БД
 			installedVer, exists := installed[fullPkgName]
 			if !exists {
-				// Fallback: пробуем оригинальное имя из списка установленных
 				installedVer = installed[pkgName]
 			}
 
-			// Нормализуем версии перед сравнением (убираем dist суффиксы типа .red80, .el9, .fc41)
 			normalizedInstalled := normalizeVersion(installedVer)
 			normalizedRepo := normalizeVersion(repoVer)
 
@@ -279,7 +320,6 @@ func checkForUpdates(
 					"exists", exists,
 					"repoVer", repoVer,
 					"installedVer", installedVer)
-				// Создаём копию pkg, т.к. переменная цикла переиспользуется
 				pkgCopy := pkg
 				out = append(out, UpdateInfo{
 					Package:     &pkgCopy,
@@ -287,8 +327,6 @@ func checkForUpdates(
 					ToVersion:   repoVer,
 				})
 			} else {
-				// Для git-пакетов с функцией version() проверяем актуальную версию
-				// на скачанных исходниках, так как статическая версия в БД может отставать.
 				sources := pkg.Sources.Resolved()
 				if len(sources) > 0 {
 					for _, src := range sources {
@@ -324,7 +362,6 @@ func checkForUpdates(
 			}
 		}
 
-		// Рисуем прогресс-бар из точек с RGB-градиентом
 		progress := float64(checked) / float64(total)
 		barWidth := 40
 		filled := int(progress * float64(barWidth))
@@ -343,7 +380,7 @@ func checkForUpdates(
 		fmt.Fprintf(os.Stderr, "\r%s %3.0f%% (%d/%d)", bar.String(), math.Floor(progress*100), checked, total)
 	}
 
-	fmt.Fprintln(os.Stderr) // новая строка после завершения
+	fmt.Fprintln(os.Stderr)
 
 	slog.Debug("checkForUpdates: finished", "time", time.Now().Format("15:04:05.000"), "updates_available", len(out))
 	slog.Info(gotext.Get("Finished checking for updates"), "updates_available", len(out))
@@ -351,28 +388,16 @@ func checkForUpdates(
 	return out, nil
 }
 
-// distSuffixRegex находит dist суффиксы в версии (.red80, .el9, .fc41, .alt1 и т.д.)
-// Формат: [epoch:]version-release.dist
-// Примеры: "1:26.0.4-10.red80", "2024.4-4.red80", "15.1.0-3.fc41"
 var distSuffixRegex = regexp.MustCompile(`^(\d+:)?([\d\.]+-\d+)(\.[a-z]+\d*)$`)
 
-// normalizeVersion убирает dist суффикс из версии пакета
-// Например: "1:26.0.4-10.red80" → "1:26.0.4-10"
-//           "2024.4-4.red80" → "2024.4-4"
-//           "15.1.0-3.fc41" → "15.1.0-3"
 func normalizeVersion(version string) string {
-	// Пробуем найти и удалить dist суффикс
 	matches := distSuffixRegex.FindStringSubmatch(version)
 	if len(matches) >= 3 {
-		// matches[1] = epoch (может быть пустым)
-		// matches[2] = version-release
 		return matches[1] + matches[2]
 	}
 	return version
 }
 
-// findGitRepoInSrcDir ищет git-репозиторий внутри директории исходников.
-// Возвращает путь к найденному репозиторию или пустую строку.
 func findGitRepoInSrcDir(srcDir string) (string, error) {
 	entries, err := os.ReadDir(srcDir)
 	if err != nil {
@@ -389,7 +414,6 @@ func findGitRepoInSrcDir(srcDir string) (string, error) {
 	return "", nil
 }
 
-// gitVersionFromPath получает версию в формате git-version (revNum.hash) из локального git-репозитория.
 func gitVersionFromPath(repoPath string) (string, error) {
 	r, err := git.PlainOpen(repoPath)
 	if err != nil {

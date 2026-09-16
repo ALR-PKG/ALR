@@ -30,7 +30,12 @@ func TestE2EBashCompletion(t *testing.T) {
 		"bash-completion",
 		COMMON_SYSTEMS,
 		func(t *testing.T, r capytest.Runner) {
-			execShouldNoError(t, r, "alr", "install", "--generate-bash-completion")
+			// Скрипт генерируется Cobra и содержит точку входа __start_alr
+			execShouldNoError(t, r, "sh", "-c", "alr completion bash | grep -q __start_alr")
+			execShouldNoError(t, r, "sh", "-c", "alr completion zsh | grep -q '^#compdef alr'")
+			execShouldNoError(t, r, "sh", "-c", "alr completion fish | grep -q '__alr_debug'")
+			// Встроенная команда __complete возвращает команды верхнего уровня
+			execShouldNoError(t, r, "sh", "-c", "alr __complete '' | grep ^install")
 		},
 	)
 }

@@ -25,10 +25,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	database "git.alr-pkg.ru/Plemya-x/ALR/internal/db"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/repos"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	database "git.alr-pkg.ru/ALR/ALR/internal/db"
+	"git.alr-pkg.ru/ALR/ALR/internal/repos"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type TestEnv struct {
@@ -54,6 +54,10 @@ func (c *TestALRConfig) GetPaths() *config.Paths {
 
 func (c *TestALRConfig) Repos() []types.Repo {
 	return []types.Repo{}
+}
+
+func (c *TestALRConfig) Site() types.Site {
+	return types.Site{}
 }
 
 func prepare(t *testing.T) *TestEnv {
@@ -116,7 +120,7 @@ func TestPull(t *testing.T) {
 	err := rs.Pull(e.Ctx, []types.Repo{
 		{
 			Name: "default",
-			URL:  "https://git.alr-pkg.ru/Plemya-x/xpamych-alr-repo.git",
+			URL:  "https://git.alr-pkg.ru/ALR/alr-repo.git",
 		},
 	})
 	if err != nil {

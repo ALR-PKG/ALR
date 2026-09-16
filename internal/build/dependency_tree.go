@@ -22,8 +22,8 @@ import (
 	"log/slog"
 	"time"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
 // DependencyNode представляет узел в дереве зависимостей
@@ -39,11 +39,11 @@ type DependencyNode struct {
 
 // UnifiedDependencyTree представляет единое дерево зависимостей для однопроходной установки
 type UnifiedDependencyTree struct {
-	Nodes              map[string]*DependencyNode
-	AllALRPackages     []string // Все ALR пакеты в порядке топологической сортировки (от листьев)
-	AllSystemDeps      []string // Все системные зависимости (build + runtime)
-	AllOptDeps         []string // Все опциональные зависимости
-	AllBuildDeps       []string // Все build зависимости для отслеживания
+	Nodes          map[string]*DependencyNode
+	AllALRPackages []string // Все ALR пакеты в порядке топологической сортировки (от листьев)
+	AllSystemDeps  []string // Все системные зависимости (build + runtime)
+	AllOptDeps     []string // Все опциональные зависимости
+	AllBuildDeps   []string // Все build зависимости для отслеживания
 }
 
 // ResolveUnifiedDependencyTree строит единое дерево зависимостей
@@ -82,9 +82,9 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 	var resolve func(pkgNames []string, isBuildDep bool, parentPkg string) error
 	resolveCallCount := 0
 	totalProcessed := 0
-	
+
 	// Счётчик обработанных пакетов для отладки
-	
+
 	resolve = func(pkgNames []string, isBuildDep bool, parentPkg string) error {
 		resolveCallCount++
 		if len(pkgNames) == 0 {
@@ -100,8 +100,12 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 			return fmt.Errorf("failed to find packages: %w", err)
 		}
 
-		// Проверяем preferALRDeps
-		if b.cfg != nil && !b.cfg.PreferALRDeps() && b.mgr != nil {
+		// Проверяем preferALRDeps: системный пакет предпочитается ALR-пакету.
+		// Применяем только к зависимостям (parentPkg != ""): целевые пакеты,
+		// которые пользователь явно просит установить/обновить через ALR,
+		// системной замене не подлежат — иначе, например, upgrade уходит
+		// в системный менеджер и фактически не выполняется
+		if parentPkg != "" && b.cfg != nil && !b.cfg.PreferALRDeps() && b.mgr != nil {
 			for pkgName := range found {
 				available, err := b.mgr.ListAvailable(pkgName)
 				if err != nil {

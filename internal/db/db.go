@@ -31,12 +31,13 @@ import (
 	_ "modernc.org/sqlite"
 	"xorm.io/xorm"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/fsutils"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
-const CurrentVersion = 6
+const CurrentVersion = 8
 
 type Version struct {
 	Version int `xorm:"'version'"`
@@ -44,10 +45,10 @@ type Version struct {
 
 // PackageAvailabilityCache хранит информацию о доступности пакетов в репозиториях
 type PackageAvailabilityCache struct {
-	Name         string `xorm:"'name' pk"`
-	Manager      string `xorm:"'manager' pk"` // dnf, apt, pacman и т.д.
-	IsAvailable  bool   `xorm:"'is_available'"`
-	CheckedAt    int64  `xorm:"'checked_at'"`
+	Name        string `xorm:"'name' pk"`
+	Manager     string `xorm:"'manager' pk"` // dnf, apt, pacman и т.д.
+	IsAvailable bool   `xorm:"'is_available'"`
+	CheckedAt   int64  `xorm:"'checked_at'"`
 }
 
 type Config interface {
@@ -128,7 +129,7 @@ func (d *Database) addVersion(ver int) error {
 }
 
 func (d *Database) reset() error {
-	return d.engine.DropTables(new(alrsh.Package), new(Version))
+	return d.engine.DropTables(new(alrsh.Package), new(Version), new(PackageAvailabilityCache))
 }
 
 func (d *Database) InsertPackage(ctx context.Context, pkg alrsh.Package) error {
@@ -193,6 +194,35 @@ func (d *Database) Close() error {
 	return d.engine.Close()
 }
 
+// CountPkgs возвращает количество пакетов, удовлетворяющих условию
+func (d *Database) CountPkgs(_ context.Context, where string, args ...any) (int64, error) {
+	return d.engine.Where(where, args...).Count(new(alrsh.Package))
+}
+
+// GetMinCachedAt возвращает минимальное значение cached_at среди пакетов,
+// удовлетворяющих условию по имени (или всех, если prefix пустой).
+func (d *Database) GetMinCachedAt(ctx context.Context, prefix string) (int64, error) {
+	session := d.engine.Context(ctx)
+	sql := "SELECT MIN(cached_at) as min FROM " + d.engine.TableName(new(alrsh.Package)) + " WHERE cached_at > 0"
+	var args []any
+	if prefix != "" {
+		sql += " AND name LIKE ? ESCAPE ?"
+		args = append(args, cliutils.EscapeLikePattern(prefix)+"%", "\\")
+	}
+
+	var result struct {
+		Min *int64
+	}
+	has, err := session.SQL(sql, args...).Get(&result)
+	if err != nil {
+		return 0, err
+	}
+	if !has || result.Min == nil {
+		return 0, fmt.Errorf("no cached packages found")
+	}
+	return *result.Min, nil
+}
+
 // GetPackageAvailability получает информацию о доступности пакета из кэша
 func (d *Database) GetPackageAvailability(name, manager string) (bool, bool) {
 	var cache PackageAvailabilityCache
@@ -211,14 +241,14 @@ func (d *Database) SetPackageAvailability(name, manager string, isAvailable bool
 		IsAvailable: isAvailable,
 		CheckedAt:   time.Now().Unix(),
 	}
-	
+
 	// Проверяем, существует ли запись
 	var existing PackageAvailabilityCache
 	has, err := d.engine.Where("name = ? AND manager = ?", name, manager).Get(&existing)
 	if err != nil {
 		return err
 	}
-	
+
 	if has {
 		// Обновляем существующую запись
 		_, err = d.engine.Where("name = ? AND manager = ?", name, manager).Update(cache)
@@ -226,6 +256,6 @@ func (d *Database) SetPackageAvailability(name, manager string, isAvailable bool
 		// Вставляем новую запись
 		_, err = d.engine.Insert(cache)
 	}
-	
+
 	return err
 }

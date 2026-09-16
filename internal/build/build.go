@@ -33,24 +33,24 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/config"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/stats"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/stats"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type BuildInput struct {
-	opts              *types.BuildOpts
-	info              *distro.OSRelease
-	pkgFormat         string
-	script            string
-	repository        string
-	packages          []string
-	skipDepsBuilding  bool // Пропустить сборку зависимостей (используется при вызове из BuildALRDeps)
-	skipBuildDeps     bool // Пропустить установку build_deps (используется при единой установке)
+	opts             *types.BuildOpts
+	info             *distro.OSRelease
+	pkgFormat        string
+	script           string
+	repository       string
+	packages         []string
+	skipDepsBuilding bool // Пропустить сборку зависимостей (используется при вызове из BuildALRDeps)
+	skipBuildDeps    bool // Пропустить установку build_deps (используется при единой установке)
 }
 
 func (bi *BuildInput) GobEncode() ([]byte, error) {
@@ -172,6 +172,7 @@ type Config interface {
 	GetPaths() *config.Paths
 	PagerStyle() string
 	PreferALRDeps() bool
+	Site() types.Site
 }
 
 type FunctionsOutput struct {
@@ -410,7 +411,7 @@ func (b *Builder) BuildPackage(
 	sources, checksums = removeDuplicatesSources(sources, checksums)
 
 	var alrBuildDeps []*BuiltDep
-	
+
 	// Устанавливаем build_deps только если не в режиме единой установки
 	if !input.skipBuildDeps {
 		slog.Debug("installBuildDeps")
@@ -523,7 +524,6 @@ func (b *Builder) BuildPackage(
 
 	return builtDeps, nil
 }
-
 
 type InstallPkgsArgs struct {
 	BuildArgs
@@ -639,8 +639,6 @@ func (b *Builder) BuildALRDeps(
 
 	return allBuiltDeps, repoDeps, nil
 }
-
-
 
 // findAllSubpackages находит все подпакеты для базового пакета
 func (b *Builder) findAllSubpackages(ctx context.Context, basePkgName, repository string) ([]string, error) {
@@ -811,7 +809,7 @@ func (i *Builder) printDependencyTree(
 		fmt.Fprintf(w, "%s%s%s\n", prefix, connectorStyle.Render(connector), circularStyle.Render(node.PkgName+" [circular]"))
 		return
 	}
-	
+
 	// Проверяем, выводился ли уже этот пакет (дедупликация)
 	if printed[node.PkgName] {
 		// Пакет уже выводился, показываем только имя без зависимостей
@@ -826,14 +824,14 @@ func (i *Builder) printDependencyTree(
 		fmt.Fprintf(w, "%s%s%s\n", prefix, connectorStyle.Render(connector), dupStyle.Render(node.PkgName+" [already listed]"))
 		return
 	}
-	
+
 	// Отмечаем пакет как выведенный
 	printed[node.PkgName] = true
-	
+
 	// Добавляем текущий узел в путь
 	path[node.PkgName] = true
 	defer delete(path, node.PkgName) // Удаляем при выходе из функции
-	
+
 	// Определяем символы для дерева
 	var connector string
 	if isLast {
@@ -841,7 +839,7 @@ func (i *Builder) printDependencyTree(
 	} else {
 		connector = "├── "
 	}
-	
+
 	// Выбираем цвет в зависимости от типа пакета
 	var pkgColor lipgloss.Color
 	if node.IsTarget {
@@ -849,10 +847,10 @@ func (i *Builder) printDependencyTree(
 	} else {
 		pkgColor = yellowColor // Зависимости - желтые
 	}
-	
+
 	pkgStyle := lipgloss.NewStyle().Foreground(pkgColor)
 	connectorStyle := lipgloss.NewStyle().Foreground(grayColor)
-	
+
 	// Формируем строку с пакетом
 	var pkgLine string
 	if node.Package != nil {
@@ -862,9 +860,9 @@ func (i *Builder) printDependencyTree(
 	} else {
 		pkgLine = pkgStyle.Render(node.PkgName)
 	}
-	
+
 	fmt.Fprintf(w, "%s%s%s\n", prefix, connectorStyle.Render(connector), pkgLine)
-	
+
 	// Рекурсивно выводим зависимости
 	childPrefix := prefix
 	if isLast {
@@ -872,11 +870,11 @@ func (i *Builder) printDependencyTree(
 	} else {
 		childPrefix += "│   "
 	}
-	
+
 	// Собираем всех детей (runtime зависимости + системные зависимости)
 	children := node.Dependencies
 	sysDeps := node.SystemDeps
-	
+
 	// Сначала ALR зависимости
 	for idx, childName := range children {
 		if childNode, ok := tree.Nodes[childName]; ok {
@@ -898,7 +896,7 @@ func (i *Builder) printDependencyTree(
 			}
 		}
 	}
-	
+
 	// Затем системные зависимости (синим цветом)
 	if len(sysDeps) > 0 {
 		sysStyle := lipgloss.NewStyle().Foreground(blueColor)
@@ -934,13 +932,13 @@ func (i *Builder) printMetaPackageTree(
 	} else {
 		connector = "├── "
 	}
-	
+
 	connectorStyle := lipgloss.NewStyle().Foreground(grayColor)
 	metaStyle := lipgloss.NewStyle().Foreground(redColor).Bold(true)
-	
+
 	// Выводим имя метапакета
 	fmt.Fprintf(w, "%s%s%s\n", prefix, connectorStyle.Render(connector), metaStyle.Render(metaPkgName))
-	
+
 	// Префикс для дочерних элементов
 	var childPrefix string
 	if isLast {
@@ -948,7 +946,7 @@ func (i *Builder) printMetaPackageTree(
 	} else {
 		childPrefix = prefix + "│   "
 	}
-	
+
 	// Выводим подпакеты
 	for idx, subpkg := range subpkgs {
 		isLastSub := idx == len(subpkgs)-1
@@ -1017,9 +1015,7 @@ func (i *Builder) InstallPkgs(
 
 	// Формируем полный список пакетов для сборки (зависимости + целевые)
 	var allPackages []string
-	for _, pkgName := range tree.AllALRPackages {
-		allPackages = append(allPackages, pkgName)
-	}
+	allPackages = append(allPackages, tree.AllALRPackages...)
 	for _, pkgName := range pkgs {
 		// Добавляем целевые пакеты если их ещё нет в списке
 		found := false
@@ -1038,24 +1034,22 @@ func (i *Builder) InstallPkgs(
 	userConfirmed := false
 	if input.BuildOpts().Interactive && (len(tree.AllSystemDeps) > 0 || len(allPackages) > 0) {
 		// Цвета из прогресс-бара: красный -> желтый -> синий
-		redColor := lipgloss.Color("#ef4444")     // Целевые пакеты
-		yellowColor := lipgloss.Color("#eab308")  // Зависимости ALR
-		blueColor := lipgloss.Color("#3b82f6")    // Системные пакеты
-		grayColor := lipgloss.Color("#64748B")    // Разделители дерева
-		
+		redColor := lipgloss.Color("#ef4444")    // Целевые пакеты
+		yellowColor := lipgloss.Color("#eab308") // Зависимости ALR
+		blueColor := lipgloss.Color("#3b82f6")   // Системные пакеты
+		grayColor := lipgloss.Color("#64748B")   // Разделители дерева
+
 		titleStyle := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#6C5DD3")).
-			MarginBottom(1)
-		
+			Foreground(lipgloss.Color("#6C5DD3"))
 		versionStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#94A3B8"))
-		
+
 		repoStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#475569"))
-		
+
 		fmt.Fprintln(os.Stderr, titleStyle.Render("📦 "+gotext.Get("Installation summary")))
-		
+
 		// Рисуем дерево зависимостей (path отслеживает текущий путь для обнаружения циклов)
 		// printed отслеживает уже выведенные пакеты для дедупликации
 		printed := make(map[string]bool)
@@ -1079,7 +1073,7 @@ func (i *Builder) InstallPkgs(
 				}
 			}
 		}
-		
+
 		// Запрашиваем подтверждение через survey (корректно обрабатывает Ctrl+C)
 		cont, err := cliutils.YesNoPrompt(ctx, gotext.Get("Proceed with installation?"), true, true)
 		if err != nil {
@@ -1090,7 +1084,7 @@ func (i *Builder) InstallPkgs(
 		if !cont {
 			return nil, errors.New("installation cancelled by user")
 		}
-		
+
 		// После подтверждения устанавливаем всё без дополнительных запросов
 		userConfirmed = true
 	}
@@ -1103,7 +1097,7 @@ func (i *Builder) InstallPkgs(
 	if len(tree.AllSystemDeps) > 0 {
 		slog.Info(gotext.Get("Installing system dependencies"), "count", len(tree.AllSystemDeps))
 		err = i.installerExecutor.Install(ctx, tree.AllSystemDeps, &manager.Opts{
-			NoConfirm: userConfirmed, // true после подтверждения, иначе используем Interactive
+			NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to install system dependencies: %w", err)
@@ -1199,7 +1193,7 @@ func (i *Builder) InstallPkgs(
 				// Устанавливаем кешированный пакет сразу
 				if len(cachedDeps) > 0 {
 					err = i.installerExecutor.InstallLocal(ctx, GetBuiltPaths(cachedDeps), &manager.Opts{
-						NoConfirm: userConfirmed, // true после подтверждения
+						NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 					})
 					if err != nil {
 						return nil, fmt.Errorf("failed to install cached %s: %w", pkgName, err)
@@ -1245,7 +1239,7 @@ func (i *Builder) InstallPkgs(
 		// Устанавливаем собранный пакет сразу, чтобы он был доступен для следующих
 		if len(res) > 0 && !node.IsTarget {
 			err = i.installerExecutor.InstallLocal(ctx, GetBuiltPaths(res), &manager.Opts{
-				NoConfirm: userConfirmed, // true после подтверждения
+				NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to install %s: %w", pkgName, err)
@@ -1253,16 +1247,14 @@ func (i *Builder) InstallPkgs(
 		}
 
 		// Собираем установленные build deps для удаления в конце
-		for _, bd := range node.BuildDeps {
-			installedBuildDeps = append(installedBuildDeps, bd)
-		}
+		installedBuildDeps = append(installedBuildDeps, node.BuildDeps...)
 	}
 
 	// Шаг 6: Устанавливаем целевые пакеты
 	if len(targetDeps) > 0 {
 		slog.Info(gotext.Get("Installing target packages"))
 		err = i.installerExecutor.InstallLocal(ctx, GetBuiltPaths(targetDeps), &manager.Opts{
-			NoConfirm: userConfirmed, // true после подтверждения
+			NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 		})
 		if err != nil {
 			return nil, err
@@ -1297,4 +1289,3 @@ func (i *Builder) InstallPkgs(
 	// Объединяем зависимости и целевые пакеты для возврата
 	return append(allBuiltDeps, targetDeps...), nil
 }
-

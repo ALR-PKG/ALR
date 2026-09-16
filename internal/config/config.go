@@ -30,8 +30,8 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/v2"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/constants"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/constants"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 type ALRConfig struct {
@@ -39,12 +39,14 @@ type ALRConfig struct {
 	paths *Paths
 
 	System *SystemConfig
+	User   *UserConfig
 	env    *EnvConfig
 }
 
 func New() *ALRConfig {
 	return &ALRConfig{
 		System: NewSystemConfig(),
+		User:   NewUserConfig(),
 		env:    NewEnvConfig(),
 	}
 }
@@ -59,13 +61,15 @@ func defaultConfigKoanf() *koanf.Koanf {
 		"logLevel":              "info",
 		"autoPull":              true,
 		"updateSystemOnUpgrade": false,
-		"preferALRDeps":         true,
-		"repo": []types.Repo{
-			{
-				Name: "alr-default",
-				URL:  "https://git.alr-pkg.ru/Plemya-x/alr-default.git",
-			},
+		"preferALRDeps":         false,
+		"site": types.Site{
+			URL:        constants.DefaultSiteURL,
+			Mirrors:    []string{},
+			Timeout:    10,
+			DisableRPC: false,
+			PreferRPC:  true,
 		},
+		"repo": []types.Repo{},
 	}
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		panic(k)
@@ -82,11 +86,16 @@ func (c *ALRConfig) Load() error {
 		return fmt.Errorf("failed to load system config: %w", err)
 	}
 
+	if err := c.User.Load(); err != nil {
+		return fmt.Errorf("failed to load user config: %w", err)
+	}
+
 	if err := c.env.Load(); err != nil {
 		return fmt.Errorf("failed to load env config: %w", err)
 	}
 
 	systemK := c.System.koanf()
+	userK := c.User.koanf()
 	envK := c.env.koanf()
 
 	if err := merged.Merge(defaultConfigKoanf()); err != nil {
@@ -94,6 +103,9 @@ func (c *ALRConfig) Load() error {
 	}
 	if err := merged.Merge(systemK); err != nil {
 		return fmt.Errorf("failed to merge system config: %w", err)
+	}
+	if err := merged.Merge(userK); err != nil {
+		return fmt.Errorf("failed to merge user config: %w", err)
 	}
 	if err := merged.Merge(envK); err != nil {
 		return fmt.Errorf("failed to merge env config: %w", err)
@@ -152,7 +164,7 @@ func (c *ALRConfig) migrateConfig() error {
 			needSave = true
 		}
 		if !c.System.k.Exists("preferALRDeps") {
-			c.System.SetPreferALRDeps(true)
+			c.System.SetPreferALRDeps(false)
 			needSave = true
 		}
 		if needSave {
@@ -269,4 +281,7 @@ func (c *ALRConfig) LogLevel() string            { return c.cfg.LogLevel }
 func (c *ALRConfig) UseRootCmd() bool            { return c.cfg.UseRootCmd }
 func (c *ALRConfig) UpdateSystemOnUpgrade() bool { return c.cfg.UpdateSystemOnUpgrade }
 func (c *ALRConfig) PreferALRDeps() bool         { return c.cfg.PreferALRDeps }
+func (c *ALRConfig) Site() types.Site            { return c.cfg.Site }
+func (c *ALRConfig) DisableRPC() bool            { return c.cfg.Site.DisableRPC }
+func (c *ALRConfig) PreferRPC() bool             { return c.cfg.Site.PreferRPC }
 func (c *ALRConfig) GetPaths() *Paths            { return c.paths }

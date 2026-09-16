@@ -27,7 +27,7 @@ import (
 	"github.com/goreleaser/nfpm/v2"
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 func rpmFindDependenciesALTLinux(ctx context.Context, pkgInfo *nfpm.Info, dirs types.Directories, command string, envs []string, updateFunc func(string)) error {

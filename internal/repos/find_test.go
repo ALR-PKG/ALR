@@ -24,9 +24,9 @@ import (
 	"strings"
 	"testing"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/repos"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/types"
+	"git.alr-pkg.ru/ALR/ALR/internal/repos"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
 func TestFindPkgs(t *testing.T) {
@@ -41,7 +41,7 @@ func TestFindPkgs(t *testing.T) {
 	err := rs.Pull(e.Ctx, []types.Repo{
 		{
 			Name: "default",
-			URL:  "https://git.alr-pkg.ru/Plemya-x/alr-default.git",
+			URL:  "https://git.alr-pkg.ru/ALR/alr-default.git",
 		},
 	})
 	if err != nil {

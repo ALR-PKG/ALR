@@ -17,7 +17,7 @@
 package build
 
 import (
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
 )
 
 func NewMainBuilder(

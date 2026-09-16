@@ -22,6 +22,9 @@ type PackageView struct {
 	pkg Package
 
 	Resolved bool
+
+	// SiteURL — ссылка на страницу пакета на сайте ALR
+	SiteURL string
 }
 
 func NewPackageView(v Package) PackageView {
@@ -29,9 +32,21 @@ func NewPackageView(v Package) PackageView {
 }
 
 func (p PackageView) MarshalJSON() ([]byte, error) {
+	var raw []byte
+	var err error
 	if p.Resolved {
-		return json.Marshal(PackageToResolved(&p.pkg))
+		raw, err = json.Marshal(PackageToResolved(&p.pkg))
 	} else {
-		return json.Marshal(p.pkg)
+		raw, err = json.Marshal(p.pkg)
 	}
+	if err != nil || p.SiteURL == "" {
+		return raw, err
+	}
+
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return raw, nil
+	}
+	m["site_url"] = p.SiteURL
+	return json.Marshal(m)
 }

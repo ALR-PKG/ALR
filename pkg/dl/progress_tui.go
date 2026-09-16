@@ -132,7 +132,7 @@ func (m model) View() string {
 	// Рисуем прогресс-бар из точек с градиентом
 	barWidth := 40
 	filled := int(m.percent * float64(barWidth))
-	
+
 	var bar strings.Builder
 	for i := 0; i < barWidth; i++ {
 		pos := float64(i) / float64(barWidth-1)

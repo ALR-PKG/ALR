@@ -1,0 +1,15 @@
+FROM docker.io/library/fedora:latest
+
+LABEL org.opencontainers.image.source="https://git.alr-pkg.ru/ALR/ALR"
+
+RUN dnf install -y sudo git bash which rpm-build \
+    && dnf clean all \
+    && useradd -m -s /bin/bash -G wheel alr \
+    && echo 'alr ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/alr
+
+COPY alr-test-setup /bin/alr-test-setup
+RUN chmod 755 /bin/alr-test-setup
+
+USER alr
+WORKDIR /home/alr
+CMD ["sleep", "infinity"]

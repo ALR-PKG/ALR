@@ -19,17 +19,17 @@ package build
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"log/slog"
+	"regexp"
 
 	"git.alr-pkg.ru/xpamych/vercmp"
 	"github.com/leonelquinteros/gotext"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/depver"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/depver"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 func NewInstaller(mgr manager.Manager) *Installer {

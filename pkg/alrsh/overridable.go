@@ -84,6 +84,17 @@ func (f *OverridableField[T]) FromDB(data []byte) error {
 		return nil
 	}
 
+	// Fallback: если данные были сохранены в формате payload (с resolved),
+	// читаем только overrides, игнорируя resolved — оно должно вычисляться заново.
+	var payload overridableFieldJSONPayload[T]
+	if err := json.Unmarshal(data, &payload); err == nil && (payload.Data != nil || payload.Resolved != nil) {
+		if payload.Data == nil {
+			payload.Data = make(map[string]T)
+		}
+		*f = OverridableField[T]{data: payload.Data}
+		return nil
+	}
+
 	var temp map[string]T
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return err

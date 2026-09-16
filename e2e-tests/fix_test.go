@@ -26,8 +26,11 @@ import (
 
 func TestE2EAlrFix(t *testing.T) {
 	runMatrixSuite(t, "run-fix", COMMON_SYSTEMS, func(t *testing.T, r capytest.Runner) {
-		r.Command("alr", "fix").
-			ExpectStderrContains("--> Done").
+		// ALR_LOG_LEVEL=INFO нужен, т.к. в non-TTY режиме уровень логов понижается до WARN.
+		// Текст сообщений локализован (по факту всегда ru), поэтому проверяем
+		// locale-независимый маркер INFO-строки логгера "--> ".
+		r.Command("env", "ALR_LOG_LEVEL=INFO", "alr", "fix").
+			ExpectStderrContains("--> ").
 			ExpectSuccess().
 			Run(t)
 	})

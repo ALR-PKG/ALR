@@ -27,8 +27,8 @@ import (
 func TestE2EAlrVersion(t *testing.T) {
 	runMatrixSuite(t, "version", COMMON_SYSTEMS, func(t *testing.T, r capytest.Runner) {
 		r.Command("alr", "version").
-			ExpectStderrRegex(`^v\d+\.\d+\.\d+(?:-\d+-g[a-f0-9]+)?\n$`).
-			ExpectStdoutEmpty().
+			ExpectStdoutRegex(`^v\d+\.\d+\.\d+(?:-\d+-g[a-f0-9]+)?\n(Сайт|Site): https://alr-pkg\.ru\n$`).
+			ExpectStderrEmpty().
 			ExpectSuccess().
 			Run(t)
 	})

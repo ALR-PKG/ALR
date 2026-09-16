@@ -54,6 +54,7 @@ jobs:
           IGNORE_ROOT_CHECK: 1
         run: |
           make build
+          make completions
 
       - name: Create tar.gz
         run: |
@@ -75,7 +76,7 @@ jobs:
       - name: Checkout alr-default repository
         uses: actions/checkout@v4
         with:
-          repository: Plemya-x/alr-default
+          repository: ALR/alr-default
           token: ${{ secrets.GITEAPUBLIC }}
           path: alr-default
 
@@ -99,7 +100,7 @@ jobs:
         run: |
           cd alr-default
           git config user.name "gitea"
-          git config user.email "admin@plemya-x.ru"
+          git config user.email "admin@alr-pkg.ru"
           git add alr-bin/alr.sh
           git commit -m "Обновление alr-bin до версии ${{ env.VERSION }}"
           git push

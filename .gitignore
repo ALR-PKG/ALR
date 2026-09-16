@@ -6,6 +6,7 @@
 .fleet/
 .idea/
 .gigaide/
+.repowise/
 
 *.out
 *.rpm
@@ -17,3 +18,8 @@ commit_msg.txt
 /ALR
 .claude/settings.local.json
 .directory
+
+# repowise API keys (local)
+.repowise/
+.vscode
+.mcp.json

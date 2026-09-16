@@ -17,12 +17,8 @@
 package config
 
 import (
-	"strings"
-
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/v2"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type EnvConfig struct {
@@ -40,38 +36,21 @@ func (c *EnvConfig) koanf() *koanf.Koanf {
 }
 
 func (c *EnvConfig) Load() error {
-	allowedKeys := map[string]struct{}{
-		"ALR_LOG_LEVEL":       {},
-		"ALR_PAGER_STYLE":     {},
-		"ALR_AUTO_PULL":       {},
-		"ALR_PREFER_ALR_DEPS": {},
+	// Явный маппинг env-переменных на ключи конфига:
+	// строковые трансформации не дают вложенных ключей вида site.url
+	allowedKeys := map[string]string{
+		"ALR_LOG_LEVEL":        "logLevel",
+		"ALR_PAGER_STYLE":      "pagerStyle",
+		"ALR_AUTO_PULL":        "autoPull",
+		"ALR_PREFER_ALR_DEPS":  "preferALRDeps",
+		"ALR_SITE_URL":         "site.url",
+		"ALR_SITE_TIMEOUT":     "site.timeout",
+		"ALR_SITE_DISABLE_RPC": "site.disableRPC",
+		"ALR_SITE_PREFER_RPC":  "site.preferRPC",
 	}
 	err := c.k.Load(env.Provider("ALR_", ".", func(s string) string {
-		_, ok := allowedKeys[s]
-		if !ok {
-			return ""
-		}
-		withoutPrefix := strings.TrimPrefix(s, "ALR_")
-		lowered := strings.ToLower(withoutPrefix)
-		dotted := strings.ReplaceAll(lowered, "__", ".")
-		parts := strings.Split(dotted, ".")
-		for i, part := range parts {
-			if strings.Contains(part, "_") {
-				parts[i] = toCamelCase(part)
-			}
-		}
-		return strings.Join(parts, ".")
+		return allowedKeys[s]
 	}), nil)
 
 	return err
-}
-
-func toCamelCase(s string) string {
-	parts := strings.Split(s, "_")
-	for i := 1; i < len(parts); i++ {
-		if len(parts[i]) > 0 {
-			parts[i] = cases.Title(language.Und, cases.NoLower).String(parts[i])
-		}
-	}
-	return strings.Join(parts, "")
 }

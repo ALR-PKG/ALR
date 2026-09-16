@@ -17,49 +17,40 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package cmd
 
 import (
 	"fmt"
 	"log/slog"
 	"os"
 	"slices"
+	"sort"
 	"strings"
 	"text/template"
 
 	"github.com/leonelquinteros/gotext"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/build"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils"
-	appbuilder "git.alr-pkg.ru/Plemya-x/ALR/internal/cliutils/app_builder"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/manager"
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/overrides"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/internal/build"
+	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
+	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
+	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
-func ListCmd() *cli.Command {
-	return &cli.Command{
-		Name:    "list",
-		Usage:   gotext.Get("List ALR repo packages"),
+func newListCmd() *cobra.Command {
+	var (
+		installed  bool
+		upgradable bool
+		formatFlag string
+	)
+
+	cmd := &cobra.Command{
+		Use:     "list",
+		Short:   gotext.Get("List ALR repo packages"),
 		Aliases: []string{"ls"},
-		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:    "installed",
-				Aliases: []string{"I"},
-			},
-			&cli.BoolFlag{
-				Name:    "upgradable",
-				Aliases: []string{"U"},
-			},
-			&cli.StringFlag{
-				Name:    "format",
-				Aliases: []string{"f"},
-				Usage:   gotext.Get("Format output using a Go template"),
-			},
-		},
-		Action: func(c *cli.Context) error {
-			ctx := c.Context
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
 
 			deps, err := appbuilder.
 				New(ctx).
@@ -80,48 +71,60 @@ func ListCmd() *cli.Command {
 			mgr := deps.Manager
 			info := deps.Info
 
-			if c.Bool("upgradable") {
-				updates, err := checkForUpdates(ctx, mgr, db, info, cfg)
+			if upgradable {
+				updates, err := checkForUpdates(ctx, mgr, db, info, cfg, deps.Repos)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error getting packages for upgrade"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error getting packages for upgrade"), err)
 				}
 				if len(updates) == 0 {
 					slog.Info(gotext.Get("No packages for upgrade"))
 					return nil
 				}
 
-				format := c.String("format")
+				format := formatFlag
 				if format == "" {
 					format = "{{.Package.Repository}}/{{.Package.Name}} {{.FromVersion}} -> {{.ToVersion}}\n"
 				}
 				tmpl, err := template.New("format").Parse(format)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error parsing format template"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error parsing format template"), err)
 				}
 
 				for _, updateInfo := range updates {
 					err = tmpl.Execute(os.Stdout, updateInfo)
 					if err != nil {
-						return cliutils.FormatCliExit(gotext.Get("Error executing template"), err)
+						return fmt.Errorf("%s: %w", gotext.Get("Error executing template"), err)
 					}
 				}
 
 				return nil
 			}
 
-			// TODO: refactor code below
-
 			where := "true"
-			args := []any(nil)
-			if c.NArg() > 0 {
+			queryArgs := []any(nil)
+			if len(args) > 0 {
 				where = "name LIKE ? OR json_array_contains(provides, ?)"
-				args = []any{c.Args().First(), c.Args().First()}
+				queryArgs = []any{args[0], args[0]}
 			}
 
-			result, err := db.GetPkgs(ctx, where, args...)
-			if err != nil {
-				return cliutils.FormatCliExit(gotext.Get("Error getting packages"), err)
+			var result []alrsh.Package
+
+			if deps.Repos != nil && deps.Repos.PreferRPC() {
+				if len(args) == 0 {
+					result, err = deps.Repos.ListAllPackages(ctx)
+				} else {
+					result, err = deps.Repos.SearchPackages(ctx, args[0])
+				}
+			} else {
+				result, err = db.GetPkgs(ctx, where, queryArgs...)
 			}
+			if err != nil {
+				return fmt.Errorf("%s: %w", gotext.Get("Error getting packages"), err)
+			}
+
+			sort.Slice(result, func(i, j int) bool {
+				return result[i].Name < result[j].Name
+			})
 
 			type verInfo struct {
 				Version string
@@ -129,19 +132,19 @@ func ListCmd() *cli.Command {
 			}
 
 			installedAlrPackages := map[string]verInfo{}
-			if c.Bool("installed") {
+			if installed {
 				mgr := manager.Detect()
 				if mgr == nil {
-					return cli.Exit(gotext.Get("Unable to detect a supported package manager on the system"), 1)
+					return fmt.Errorf("%s", gotext.Get("Unable to detect a supported package manager on the system"))
 				}
 
-				installed, err := mgr.ListInstalled(&manager.Opts{})
+				installedList, err := mgr.ListInstalled(&manager.Opts{})
 				if err != nil {
 					slog.Error(gotext.Get("Error listing installed packages"), "err", err)
-					return cli.Exit(err, 1)
+					return fmt.Errorf("%s: %w", gotext.Get("Error listing installed packages"), err)
 				}
 
-				for pkgName, version := range installed {
+				for pkgName, version := range installedList {
 					matches := build.RegexpALRPackageName.FindStringSubmatch(pkgName)
 					if matches != nil {
 						packageName := matches[build.RegexpALRPackageName.SubexpIndex("package")]
@@ -153,12 +156,17 @@ func ListCmd() *cli.Command {
 						}
 
 						if i := strings.LastIndex(version, "-"); i != -1 {
-							verInfo.Version = version[:i]
-							verInfo.Release, err = overrides.ParseReleasePlatformSpecific(version[i+1:], info)
+							rel, err := overrides.ParseReleasePlatformSpecific(version[i+1:], info)
 							if err != nil {
-								slog.Error(gotext.Get("Failed to parse release"), "err", err)
-								return cli.Exit(err, 1)
+								// Системный пакет, случайно совпавший с форматом
+								// имени ALR (например, libstdc++6 с релизом
+								// 1ubuntu1) — пропускаем, не роняя команду
+								slog.Debug("list: не удалось разобрать релиз системного пакета, пропускаем",
+									"pkg", pkgName, "version", version, "err", err)
+								continue
 							}
+							verInfo.Version = version[:i]
+							verInfo.Release = rel
 						}
 
 						installedAlrPackages[fmt.Sprintf("%s/%s", repoName, packageName)] = verInfo
@@ -177,7 +185,7 @@ func ListCmd() *cli.Command {
 
 				pkgInfo := &packageInfo{}
 				pkgInfo.Package = &pkg
-				if c.Bool("installed") {
+				if installed {
 					instVersion, ok := installedAlrPackages[fmt.Sprintf("%s/%s", pkg.Repository, pkg.Name)]
 					if !ok {
 						continue
@@ -187,21 +195,28 @@ func ListCmd() *cli.Command {
 					}
 				}
 
-				format := c.String("format")
+				format := formatFlag
 				if format == "" {
 					format = "{{.Package.Repository}}/{{.Package.Name}} {{.Package.Version}}-{{.Package.Release}}\n"
 				}
 				tmpl, err := template.New("format").Parse(format)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error parsing format template"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error parsing format template"), err)
 				}
 				err = tmpl.Execute(os.Stdout, pkgInfo)
 				if err != nil {
-					return cliutils.FormatCliExit(gotext.Get("Error executing template"), err)
+					return fmt.Errorf("%s: %w", gotext.Get("Error executing template"), err)
 				}
 			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&installed, "installed", "I", false, "")
+	cmd.Flags().BoolVarP(&upgradable, "upgradable", "U", false, "")
+	cmd.Flags().StringVarP(&formatFlag, "format", "f", "", gotext.Get("Format output using a Go template"))
+
+	addFlagCompletion(cmd)
+	return cmd
 }

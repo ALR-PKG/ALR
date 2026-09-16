@@ -28,8 +28,8 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/language"
 
-	"git.alr-pkg.ru/Plemya-x/ALR/internal/cpu"
-	"git.alr-pkg.ru/Plemya-x/ALR/pkg/distro"
+	"git.alr-pkg.ru/ALR/ALR/internal/cpu"
+	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 type Opts struct {
@@ -67,6 +67,10 @@ func Resolve(info *distro.OSRelease, opts *Opts) ([]string, error) {
 	}
 
 	distros := []string{info.ID}
+	if info.ID == "altlinux" {
+		// В репозитории пакетов для ALT Linux используется короткий суффикс _alt
+		distros = append(distros, "alt")
+	}
 	if opts.LikeDistros {
 		distros = append(distros, info.Like...)
 	}
@@ -156,6 +160,11 @@ func parseLangs(langs []string, tags []language.Tag) ([]string, error) {
 		out[i] = base.String()
 	}
 	for i, lang := range langs {
+		// Локали C/POSIX (например, из LANG=C.UTF-8) — не BCP 47 теги,
+		// трактуем их как английский
+		if lang == "C" || lang == "POSIX" {
+			lang = "en"
+		}
 		tag, err := language.Parse(lang)
 		if err != nil {
 			return nil, err

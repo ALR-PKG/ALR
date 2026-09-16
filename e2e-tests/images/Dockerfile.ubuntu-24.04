@@ -1,0 +1,16 @@
+FROM docker.io/library/ubuntu:latest
+
+LABEL org.opencontainers.image.source="https://git.alr-pkg.ru/ALR/ALR"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends sudo git bash ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -s /bin/bash -G sudo alr \
+    && echo 'alr ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/alr
+
+COPY alr-test-setup /bin/alr-test-setup
+RUN chmod 755 /bin/alr-test-setup
+
+USER alr
+WORKDIR /home/alr
+CMD ["sleep", "infinity"]
