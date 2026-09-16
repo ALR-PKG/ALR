@@ -17,6 +17,7 @@
 package config_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -33,6 +34,27 @@ func TestLoadSetsPerUserBuildDir(t *testing.T) {
 	}
 
 	want := filepath.Join(xdg, "alr", "build")
+	if cfg.GetPaths().PkgsDir != want {
+		t.Errorf("Expected PkgsDir %q, got %q", want, cfg.GetPaths().PkgsDir)
+	}
+}
+
+func TestLoadFallsBackToSystemBuildDir(t *testing.T) {
+	// При пустых HOME и XDG_CACHE_HOME os.UserCacheDir возвращает ошибку,
+	// и PkgsDir должен стать системным каталогом
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_CACHE_HOME", "")
+
+	if _, err := os.UserCacheDir(); err == nil {
+		t.Skip("os.UserCacheDir не возвращает ошибку при пустых HOME/XDG_CACHE_HOME, фолбэк-ветка недостижима")
+	}
+
+	cfg := config.New()
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+
+	want := "/var/cache/alr/build"
 	if cfg.GetPaths().PkgsDir != want {
 		t.Errorf("Expected PkgsDir %q, got %q", want, cfg.GetPaths().PkgsDir)
 	}
