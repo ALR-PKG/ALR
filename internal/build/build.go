@@ -334,12 +334,13 @@ func (b *Builder) BuildPackage(
 		return nil, fmt.Errorf("failed ExecuteFirstPass: %w", err)
 	}
 
-	lock, err := fsutils.TryLock(getBaseDir(b.cfg, basePkg) + ".lock")
+	lockPath := getBaseDir(b.cfg, basePkg) + ".lock"
+	lock, err := fsutils.TryLock(lockPath)
 	if errors.Is(err, fsutils.ErrLocked) {
-		return nil, errors.New(gotext.Get("Package is already being built by another process"))
+		return nil, fmt.Errorf("%s: %w", gotext.Get("Package is already being built by another process"), fsutils.ErrLocked)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to lock %s: %w", lockPath, err)
 	}
 	defer lock.Close()
 

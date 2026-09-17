@@ -629,85 +629,85 @@ msgstr "Показать текущую версию ALR и выйти"
 msgid "Site: %s"
 msgstr "Сайт: %s"
 
-#: internal/build/build.go:339
+#: internal/build/build.go:340
 msgid "Package is already being built by another process"
 msgstr "Пакет уже собирается другим процессом"
 
-#: internal/build/build.go:366 internal/build/build.go:716
-#: internal/build/build.go:1197
+#: internal/build/build.go:367 internal/build/build.go:717
+#: internal/build/build.go:1198
 msgid "Using cached package"
 msgstr "Используется кешированный пакет"
 
-#: internal/build/build.go:382
+#: internal/build/build.go:383
 msgid "Failed to clean build directory"
 msgstr "Не удалось очистить директорию сборки"
 
-#: internal/build/build.go:384
+#: internal/build/build.go:385
 msgid "Cleaned build directory for rebuild"
 msgstr "Очищена директория сборки для пересборки"
 
-#: internal/build/build.go:418
+#: internal/build/build.go:419
 msgid "The checksums array must be the same length as sources"
 msgstr "Массив контрольных сумм должен быть той же длины, что и источники"
 
-#: internal/build/build.go:482
+#: internal/build/build.go:483
 msgid "Downloading sources"
 msgstr "Скачивание источников"
 
-#: internal/build/build.go:1001
+#: internal/build/build.go:1002
 #, fuzzy
 msgid "Resolving dependencies for packages"
 msgstr "Установка зависимостей"
 
-#: internal/build/build.go:1003
+#: internal/build/build.go:1004
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1061
+#: internal/build/build.go:1062
 msgid "Installation summary"
 msgstr "Сводка установки"
 
-#: internal/build/build.go:1088
+#: internal/build/build.go:1089
 msgid "Proceed with installation?"
 msgstr "Продолжить установку?"
 
-#: internal/build/build.go:1108
+#: internal/build/build.go:1109
 msgid "Installing system dependencies"
 msgstr "Установка системных зависимостей"
 
-#: internal/build/build.go:1120
+#: internal/build/build.go:1121
 msgid "Processing optional dependencies"
 msgstr "Обработка опциональных зависимостей"
 
-#: internal/build/build.go:1152
+#: internal/build/build.go:1153
 msgid "Building %d packages"
 msgstr "Сборка %d пакетов"
 
-#: internal/build/build.go:1158
+#: internal/build/build.go:1159
 msgid "Package %s not found in tree, skipping"
 msgstr "Пакет %s не найден в дереве, пропускаем"
 
-#: internal/build/build.go:1176
+#: internal/build/build.go:1177
 msgid "Package %s already installed, skipping"
 msgstr "Пакет %s уже установлен, пропускаем"
 
-#: internal/build/build.go:1218
+#: internal/build/build.go:1219
 msgid "Building package %s-%s"
 msgstr "Сборка пакета %s-%s"
 
-#: internal/build/build.go:1220
+#: internal/build/build.go:1221
 msgid "Building dependency %s-%s"
 msgstr "Сборка зависимости %s-%s"
 
-#: internal/build/build.go:1265
+#: internal/build/build.go:1266
 msgid "Installing target packages"
 msgstr "Установка целевых пакетов"
 
-#: internal/build/build.go:1284
+#: internal/build/build.go:1285
 msgid "Would you like to remove all build dependencies?"
 msgstr "Хотите удалить все зависимости сборки?"
 
-#: internal/build/build.go:1294
+#: internal/build/build.go:1295
 msgid "Failed to remove build dependencies: %v"
 msgstr "Не удалось удалить зависимости сборки: %v"
 

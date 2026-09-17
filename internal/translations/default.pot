@@ -598,84 +598,84 @@ msgstr ""
 msgid "Site: %s"
 msgstr ""
 
-#: internal/build/build.go:339
+#: internal/build/build.go:340
 msgid "Package is already being built by another process"
 msgstr ""
 
-#: internal/build/build.go:366 internal/build/build.go:716
-#: internal/build/build.go:1197
+#: internal/build/build.go:367 internal/build/build.go:717
+#: internal/build/build.go:1198
 msgid "Using cached package"
 msgstr ""
 
-#: internal/build/build.go:382
+#: internal/build/build.go:383
 msgid "Failed to clean build directory"
 msgstr ""
 
-#: internal/build/build.go:384
+#: internal/build/build.go:385
 msgid "Cleaned build directory for rebuild"
 msgstr ""
 
-#: internal/build/build.go:418
+#: internal/build/build.go:419
 msgid "The checksums array must be the same length as sources"
 msgstr ""
 
-#: internal/build/build.go:482
+#: internal/build/build.go:483
 msgid "Downloading sources"
 msgstr ""
 
-#: internal/build/build.go:1001
+#: internal/build/build.go:1002
 msgid "Resolving dependencies for packages"
 msgstr ""
 
-#: internal/build/build.go:1003
+#: internal/build/build.go:1004
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1061
+#: internal/build/build.go:1062
 msgid "Installation summary"
 msgstr ""
 
-#: internal/build/build.go:1088
+#: internal/build/build.go:1089
 msgid "Proceed with installation?"
 msgstr ""
 
-#: internal/build/build.go:1108
+#: internal/build/build.go:1109
 msgid "Installing system dependencies"
 msgstr ""
 
-#: internal/build/build.go:1120
+#: internal/build/build.go:1121
 msgid "Processing optional dependencies"
 msgstr ""
 
-#: internal/build/build.go:1152
+#: internal/build/build.go:1153
 msgid "Building %d packages"
 msgstr ""
 
-#: internal/build/build.go:1158
+#: internal/build/build.go:1159
 msgid "Package %s not found in tree, skipping"
 msgstr ""
 
-#: internal/build/build.go:1176
+#: internal/build/build.go:1177
 msgid "Package %s already installed, skipping"
 msgstr ""
 
-#: internal/build/build.go:1218
+#: internal/build/build.go:1219
 msgid "Building package %s-%s"
 msgstr ""
 
-#: internal/build/build.go:1220
+#: internal/build/build.go:1221
 msgid "Building dependency %s-%s"
 msgstr ""
 
-#: internal/build/build.go:1265
+#: internal/build/build.go:1266
 msgid "Installing target packages"
 msgstr ""
 
-#: internal/build/build.go:1284
+#: internal/build/build.go:1285
 msgid "Would you like to remove all build dependencies?"
 msgstr ""
 
-#: internal/build/build.go:1294
+#: internal/build/build.go:1295
 msgid "Failed to remove build dependencies: %v"
 msgstr ""
 
