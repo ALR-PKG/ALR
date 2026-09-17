@@ -33,15 +33,19 @@ func TestLoadSetsPerUserBuildDir(t *testing.T) {
 		t.Fatalf("Expected no error, got %s", err)
 	}
 
-	want := filepath.Join(xdg, "alr", "build")
-	if cfg.GetPaths().PkgsDir != want {
-		t.Errorf("Expected PkgsDir %q, got %q", want, cfg.GetPaths().PkgsDir)
+	wantBuild := filepath.Join(xdg, "alr", "build")
+	if cfg.GetPaths().BuildDir != wantBuild {
+		t.Errorf("Expected BuildDir %q, got %q", wantBuild, cfg.GetPaths().BuildDir)
+	}
+	wantPkgs := filepath.Join(xdg, "alr", "pkgs")
+	if cfg.GetPaths().PkgsDir != wantPkgs {
+		t.Errorf("Expected PkgsDir %q, got %q", wantPkgs, cfg.GetPaths().PkgsDir)
 	}
 }
 
 func TestLoadFallsBackToSystemBuildDir(t *testing.T) {
 	// При пустых HOME и XDG_CACHE_HOME os.UserCacheDir возвращает ошибку,
-	// и PkgsDir должен стать системным каталогом
+	// и BuildDir/PkgsDir должны стать системными каталогами
 	t.Setenv("HOME", "")
 	t.Setenv("XDG_CACHE_HOME", "")
 
@@ -54,9 +58,13 @@ func TestLoadFallsBackToSystemBuildDir(t *testing.T) {
 		t.Fatalf("Expected no error, got %s", err)
 	}
 
-	want := "/var/cache/alr/build"
-	if cfg.GetPaths().PkgsDir != want {
-		t.Errorf("Expected PkgsDir %q, got %q", want, cfg.GetPaths().PkgsDir)
+	wantBuild := "/var/cache/alr/build"
+	if cfg.GetPaths().BuildDir != wantBuild {
+		t.Errorf("Expected BuildDir %q, got %q", wantBuild, cfg.GetPaths().BuildDir)
+	}
+	wantPkgs := "/var/cache/alr/pkgs"
+	if cfg.GetPaths().PkgsDir != wantPkgs {
+		t.Errorf("Expected PkgsDir %q, got %q", wantPkgs, cfg.GetPaths().PkgsDir)
 	}
 }
 

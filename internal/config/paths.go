@@ -25,6 +25,7 @@ type Paths struct {
 	UserConfigPath   string
 	CacheDir         string
 	RepoDir          string
+	BuildDir         string
 	PkgsDir          string
 	DBPath           string
 }
