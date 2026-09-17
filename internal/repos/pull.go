@@ -106,7 +106,7 @@ func (rs *Repos) pullRepo(ctx context.Context, repo *types.Repo, updateRepoFromT
 		if errors.Is(err, fsutils.ErrLocked) {
 			return fmt.Errorf("%s: %w", gotext.Get("Repository %s is already being pulled by another process", repo.Name), err)
 		}
-		return err
+		return fmt.Errorf("failed to lock repository %s: %w", repo.Name, err)
 	}
 	defer lock.Close()
 

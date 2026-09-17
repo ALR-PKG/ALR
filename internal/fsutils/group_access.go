@@ -37,13 +37,9 @@ func EnsureGroupAccess(root string) error {
 		return nil
 	}
 
-	grp, err := user.LookupGroup(GetPrivilegedGroup())
+	gid, err := privilegedGID()
 	if err != nil {
-		return fmt.Errorf("не удалось найти привилегированную группу: %w", err)
-	}
-	gid, err := strconv.Atoi(grp.Gid)
-	if err != nil {
-		return fmt.Errorf("некорректный gid группы %s: %w", grp.Name, err)
+		return err
 	}
 
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -74,4 +70,17 @@ func EnsureGroupAccess(root string) error {
 
 		return nil
 	})
+}
+
+// privilegedGID возвращает gid привилегированной группы текущего дистрибутива
+func privilegedGID() (int, error) {
+	grp, err := user.LookupGroup(GetPrivilegedGroup())
+	if err != nil {
+		return 0, fmt.Errorf("не удалось найти привилегированную группу: %w", err)
+	}
+	gid, err := strconv.Atoi(grp.Gid)
+	if err != nil {
+		return 0, fmt.Errorf("некорректный gid группы %s: %w", grp.Name, err)
+	}
+	return gid, nil
 }

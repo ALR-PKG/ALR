@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
 
 	"git.alr-pkg.ru/ALR/ALR/internal/config"
@@ -86,10 +87,10 @@ func TestPullLocked(t *testing.T) {
 	// fsutils.TryLock реентерабелен в пределах процесса, поэтому «другой
 	// процесс» симулируется прямым flock на отдельном open file description
 	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o664)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer f.Close()
 	err = unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer unix.Flock(int(f.Fd()), unix.LOCK_UN)
 
 	err = rs.pullRepo(ctx, &types.Repo{Name: name, URL: "https://example.invalid/x.git"}, false)

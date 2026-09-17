@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 	"testing"
@@ -194,5 +196,52 @@ func TestTryLockCreatesParentDir(t *testing.T) {
 	defer l.Close()
 	if _, err := os.Stat(path); err != nil {
 		t.Errorf("Expected lock file to exist, got %s", err)
+	}
+}
+
+// TestTryLockRootNormalizesPermissions проверяет, что при запуске от root
+// лок-файл получает привилегированную группу и режим 0660, а только что
+// созданный родительский каталог — привилегированную группу. Иначе после
+// pull от root пользователь из группы не сможет открыть лок-файл (EACCES)
+func TestTryLockRootNormalizesPermissions(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("тест требует root: проверяется нормализация прав лок-файла")
+	}
+
+	grp, err := user.LookupGroup(fsutils.GetPrivilegedGroup())
+	if err != nil {
+		t.Skipf("привилегированная группа %s не найдена: %s", fsutils.GetPrivilegedGroup(), err)
+	}
+	gid, err := strconv.Atoi(grp.Gid)
+	if err != nil {
+		t.Fatalf("некорректный gid группы %s: %s", grp.Name, err)
+	}
+
+	dir := filepath.Join(t.TempDir(), "repo")
+	path := filepath.Join(dir, "test.lock")
+
+	l, err := fsutils.TryLock(path)
+	if err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+	defer l.Close()
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("Failed to stat %s: %s", path, err)
+	}
+	if info.Mode().Perm() != 0o660 {
+		t.Errorf("Expected lock file mode 0660, got %04o", info.Mode().Perm())
+	}
+	if stat, ok := info.Sys().(*syscall.Stat_t); !ok || int(stat.Gid) != gid {
+		t.Errorf("Expected lock file gid %d (%s), got %+v", gid, grp.Name, info.Sys())
+	}
+
+	dinfo, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("Failed to stat %s: %s", dir, err)
+	}
+	if stat, ok := dinfo.Sys().(*syscall.Stat_t); !ok || int(stat.Gid) != gid {
+		t.Errorf("Expected parent dir gid %d (%s), got %+v", gid, grp.Name, dinfo.Sys())
 	}
 }

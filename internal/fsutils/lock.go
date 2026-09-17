@@ -19,6 +19,7 @@ package fsutils
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -79,7 +80,10 @@ func (l *Lock) Close() error {
 // возвращает новый handle на тот же flock.
 // Если блокировку уже держит другой процесс — ErrLocked.
 func TryLock(path string) (*Lock, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o2775); err != nil {
+	dir := filepath.Dir(path)
+	_, statErr := os.Stat(dir)
+	dirCreated := os.IsNotExist(statErr)
+	if err := os.MkdirAll(dir, 0o2775); err != nil {
 		return nil, fmt.Errorf("не удалось создать каталог для файла блокировки %s: %w", path, err)
 	}
 
@@ -103,6 +107,41 @@ func TryLock(path string) (*Lock, error) {
 		return nil, fmt.Errorf("не удалось заблокировать %s: %w", path, err)
 	}
 
+	normalizeLockAccess(path, dir, dirCreated)
+
 	heldLocks[path] = &lockEntry{file: f, refs: 1}
 	return &Lock{path: path}, nil
+}
+
+// normalizeLockAccess при запуске от root выставляет лок-файлу
+// привилегированную группу и режим 0660, чтобы члены группы могли брать
+// блокировку после pull/сборки от root (RepoDir — общий каталог группы).
+// Родительский каталог получает группу только если его только что создал
+// TryLock — существующие каталоги не трогаем. Ошибки нормализации
+// не фатальны: на системах без привилегированной группы root продолжает
+// работать. Реентерабельный путь TryLock сюда не попадает — файл уже
+// нормализован при первом захвате.
+func normalizeLockAccess(path, dir string, dirCreated bool) {
+	if os.Geteuid() != 0 {
+		return
+	}
+
+	gid, err := privilegedGID()
+	if err != nil {
+		slog.Debug("TryLock: не удалось определить привилегированную группу", "error", err)
+		return
+	}
+
+	if err := os.Chown(path, 0, gid); err != nil {
+		slog.Debug("TryLock: не удалось сменить группу лок-файла", "path", path, "error", err)
+	}
+	if err := os.Chmod(path, 0o660); err != nil {
+		slog.Debug("TryLock: не удалось сменить права лок-файла", "path", path, "error", err)
+	}
+
+	if dirCreated {
+		if err := os.Chown(dir, 0, gid); err != nil {
+			slog.Debug("TryLock: не удалось сменить группу каталога блокировки", "dir", dir, "error", err)
+		}
+	}
 }
