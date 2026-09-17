@@ -18,12 +18,14 @@ package build
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"syscall"
 
 	"github.com/goreleaser/nfpm/v2"
+	"github.com/leonelquinteros/gotext"
 
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
@@ -47,12 +49,22 @@ func (c *Cache) CheckForBuiltPackage(
 }
 
 // findTrustedCachedPkg ищет готовый пакет в плоском кэше PkgsDir и
-// возвращает его, только если владелец файла доверенный.
+// возвращает его, только если это регулярный файл с доверенным владельцем.
 func findTrustedCachedPkg(cfg Config, filename string) (string, bool) {
 	pkgPath := filepath.Join(cfg.GetPaths().PkgsDir, filename)
 
-	stat, err := os.Stat(pkgPath)
+	stat, err := os.Lstat(pkgPath)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			slog.Debug("Не удалось прочитать файл кэша, пересборка", "path", pkgPath, "error", err)
+		}
+		return "", false
+	}
+
+	// Симлинк или не-регулярный файл в общем кэше не доверен:
+	// симлинк на root-owned файл иначе прошёл бы проверку владельца
+	if !stat.Mode().IsRegular() {
+		slog.Debug("Файл кэша не является регулярным файлом, пересборка", "path", pkgPath)
 		return "", false
 	}
 
@@ -68,6 +80,24 @@ func findTrustedCachedPkg(cfg Config, filename string) (string, bool) {
 	}
 
 	return pkgPath, true
+}
+
+// verifyTrustedPaths перепроверяет владельца путей непосредственно перед
+// установкой, закрывая TOCTOU-окно между попаданием в кэш и InstallLocal.
+func verifyTrustedPaths(paths []string) error {
+	for _, path := range paths {
+		stat, err := os.Lstat(path)
+		if err != nil {
+			return fmt.Errorf("failed to stat cached package %s: %w", path, err)
+		}
+
+		sys, ok := stat.Sys().(*syscall.Stat_t)
+		if !ok || !stat.Mode().IsRegular() || !isTrustedOwner(sys.Uid) {
+			slog.Debug("Отказ в установке пакета из кэша", "path", path)
+			return fmt.Errorf("%s: %s", gotext.Get("Cached package owner changed, refusing to install"), path)
+		}
+	}
+	return nil
 }
 
 // isTrustedOwner возвращает true, если uid — сам пользователь, root (фолбэк

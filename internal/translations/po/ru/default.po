@@ -703,13 +703,17 @@ msgstr "Сборка зависимости %s-%s"
 msgid "Installing target packages"
 msgstr "Установка целевых пакетов"
 
-#: internal/build/build.go:1285
+#: internal/build/build.go:1292
 msgid "Would you like to remove all build dependencies?"
 msgstr "Хотите удалить все зависимости сборки?"
 
-#: internal/build/build.go:1295
+#: internal/build/build.go:1302
 msgid "Failed to remove build dependencies: %v"
 msgstr "Не удалось удалить зависимости сборки: %v"
+
+#: internal/build/cache.go:97
+msgid "Cached package owner changed, refusing to install"
+msgstr "Владелец кэшированного пакета изменился, установка отклонена"
 
 #: internal/build/checker.go:43
 msgid ""

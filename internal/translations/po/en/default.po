@@ -140,3 +140,6 @@ msgstr "Package copied to cache"
 
 msgid "Failed to remove package from build tree"
 msgstr "Failed to remove package from build tree"
+
+msgid "Cached package owner changed, refusing to install"
+msgstr "Cached package owner changed, refusing to install"

@@ -671,12 +671,16 @@ msgstr ""
 msgid "Installing target packages"
 msgstr ""
 
-#: internal/build/build.go:1285
+#: internal/build/build.go:1292
 msgid "Would you like to remove all build dependencies?"
 msgstr ""
 
-#: internal/build/build.go:1295
+#: internal/build/build.go:1302
 msgid "Failed to remove build dependencies: %v"
+msgstr ""
+
+#: internal/build/cache.go:97
+msgid "Cached package owner changed, refusing to install"
 msgstr ""
 
 #: internal/build/checker.go:43

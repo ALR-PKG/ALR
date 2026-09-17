@@ -75,6 +75,25 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		assert.False(t, found)
 	})
 
+	t.Run("symlink in PkgsDir is not a cache hit", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+		cache := &Cache{cfg}
+		input, vars := newTestCacheInput()
+
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		target := filepath.Join(t.TempDir(), "target.pkg")
+		require.NoError(t, os.WriteFile(target, []byte("pkg"), 0o644))
+		require.NoError(t, os.Symlink(target, filepath.Join(pkgsDir, filename)))
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
 	t.Run("package in build tree is not a cache hit", func(t *testing.T) {
 		// Старая схема: пакет лежал в дереве сборки (<BaseDir>/<filename>).
 		// После переезда кэша в PkgsDir такой файл не должен засчитываться.
@@ -95,6 +114,30 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars)
 		require.NoError(t, err)
 		assert.False(t, found)
+	})
+}
+
+func TestVerifyTrustedPaths(t *testing.T) {
+	t.Run("own regular file is accepted", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "pkg-1.0.apk")
+		require.NoError(t, os.WriteFile(path, []byte("pkg"), 0o644))
+
+		assert.NoError(t, verifyTrustedPaths([]string{path}))
+	})
+
+	t.Run("missing file returns error", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "missing.pkg")
+
+		assert.Error(t, verifyTrustedPaths([]string{path}))
+	})
+
+	t.Run("symlink is rejected", func(t *testing.T) {
+		target := filepath.Join(t.TempDir(), "target.pkg")
+		require.NoError(t, os.WriteFile(target, []byte("pkg"), 0o644))
+		link := filepath.Join(t.TempDir(), "link.pkg")
+		require.NoError(t, os.Symlink(target, link))
+
+		assert.Error(t, verifyTrustedPaths([]string{link}))
 	})
 }
 

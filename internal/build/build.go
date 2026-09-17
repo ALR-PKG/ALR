@@ -1264,6 +1264,13 @@ func (i *Builder) InstallPkgs(
 	// Шаг 6: Устанавливаем целевые пакеты
 	if len(targetDeps) > 0 {
 		slog.Info(gotext.Get("Installing target packages"))
+
+		// Перепроверяем владельца кэшированных пакетов: между попаданием
+		// в кэш и установкой файл в общем кэше мог быть подменён
+		if err := verifyTrustedPaths(GetBuiltPaths(targetDeps)); err != nil {
+			return nil, err
+		}
+
 		err = i.installerExecutor.InstallLocal(ctx, GetBuiltPaths(targetDeps), &manager.Opts{
 			NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 		})
