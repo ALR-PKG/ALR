@@ -48,6 +48,9 @@ msgstr "Package %s already installed, skipping"
 msgid "Package is already being built by another process"
 msgstr "Package is already being built by another process"
 
+msgid "Repository %s is already being pulled by another process"
+msgstr "Repository %s is already being pulled by another process"
+
 msgid "Using cached package"
 msgstr "Using cached package"
 

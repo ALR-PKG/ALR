@@ -853,69 +853,73 @@ msgstr ""
 msgid "ERROR"
 msgstr ""
 
-#: internal/repos/pull.go:110
+#: internal/repos/pull.go:107
+msgid "Repository %s is already being pulled by another process"
+msgstr ""
+
+#: internal/repos/pull.go:120
 msgid "Trying mirror"
 msgstr ""
 
-#: internal/repos/pull.go:116
+#: internal/repos/pull.go:126
 msgid "Failed to pull from URL"
 msgstr ""
 
-#: internal/repos/pull.go:180
+#: internal/repos/pull.go:190
 msgid "Pulling repository"
 msgstr ""
 
-#: internal/repos/pull.go:220
+#: internal/repos/pull.go:230
 msgid "Repository up to date"
 msgstr ""
 
-#: internal/repos/pull.go:232
+#: internal/repos/pull.go:242
 msgid "Checking out repository..."
 msgstr ""
 
-#: internal/repos/pull.go:256
+#: internal/repos/pull.go:266
 msgid "Processing repository packages (full)..."
 msgstr ""
 
-#: internal/repos/pull.go:262
+#: internal/repos/pull.go:272
 msgid "Processing repository changes..."
 msgstr ""
 
-#: internal/repos/pull.go:271
+#: internal/repos/pull.go:281
 msgid "Git repository does not appear to be a valid ALR repo"
 msgstr ""
 
-#: internal/repos/pull.go:287
+#: internal/repos/pull.go:297
 msgid ""
 "ALR repo's minimum ALR version is greater than the current version. Try "
 "updating ALR if something doesn't work."
 msgstr ""
 
-#: internal/repos/pull.go:455
+#: internal/repos/pull.go:465
 msgid "Failed to get deleted file from old commit"
 msgstr ""
 
-#: internal/repos/pull.go:461
+#: internal/repos/pull.go:471
 msgid "Failed to read deleted file"
 msgstr ""
 
-#: internal/repos/pull.go:480
+#: internal/repos/pull.go:490
 msgid "Failed to get updated file from new commit"
 msgstr ""
 
-#: internal/repos/pull.go:486
+#: internal/repos/pull.go:496
 msgid "Failed to read updated file"
 msgstr ""
 
-#: internal/repos/pull.go:510 internal/repos/pull.go:546
+#: internal/repos/pull.go:520 internal/repos/pull.go:556
 msgid "Processing repository packages..."
 msgstr ""
 
-#: internal/repos/pull.go:542
+#: internal/repos/pull.go:552
 msgid "No alr.sh files found in repository"
 msgstr ""
 
-#: internal/repos/pull.go:609
+#: internal/repos/pull.go:619
 msgid "Repository packages processed"
 msgstr ""
 

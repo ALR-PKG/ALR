@@ -20,22 +20,28 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sys/unix"
 
 	"git.alr-pkg.ru/ALR/ALR/internal/config"
 	"git.alr-pkg.ru/ALR/ALR/internal/db"
+	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
-type TestALRConfig struct{}
+type TestALRConfig struct {
+	RepoDir string
+}
 
 func (c *TestALRConfig) GetPaths() *config.Paths {
 	return &config.Paths{
-		DBPath: ":memory:",
+		DBPath:  ":memory:",
+		RepoDir: c.RepoDir,
 	}
 }
 
@@ -61,6 +67,33 @@ func createReadCloserFromString(input string) io.ReadCloser {
 		Reader: reader,
 		Closer: io.NopCloser(reader),
 	}
+}
+
+func TestPullLocked(t *testing.T) {
+	ctx := context.Background()
+
+	cfg := &TestALRConfig{RepoDir: t.TempDir()}
+
+	database := db.New(cfg)
+	database.Init(ctx)
+	defer database.Close()
+
+	rs := New(cfg, database)
+
+	name := "locked-repo"
+	lockPath := filepath.Join(cfg.RepoDir, name+".lock")
+
+	// fsutils.TryLock реентерабелен в пределах процесса, поэтому «другой
+	// процесс» симулируется прямым flock на отдельном open file description
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o664)
+	assert.NoError(t, err)
+	defer f.Close()
+	err = unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB)
+	assert.NoError(t, err)
+	defer unix.Flock(int(f.Fd()), unix.LOCK_UN)
+
+	err = rs.pullRepo(ctx, &types.Repo{Name: name, URL: "https://example.invalid/x.git"}, false)
+	assert.ErrorIs(t, err, fsutils.ErrLocked)
 }
 
 func TestUpdatePkg(t *testing.T) {
