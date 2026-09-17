@@ -836,11 +836,11 @@ msgstr ""
 msgid "Cache directory does not exist, creating it"
 msgstr ""
 
-#: internal/db/db.go:105
+#: internal/db/db.go:111
 msgid "Database version mismatch; resetting"
 msgstr ""
 
-#: internal/db/db.go:111
+#: internal/db/db.go:117
 msgid ""
 "Database version does not exist. Run alr fix if something isn't working."
 msgstr ""

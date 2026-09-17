@@ -881,11 +881,11 @@ msgstr "Пользователь решил не продолжать после
 msgid "Cache directory does not exist, creating it"
 msgstr ""
 
-#: internal/db/db.go:105
+#: internal/db/db.go:111
 msgid "Database version mismatch; resetting"
 msgstr "Несоответствие версий базы данных; сброс настроек"
 
-#: internal/db/db.go:111
+#: internal/db/db.go:117
 msgid ""
 "Database version does not exist. Run alr fix if something isn't working."
 msgstr ""
