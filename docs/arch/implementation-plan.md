@@ -595,12 +595,12 @@ Expected: PASS
 - Modify: `internal/build/cache.go`
 - Test: `internal/build/cache_test.go` (новый или существующий)
 
-- [ ] **Шаг 1: падающий тест** — файл пакета в `PkgsDir` (temp-dir)
+- [x] **Шаг 1: падающий тест** — файл пакета в `PkgsDir` (temp-dir)
   от текущего пользователя → найден; отсутствует → не найден; юнит на
   хелпер `isTrustedOwner(uid uint32) bool`: доверенные — `os.Geteuid()`,
   0, 65534; остальные — нет.
 
-- [ ] **Шаг 2: реализация** — `CheckForBuiltPackage` ищет
+- [x] **Шаг 2: реализация** — `CheckForBuiltPackage` ищет
   `filepath.Join(c.cfg.GetPaths().PkgsDir, filename)` (плоско, без
   baseName-подкаталога — conventional filename уже уникален: имя+репо,
   версия, релиз, арх, формат). При находке: `os.Stat` →
@@ -608,12 +608,12 @@ Expected: PASS
   (`os.Geteuid()`, 0, 65534) → `slog.Debug` о недоверии и `false`
   (пересборка; файл будет заменён на шаге копирования).
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/build/ -v && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Изменено: кэш пакетов в PkgsDir с проверкой владельца`
+- [x] **Шаг 4: коммит** `Изменено: кэш пакетов в PkgsDir с проверкой владельца`
 
 ### Task 4.5: сквозная проверка Этапа 4
 

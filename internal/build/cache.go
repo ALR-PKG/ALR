@@ -18,8 +18,10 @@ package build
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/goreleaser/nfpm/v2"
 
@@ -40,19 +42,38 @@ func (c *Cache) CheckForBuiltPackage(
 		return "", false, err
 	}
 
-	// Для подпакетов используем BasePkgName, чтобы искать в правильной директории
-	baseName := vars.BasePkgName
-	if baseName == "" {
-		baseName = vars.Name
-	}
-	pkgPath := filepath.Join(getBaseDir(c.cfg, baseName), filename)
+	path, found := findTrustedCachedPkg(c.cfg, filename)
+	return path, found, nil
+}
 
-	_, err = os.Stat(pkgPath)
+// findTrustedCachedPkg ищет готовый пакет в плоском кэше PkgsDir и
+// возвращает его, только если владелец файла доверенный.
+func findTrustedCachedPkg(cfg Config, filename string) (string, bool) {
+	pkgPath := filepath.Join(cfg.GetPaths().PkgsDir, filename)
+
+	stat, err := os.Stat(pkgPath)
 	if err != nil {
-		return "", false, nil
+		return "", false
 	}
 
-	return pkgPath, true, nil
+	sys, ok := stat.Sys().(*syscall.Stat_t)
+	if !ok {
+		slog.Debug("Не удалось получить владельца файла кэша, пересборка", "path", pkgPath)
+		return "", false
+	}
+
+	if !isTrustedOwner(sys.Uid) {
+		slog.Debug("Пакет в кэше принадлежит недоверенному владельцу, пересборка", "path", pkgPath, "uid", sys.Uid)
+		return "", false
+	}
+
+	return pkgPath, true
+}
+
+// isTrustedOwner возвращает true, если uid — сам пользователь, root (фолбэк
+// демона) или nobody (тоже фолбэк демона в общем кэше).
+func isTrustedOwner(uid uint32) bool {
+	return uid == uint32(os.Geteuid()) || uid == 0 || uid == 65534
 }
 
 func pkgFileName(
