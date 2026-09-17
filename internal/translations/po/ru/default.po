@@ -629,81 +629,85 @@ msgstr "Показать текущую версию ALR и выйти"
 msgid "Site: %s"
 msgstr "Сайт: %s"
 
-#: internal/build/build.go:356 internal/build/build.go:706
-#: internal/build/build.go:1187
+#: internal/build/build.go:340
+msgid "Package is already being built by another process"
+msgstr "Пакет уже собирается другим процессом"
+
+#: internal/build/build.go:367 internal/build/build.go:717
+#: internal/build/build.go:1198
 msgid "Using cached package"
 msgstr "Используется кешированный пакет"
 
-#: internal/build/build.go:372
+#: internal/build/build.go:383
 msgid "Failed to clean build directory"
 msgstr "Не удалось очистить директорию сборки"
 
-#: internal/build/build.go:374
+#: internal/build/build.go:385
 msgid "Cleaned build directory for rebuild"
 msgstr "Очищена директория сборки для пересборки"
 
-#: internal/build/build.go:408
+#: internal/build/build.go:419
 msgid "The checksums array must be the same length as sources"
 msgstr "Массив контрольных сумм должен быть той же длины, что и источники"
 
-#: internal/build/build.go:472
+#: internal/build/build.go:483
 msgid "Downloading sources"
 msgstr "Скачивание источников"
 
-#: internal/build/build.go:991
+#: internal/build/build.go:1002
 #, fuzzy
 msgid "Resolving dependencies for packages"
 msgstr "Установка зависимостей"
 
-#: internal/build/build.go:993
+#: internal/build/build.go:1004
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1051
+#: internal/build/build.go:1062
 msgid "Installation summary"
 msgstr "Сводка установки"
 
-#: internal/build/build.go:1078
+#: internal/build/build.go:1089
 msgid "Proceed with installation?"
 msgstr "Продолжить установку?"
 
-#: internal/build/build.go:1098
+#: internal/build/build.go:1109
 msgid "Installing system dependencies"
 msgstr "Установка системных зависимостей"
 
-#: internal/build/build.go:1110
+#: internal/build/build.go:1121
 msgid "Processing optional dependencies"
 msgstr "Обработка опциональных зависимостей"
 
-#: internal/build/build.go:1142
+#: internal/build/build.go:1153
 msgid "Building %d packages"
 msgstr "Сборка %d пакетов"
 
-#: internal/build/build.go:1148
+#: internal/build/build.go:1159
 msgid "Package %s not found in tree, skipping"
 msgstr "Пакет %s не найден в дереве, пропускаем"
 
-#: internal/build/build.go:1166
+#: internal/build/build.go:1177
 msgid "Package %s already installed, skipping"
 msgstr "Пакет %s уже установлен, пропускаем"
 
-#: internal/build/build.go:1208
+#: internal/build/build.go:1219
 msgid "Building package %s-%s"
 msgstr "Сборка пакета %s-%s"
 
-#: internal/build/build.go:1210
+#: internal/build/build.go:1221
 msgid "Building dependency %s-%s"
 msgstr "Сборка зависимости %s-%s"
 
-#: internal/build/build.go:1255
+#: internal/build/build.go:1266
 msgid "Installing target packages"
 msgstr "Установка целевых пакетов"
 
-#: internal/build/build.go:1274
+#: internal/build/build.go:1285
 msgid "Would you like to remove all build dependencies?"
 msgstr "Хотите удалить все зависимости сборки?"
 
-#: internal/build/build.go:1284
+#: internal/build/build.go:1295
 msgid "Failed to remove build dependencies: %v"
 msgstr "Не удалось удалить зависимости сборки: %v"
 
@@ -877,11 +881,11 @@ msgstr "Пользователь решил не продолжать после
 msgid "Cache directory does not exist, creating it"
 msgstr ""
 
-#: internal/db/db.go:105
+#: internal/db/db.go:111
 msgid "Database version mismatch; resetting"
 msgstr "Несоответствие версий базы данных; сброс настроек"
 
-#: internal/db/db.go:111
+#: internal/db/db.go:117
 msgid ""
 "Database version does not exist. Run alr fix if something isn't working."
 msgstr ""
@@ -895,39 +899,43 @@ msgstr "ОТЛАДКА"
 msgid "ERROR"
 msgstr "ОШИБКА"
 
-#: internal/repos/pull.go:110
+#: internal/repos/pull.go:107
+msgid "Repository %s is already being pulled by another process"
+msgstr "Репозиторий %s уже обновляется другим процессом"
+
+#: internal/repos/pull.go:120
 msgid "Trying mirror"
 msgstr "Пробую зеркало"
 
-#: internal/repos/pull.go:116
+#: internal/repos/pull.go:126
 msgid "Failed to pull from URL"
 msgstr "Не удалось извлечь из URL"
 
-#: internal/repos/pull.go:180
+#: internal/repos/pull.go:190
 msgid "Pulling repository"
 msgstr "Скачивание репозитория"
 
-#: internal/repos/pull.go:220
+#: internal/repos/pull.go:230
 msgid "Repository up to date"
 msgstr "Репозиторий уже обновлён"
 
-#: internal/repos/pull.go:232
+#: internal/repos/pull.go:242
 msgid "Checking out repository..."
 msgstr "Переключение репозитория..."
 
-#: internal/repos/pull.go:256
+#: internal/repos/pull.go:266
 msgid "Processing repository packages (full)..."
 msgstr "Обработка пакетов репозитория (полная)..."
 
-#: internal/repos/pull.go:262
+#: internal/repos/pull.go:272
 msgid "Processing repository changes..."
 msgstr "Обработка изменений репозитория..."
 
-#: internal/repos/pull.go:271
+#: internal/repos/pull.go:281
 msgid "Git repository does not appear to be a valid ALR repo"
 msgstr "Репозиторий Git не поддерживается репозиторием ALR"
 
-#: internal/repos/pull.go:287
+#: internal/repos/pull.go:297
 msgid ""
 "ALR repo's minimum ALR version is greater than the current version. Try "
 "updating ALR if something doesn't work."
@@ -935,31 +943,31 @@ msgstr ""
 "Минимальная версия ALR для ALR-репозитория выше текущей версии. Попробуйте "
 "обновить ALR, если что-то не работает."
 
-#: internal/repos/pull.go:455
+#: internal/repos/pull.go:465
 msgid "Failed to get deleted file from old commit"
 msgstr "Не удалось получить удалённый файл из старого коммита"
 
-#: internal/repos/pull.go:461
+#: internal/repos/pull.go:471
 msgid "Failed to read deleted file"
 msgstr "Не удалось прочитать удалённый файл"
 
-#: internal/repos/pull.go:480
+#: internal/repos/pull.go:490
 msgid "Failed to get updated file from new commit"
 msgstr "Не удалось получить обновлённый файл из нового коммита"
 
-#: internal/repos/pull.go:486
+#: internal/repos/pull.go:496
 msgid "Failed to read updated file"
 msgstr "Не удалось прочитать обновлённый файл"
 
-#: internal/repos/pull.go:510 internal/repos/pull.go:546
+#: internal/repos/pull.go:520 internal/repos/pull.go:556
 msgid "Processing repository packages..."
 msgstr "Обработка пакетов репозитория..."
 
-#: internal/repos/pull.go:542
+#: internal/repos/pull.go:552
 msgid "No alr.sh files found in repository"
 msgstr "Файлы alr.sh не найдены в репозитории"
 
-#: internal/repos/pull.go:609
+#: internal/repos/pull.go:619
 msgid "Repository packages processed"
 msgstr "Пакеты репозитория обработаны"
 

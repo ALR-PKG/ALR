@@ -100,6 +100,16 @@ func (rs *Repos) PullOneAndUpdateFromConfig(ctx context.Context, repo *types.Rep
 }
 
 func (rs *Repos) pullRepo(ctx context.Context, repo *types.Repo, updateRepoFromToml bool) error {
+	repoDir := filepath.Join(rs.cfg.GetPaths().RepoDir, repo.Name)
+	lock, err := fsutils.TryLock(repoDir + ".lock")
+	if err != nil {
+		if errors.Is(err, fsutils.ErrLocked) {
+			return fmt.Errorf("%s: %w", gotext.Get("Repository %s is already being pulled by another process", repo.Name), err)
+		}
+		return fmt.Errorf("failed to lock repository %s: %w", repo.Name, err)
+	}
+	defer lock.Close()
+
 	urls := []string{repo.URL}
 	urls = append(urls, repo.Mirrors...)
 
