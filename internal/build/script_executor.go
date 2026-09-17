@@ -206,10 +206,14 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 			slog.Error(gotext.Get("Failed to create package file"), "path", pkgPath, "error", err)
 			return nil, err
 		}
-		defer pkgFile.Close()
 
 		slog.Info(gotext.Get("Packaging with nfpm"), "format", pkgFormat)
 		err = packager.Package(pkgInfo, pkgFile)
+		// Закрываем файл явно до проверки и копирования в кэш:
+		// иначе кэш может получить недописанные данные из буфера
+		if closeErr := pkgFile.Close(); err == nil {
+			err = closeErr
+		}
 		if err != nil {
 			slog.Error(gotext.Get("Failed to create package"), "path", pkgPath, "error", err)
 			return nil, err

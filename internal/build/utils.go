@@ -17,7 +17,6 @@
 package build
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -38,6 +37,7 @@ import (
 
 	"github.com/goreleaser/nfpm/v2"
 	"github.com/goreleaser/nfpm/v2/files"
+	"github.com/leonelquinteros/gotext"
 
 	"git.alr-pkg.ru/ALR/ALR/internal/constants"
 	"git.alr-pkg.ru/ALR/ALR/internal/cpu"
@@ -88,7 +88,9 @@ func prepareDirs(dirs types.Directories) error {
 }
 
 // copyToCache обеспечивает каталог кэша пакетов и перемещает готовый пакет
-// из дерева сборки в PkgsDir. Возвращает путь к файлу в кэше.
+// из дерева сборки в PkgsDir. Публикация атомарна: пакет пишется во временный
+// файл в том же каталоге и переименовывается, поэтому в кэше никогда не
+// оказывается частично записанный файл. Возвращает путь к файлу в кэше.
 func copyToCache(cfg Config, srcPath, filename string) (string, error) {
 	pkgsDir := cfg.GetPaths().PkgsDir
 
@@ -106,33 +108,46 @@ func copyToCache(cfg Config, srcPath, filename string) (string, error) {
 
 	dstPath := filepath.Join(pkgsDir, filename)
 
-	// Каталог group-writable, замена чужого файла допустима: сначала удаляем
-	if err := os.Remove(dstPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return "", err
-	}
-
 	src, err := os.Open(srcPath)
 	if err != nil {
 		return "", err
 	}
 	defer src.Close()
 
-	dst, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	tmp, err := os.CreateTemp(pkgsDir, "."+filename+".tmp-*")
 	if err != nil {
 		return "", err
 	}
+	tmpPath := tmp.Name()
 
-	if _, err := io.Copy(dst, src); err != nil {
-		dst.Close()
+	// CreateTemp создаёт файл с режимом 0600, пакет в общем кэше должен быть 0644
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
 		return "", err
 	}
-	if err := dst.Close(); err != nil {
+
+	if _, err := io.Copy(tmp, src); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return "", err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
 		return "", err
 	}
 
-	// Пакет в дереве сборки больше не артефакт кэша
+	// Rename атомарно заменяет существующий файл: каталог group-writable,
+	// замена чужого файла допустима
+	if err := os.Rename(tmpPath, dstPath); err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+
+	// Пакет в дереве сборки больше не артефакт кэша; файл уже в кэше,
+	// поэтому ошибка удаления не должна проваливать сборку
 	if err := os.Remove(srcPath); err != nil {
-		return "", err
+		slog.Warn(gotext.Get("Failed to remove package from build tree"), "path", srcPath, "error", err)
 	}
 
 	return dstPath, nil

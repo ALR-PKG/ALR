@@ -137,3 +137,6 @@ msgstr "Failed to copy package to cache"
 
 msgid "Package copied to cache"
 msgstr "Package copied to cache"
+
+msgid "Failed to remove package from build tree"
+msgstr "Failed to remove package from build tree"

@@ -75,6 +75,10 @@ func TestCopyToCache(t *testing.T) {
 
 		_, err = os.Stat(srcPath)
 		assert.True(t, os.IsNotExist(err), "источник должен быть удалён из дерева сборки")
+
+		tmpFiles, err := filepath.Glob(filepath.Join(pkgsDir, "*.tmp-*"))
+		require.NoError(t, err)
+		assert.Empty(t, tmpFiles, "в кэше не должно оставаться временных файлов")
 	})
 
 	t.Run("replaces existing file in cache", func(t *testing.T) {
@@ -96,5 +100,39 @@ func TestCopyToCache(t *testing.T) {
 		data, err := os.ReadFile(dstPath)
 		require.NoError(t, err)
 		assert.Equal(t, []byte("new-data"), data)
+	})
+
+	t.Run("missing source returns error and cache stays empty", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		srcPath := filepath.Join(t.TempDir(), "pkg-1.0-1-x86_64.pkg.tar.zst")
+
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+
+		_, err := copyToCache(cfg, srcPath, "pkg-1.0-1-x86_64.pkg.tar.zst")
+		require.Error(t, err)
+
+		entries, err := os.ReadDir(pkgsDir)
+		require.NoError(t, err)
+		assert.Empty(t, entries, "в кэше не должно быть ни пакета, ни временных файлов")
+	})
+
+	t.Run("copy error leaves no partial file in cache", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		// Каталог как источник: Open успешен, но чтение падает — io.Copy вернёт ошибку
+		srcPath := filepath.Join(t.TempDir(), "src")
+		require.NoError(t, os.MkdirAll(srcPath, 0o755))
+
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+
+		_, err := copyToCache(cfg, srcPath, "pkg-1.0-1-x86_64.pkg.tar.zst")
+		require.Error(t, err)
+
+		entries, err := os.ReadDir(pkgsDir)
+		require.NoError(t, err)
+		assert.Empty(t, entries, "в кэше не должно остаться частичного или временного файла")
 	})
 }

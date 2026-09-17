@@ -751,44 +751,48 @@ msgstr ""
 msgid "Failed to create package file"
 msgstr ""
 
-#: internal/build/script_executor.go:211
+#: internal/build/script_executor.go:210
 msgid "Packaging with nfpm"
 msgstr ""
 
-#: internal/build/script_executor.go:214
+#: internal/build/script_executor.go:218
 msgid "Failed to create package"
 msgstr ""
 
-#: internal/build/script_executor.go:218
+#: internal/build/script_executor.go:222
 msgid "Package created successfully"
 msgstr ""
 
-#: internal/build/script_executor.go:222
+#: internal/build/script_executor.go:226
 msgid "Package file not found after creation"
 msgstr ""
 
-#: internal/build/script_executor.go:225
+#: internal/build/script_executor.go:229
 msgid "Package file verified to exist"
 msgstr ""
 
-#: internal/build/script_executor.go:229
+#: internal/build/script_executor.go:233
 msgid "Failed to copy package to cache"
 msgstr ""
 
-#: internal/build/script_executor.go:232
+#: internal/build/script_executor.go:236
 msgid "Package copied to cache"
 msgstr ""
 
-#: internal/build/script_executor.go:350
+#: internal/build/script_executor.go:354
 msgid "Executing prepare()"
 msgstr ""
 
-#: internal/build/script_executor.go:359
+#: internal/build/script_executor.go:363
 msgid "Executing build()"
 msgstr ""
 
-#: internal/build/script_executor.go:388 internal/build/script_executor.go:408
+#: internal/build/script_executor.go:392 internal/build/script_executor.go:412
 msgid "Executing %s()"
+msgstr ""
+
+#: internal/build/utils.go:150
+msgid "Failed to remove package from build tree"
 msgstr ""
 
 #: internal/cliutils/app_builder/builder.go:45
