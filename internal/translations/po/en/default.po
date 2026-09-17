@@ -143,3 +143,6 @@ msgstr "Failed to remove package from build tree"
 
 msgid "Cached package owner changed, refusing to install"
 msgstr "Cached package owner changed, refusing to install"
+
+msgid "Unable to stat cached package"
+msgstr "Unable to stat cached package"

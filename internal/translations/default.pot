@@ -679,6 +679,10 @@ msgstr ""
 msgid "Failed to remove build dependencies: %v"
 msgstr ""
 
+#: internal/build/cache.go:91
+msgid "Unable to stat cached package"
+msgstr ""
+
 #: internal/build/cache.go:97
 msgid "Cached package owner changed, refusing to install"
 msgstr ""

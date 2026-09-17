@@ -711,6 +711,10 @@ msgstr "Хотите удалить все зависимости сборки?"
 msgid "Failed to remove build dependencies: %v"
 msgstr "Не удалось удалить зависимости сборки: %v"
 
+#: internal/build/cache.go:91
+msgid "Unable to stat cached package"
+msgstr "Не удалось прочитать кэшированный пакет"
+
 #: internal/build/cache.go:97
 msgid "Cached package owner changed, refusing to install"
 msgstr "Владелец кэшированного пакета изменился, установка отклонена"

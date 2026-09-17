@@ -88,7 +88,7 @@ func verifyTrustedPaths(paths []string) error {
 	for _, path := range paths {
 		stat, err := os.Lstat(path)
 		if err != nil {
-			return fmt.Errorf("failed to stat cached package %s: %w", path, err)
+			return fmt.Errorf("%s: %s: %w", gotext.Get("Unable to stat cached package"), path, err)
 		}
 
 		sys, ok := stat.Sys().(*syscall.Stat_t)
