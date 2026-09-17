@@ -353,7 +353,7 @@ SQLite ждёт освобождения БД до 5 секунд вместо �
 - Test: `internal/fsutils/lock_test.go`
 - Modify: `internal/build/build.go` (`BuildPackage`, после ExecuteFirstPass)
 
-- [ ] **Шаг 1: падающий тест** `internal/fsutils/lock_test.go`
+- [x] **Шаг 1: падающий тест** `internal/fsutils/lock_test.go`
 
   - `TryLock` создаёт файл и возвращает его;
   - повторный `TryLock` на тот же путь → `errors.Is(err, fsutils.ErrLocked)`;
@@ -363,7 +363,7 @@ SQLite ждёт освобождения БД до 5 секунд вместо �
 Run: `go test ./internal/fsutils/ -run TestTryLock -v`
 Expected: FAIL (нет fsutils.TryLock)
 
-- [ ] **Шаг 2: реализация `internal/fsutils/lock.go`**
+- [x] **Шаг 2: реализация `internal/fsutils/lock.go`**
 
 ```go
 package fsutils
@@ -394,7 +394,7 @@ func TryLock(path string) (*os.File, error) {
 
 (`golang.org/x/sys/unix` уже в go.mod)
 
-- [ ] **Шаг 3: блокировка в `BuildPackage`** — сразу после `ExecuteFirstPass`
+- [x] **Шаг 3: блокировка в `BuildPackage`** — сразу после `ExecuteFirstPass`
   (basePkg уже известен), ДО проверки кэша `CheckForBuiltPackage`:
 
 ```go
@@ -413,12 +413,12 @@ defer lock.Close()
   процессам пользователя. Блокировка держится до конца `BuildPackage` (defer).
   Новую строку добавить в `internal/translations` (en + ru).
 
-- [ ] **Шаг 4: тесты проходят**
+- [x] **Шаг 4: тесты проходят**
 
 Run: `go test ./internal/fsutils/ -v && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 5: коммит** `Добавлено: блокировка сборки пакета (flock)`
+- [x] **Шаг 5: коммит** `Добавлено: блокировка сборки пакета (flock)`
 
 ### Task 3.2: блокировка pull репозитория
 
@@ -426,7 +426,7 @@ Expected: PASS
 - Modify: `internal/repos/pull.go` (`pullRepo`)
 - Test: `internal/repos/pull_test.go` (существующий) или `pull_internal_test.go`
 
-- [ ] **Шаг 1: падающий тест** — создать `Repos` с cfg на temp-dir, в тесте
+- [x] **Шаг 1: падающий тест** — создать `Repos` с cfg на temp-dir, в тесте
   заранее взять `fsutils.TryLock(<RepoDir>/<name>.lock)`, вызвать
   `rs.pullRepo(ctx, &types.Repo{Name: name, URL: "https://example.invalid/x.git"}, false)` —
   ожидается ошибка с `errors.Is(err, fsutils.ErrLocked)` до любого сетевого
@@ -435,7 +435,7 @@ Expected: PASS
 Run: `go test ./internal/repos/ -run TestPullLocked -v`
 Expected: FAIL
 
-- [ ] **Шаг 2: в `pullRepo` первым действием** (до цикла по URL):
+- [x] **Шаг 2: в `pullRepo` первым действием** (до цикла по URL):
 
 ```go
 repoDir := filepath.Join(rs.cfg.GetPaths().RepoDir, repo.Name)
@@ -454,12 +454,12 @@ defer lock.Close()
   `Pull` и `PullOneAndUpdateFromConfig` проходят через `pullRepo` — оба
   покрываются автоматически. Строку — в переводы (en + ru).
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/repos/ -v`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: блокировка обновления репозитория (flock)`
+- [x] **Шаг 4: коммит** `Добавлено: блокировка обновления репозитория (flock)`
 
 ### Task 3.3: SQLite busy_timeout
 
@@ -467,13 +467,13 @@ Expected: PASS
 - Modify: `internal/db/db.go:70` (`Connect`)
 - Test: `internal/db/db_test.go` (существующий)
 
-- [ ] **Шаг 1: падающий тест** — открыть БД через `Database` на temp-dir,
+- [x] **Шаг 1: падающий тест** — открыть БД через `Database` на temp-dir,
   выполнить запрос `PRAGMA busy_timeout` через engine, ожидать значение 5000.
 
 Run: `go test ./internal/db/ -run TestBusyTimeout -v`
 Expected: FAIL
 
-- [ ] **Шаг 2: DSN через file-URI с параметром modernc.org/sqlite:**
+- [x] **Шаг 2: DSN через file-URI с параметром modernc.org/sqlite:**
 
 ```go
 dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", d.config.GetPaths().DBPath)
@@ -482,19 +482,19 @@ dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", d.config.GetPaths().DBP
   (драйвер — `modernc.org/sqlite`, см. import в db.go; `_pragma` —
   документированный параметр его DSN)
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/db/ -v`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: busy_timeout 5с для SQLite`
+- [x] **Шаг 4: коммит** `Добавлено: busy_timeout 5с для SQLite`
 
 ### Task 3.4: сквозная проверка Этапа 3
 
-- Два параллельных `alr build -s <один и тот же рецепт>`: второй сразу падает
+- [x] Два параллельных `alr build -s <один и тот же рецепт>`: второй сразу падает
   с «Package is already being built by another process»
-- Два параллельных `alr pull`: второй падает с ошибкой про занятый репозиторий
-- `go build ./...`, `go test ./...`, pre-commit
+- [x] Два параллельных `alr pull`: второй падает с ошибкой про занятый репозиторий
+- [x] `go build ./...`, `go test ./...`, pre-commit
 
 ---
 
