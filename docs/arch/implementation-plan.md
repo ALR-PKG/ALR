@@ -498,14 +498,134 @@ Expected: PASS
 
 ---
 
-## Этапы 4-10: состав работ (детальный план — перед стартом каждого)
+## Этап 4: разделение build dir и кэша пакетов
 
-### Этап 4: разделение build dir и кэша пакетов
-- `Paths.BuildDir` (дерево) отдельно от `Paths.PkgsDir` (готовые пакеты,
-  `~/.cache/alr/pkgs`); готовый пакет копируется из дерева в кэш
-- `CheckForBuiltPackage`: поиск в `PkgsDir` + проверка владельца файла
-  (`syscall.Stat_t.Uid`: свой или 0/65534), чужой — пересборка
-- `internal/build/dirs.go`, `cache.go`, `script_executor.go` (вывод пакета)
+Результат: дерево сборки (`Paths.BuildDir`, `~/.cache/alr/build/<pkg>/{src,pkg}`)
+отделено от кэша готовых пакетов (`Paths.PkgsDir`, `~/.cache/alr/pkgs`, плоский).
+Готовый пакет после сборки копируется из дерева в кэш. Попадание в кэш
+определяется поиском в `PkgsDir` + проверкой владельца файла: доверен
+свой uid, root (0) и nobody (65534); чужой владелец — пересборка.
+Миграция: старые пакеты внутри деревьев сборки просто не находятся
+(разовая пересборка); `alr fix` чистит оба каталога.
+
+### Task 4.1: Paths.BuildDir в config
+
+**Файлы:**
+- Modify: `internal/config/paths.go` (поле `BuildDir`)
+- Modify: `internal/config/config.go:123-132` (`Load`)
+- Test: `internal/config/paths_test.go`
+
+- [ ] **Шаг 1: падающий тест** — в `paths_test.go` обновить ожидания:
+  успешный `os.UserCacheDir` → `BuildDir = <ucd>/alr/build`,
+  `PkgsDir = <ucd>/alr/pkgs`; фолбэк без HOME → `BuildDir = /var/cache/alr/build`,
+  `PkgsDir = /var/cache/alr/pkgs`.
+
+Run: `go test ./internal/config/ -v`
+Expected: FAIL
+
+- [ ] **Шаг 2: реализация** — добавить поле `BuildDir string` в `Paths`
+  (paths.go) и заполнить оба пути в `config.go` по правилам выше.
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/config/ -v && go build ./...`
+Expected: PASS (пока BuildDir никем не читается — только config)
+
+- [ ] **Шаг 4: коммит** `Добавлено: пути BuildDir и PkgsDir (кэш пакетов) в конфиг`
+
+### Task 4.2: дерево сборки на BuildDir
+
+**Файлы:**
+- Modify: `internal/build/dirs.go` (`getDirsForPackage`, `getBaseDir`, `getSrcDir`)
+- Modify: `cmd/fix.go:100-109` (чистка обоих каталогов)
+- Test: `internal/build/dirs_test.go` (если есть) или смежные тесты build
+
+- [ ] **Шаг 1: падающий тест** — `getDirs`/`getBaseDir`/`getSrcDir` строятся
+  от `BuildDir`, а не `PkgsDir` (тест с мок-конфигом: BuildDir=/tmp/b,
+  PkgsDir=/tmp/p → BaseDir=/tmp/b/<pkg>).
+
+- [ ] **Шаг 2: реализация** — `getBaseDir`/`getSrcDir`/`getDirsForPackage`
+  используют `cfg.GetPaths().BuildDir`. Лок-файл сборки
+  (`build.go:337`, `<BaseDir>.lock`) автоматически переезжает на BuildDir —
+  это желаемо (лок дерева сборки). В `cmd/fix.go` блок «Clearing build
+  directory» чистит `paths.BuildDir` И `paths.PkgsDir` (оба RemoveAll +
+  MkdirAll 0755, как сейчас).
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ ./internal/config/ -v && go build ./...`
+Expected: PASS. ВНИМАНИЕ: после этого шага готовые пакеты всё ещё пишутся
+в дерево (BaseDir), а CheckForBuiltPackage ищет там же — поведение
+временно эквивалентно текущему, разрыв появится в Task 4.3/4.4.
+
+- [ ] **Шаг 4: коммит** `Изменено: дерево сборки переведено на Paths.BuildDir`
+
+### Task 4.3: копирование готового пакета в кэш
+
+**Файлы:**
+- Modify: `internal/build/script_executor.go:194-231` (вывод nfpm-пакета)
+
+- [ ] **Шаг 1: падающий тест** — если есть тестовая инфраструктура для
+  ExecuteSecondPass — тест, что после упаковки файл лежит в `PkgsDir`.
+  Если инфраструктуры нет — вынести копирование в хелпер
+  `copyToCache(cfg, srcPath, filename) (dstPath string, err error)` и
+  покрыть его юнит-тестом (temp-dir: файл копируется, режим 0644,
+  существующий чужой файл заменяется через Remove+Create).
+
+- [ ] **Шаг 2: реализация** — после `packager.Package` и проверки
+  существования файла: обеспечить `PkgsDir` (per-user — `os.MkdirAll(dir,
+  0o755)`; общий фолбэк под `/var/cache` — `utils.EnsureTempDirWithRootOwner`
+  как в prepareDirs, выбирать по тому же признаку, что config: если
+  PkgsDir внутри `constants.SystemCachePath`), скопировать пакет в
+  `filepath.Join(PkgsDir, pkgName)` (если dst существует — сначала
+  `os.Remove`: каталог group-writable, замена чужого файла допустима),
+  после успешного копирования удалить файл из дерева (он больше не
+  артефакт кэша). `BuiltDep.Path` = путь в кэше.
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ -v && go build ./...`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: копирование готового пакета в кэш PkgsDir`
+
+### Task 4.4: CheckForBuiltPackage — кэш + доверие по владельцу
+
+**Файлы:**
+- Modify: `internal/build/cache.go`
+- Test: `internal/build/cache_test.go` (новый или существующий)
+
+- [ ] **Шаг 1: падающий тест** — файл пакета в `PkgsDir` (temp-dir)
+  от текущего пользователя → найден; отсутствует → не найден; юнит на
+  хелпер `isTrustedOwner(uid uint32) bool`: доверенные — `os.Geteuid()`,
+  0, 65534; остальные — нет.
+
+- [ ] **Шаг 2: реализация** — `CheckForBuiltPackage` ищет
+  `filepath.Join(c.cfg.GetPaths().PkgsDir, filename)` (плоско, без
+  baseName-подкаталога — conventional filename уже уникален: имя+репо,
+  версия, релиз, арх, формат). При находке: `os.Stat` →
+  `stat.Sys().(*syscall.Stat_t).Uid`; владелец не из доверенных
+  (`os.Geteuid()`, 0, 65534) → `slog.Debug` о недоверии и `false`
+  (пересборка; файл будет заменён на шаге копирования).
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ -v && go build ./...`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Изменено: кэш пакетов в PkgsDir с проверкой владельца`
+
+### Task 4.5: сквозная проверка Этапа 4
+
+- Сборка тестового пакета: файл появляется в `~/.cache/alr/pkgs`, в дереве
+  не остаётся; повторная сборка → «Using cached package»
+- `alr fix` чистит оба каталога (проверить от пользователя)
+- Параллельная сборка того же пакета → ErrLocked (Этап 3 не сломан)
+- `go build ./...`, `go test ./...`, pre-commit
+
+---
+
+## Этапы 5-10: состав работ (детальный план — перед стартом каждого)
 
 ### Этап 5: семантический ключ кэша
 - Каноническая форма сборочно-значимых полей из `alrsh.Package`
