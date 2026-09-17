@@ -340,14 +340,165 @@ Expected: OK
 
 ---
 
-## Этапы 3-10: состав работ (детальный план — перед стартом каждого)
+## Этап 3: блокировки
 
-### Этап 3: блокировки
-- flock на `<BaseDir>.lock` вокруг сборки пакета (`internal/build/utils.go`,
-  `x/sys/unix.Flock`), non-blocking с понятной ошибкой «пакет уже собирается»
-- flock на pull репозитория (`internal/repos/pull.go`)
-- SQLite: `?_busy_timeout=5000` в DSN (`internal/db/db.go:70`)
-- Тесты: два параллельных процесса на один пакет
+Результат: два параллельных процесса alr не могут одновременно собирать один
+пакет или обновлять один репозиторий — второй получает понятную ошибку.
+SQLite ждёт освобождения БД до 5 секунд вместо мгновенного `database is locked`.
+
+### Task 3.1: fsutils.TryLock + блокировка сборки пакета
+
+**Файлы:**
+- Create: `internal/fsutils/lock.go`
+- Test: `internal/fsutils/lock_test.go`
+- Modify: `internal/build/build.go` (`BuildPackage`, после ExecuteFirstPass)
+
+- [ ] **Шаг 1: падающий тест** `internal/fsutils/lock_test.go`
+
+  - `TryLock` создаёт файл и возвращает его;
+  - повторный `TryLock` на тот же путь → `errors.Is(err, fsutils.ErrLocked)`;
+  - после `Close` первого файла повторный `TryLock` успешен;
+  - `TryLock` создаёт родительский каталог, если его нет.
+
+Run: `go test ./internal/fsutils/ -run TestTryLock -v`
+Expected: FAIL (нет fsutils.TryLock)
+
+- [ ] **Шаг 2: реализация `internal/fsutils/lock.go`**
+
+```go
+package fsutils
+
+var ErrLocked = errors.New("resource is locked by another process")
+
+// TryLock создаёт (при необходимости) файл path и берёт exclusive
+// non-blocking flock(2). Возвращённый файл снимает блокировку при Close.
+// Если блокировку уже держит другой процесс — ErrLocked.
+func TryLock(path string) (*os.File, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o2775); err != nil {
+		return nil, err
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o664)
+	if err != nil {
+		return nil, err
+	}
+	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+		f.Close()
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			return nil, ErrLocked
+		}
+		return nil, err
+	}
+	return f, nil
+}
+```
+
+(`golang.org/x/sys/unix` уже в go.mod)
+
+- [ ] **Шаг 3: блокировка в `BuildPackage`** — сразу после `ExecuteFirstPass`
+  (basePkg уже известен), ДО проверки кэша `CheckForBuiltPackage`:
+
+```go
+lock, err := fsutils.TryLock(getBaseDir(b.cfg, basePkg) + ".lock")
+if errors.Is(err, fsutils.ErrLocked) {
+	return nil, errors.New(gotext.Get("Package is already being built by another process"))
+}
+if err != nil {
+	return nil, err
+}
+defer lock.Close()
+```
+
+  Лок-файл лежит рядом с деревом сборки (`~/.cache/alr/build/<pkg>.lock`),
+  поэтому переживает очистку SrcDir/PkgDir в `prepareDirs` и виден всем
+  процессам пользователя. Блокировка держится до конца `BuildPackage` (defer).
+  Новую строку добавить в `internal/translations` (en + ru).
+
+- [ ] **Шаг 4: тесты проходят**
+
+Run: `go test ./internal/fsutils/ -v && go build ./...`
+Expected: PASS
+
+- [ ] **Шаг 5: коммит** `Добавлено: блокировка сборки пакета (flock)`
+
+### Task 3.2: блокировка pull репозитория
+
+**Файлы:**
+- Modify: `internal/repos/pull.go` (`pullRepo`)
+- Test: `internal/repos/pull_test.go` (существующий) или `pull_internal_test.go`
+
+- [ ] **Шаг 1: падающий тест** — создать `Repos` с cfg на temp-dir, в тесте
+  заранее взять `fsutils.TryLock(<RepoDir>/<name>.lock)`, вызвать
+  `rs.pullRepo(ctx, &types.Repo{Name: name, URL: "https://example.invalid/x.git"}, false)` —
+  ожидается ошибка с `errors.Is(err, fsutils.ErrLocked)` до любого сетевого
+  обращения.
+
+Run: `go test ./internal/repos/ -run TestPullLocked -v`
+Expected: FAIL
+
+- [ ] **Шаг 2: в `pullRepo` первым действием** (до цикла по URL):
+
+```go
+repoDir := filepath.Join(rs.cfg.GetPaths().RepoDir, repo.Name)
+lock, err := fsutils.TryLock(repoDir + ".lock")
+if err != nil {
+	if errors.Is(err, fsutils.ErrLocked) {
+		return fmt.Errorf(gotext.Get("Repository %s is already being pulled by another process: %w"), repo.Name, err)
+	}
+	return err
+}
+defer lock.Close()
+```
+
+  Блокировка per-repo: параллельные pull разных репозиториев не мешают друг
+  другу; конкуренцию за SQLite закрывает busy_timeout (Task 3.3).
+  `Pull` и `PullOneAndUpdateFromConfig` проходят через `pullRepo` — оба
+  покрываются автоматически. Строку — в переводы (en + ru).
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/repos/ -v`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: блокировка обновления репозитория (flock)`
+
+### Task 3.3: SQLite busy_timeout
+
+**Файлы:**
+- Modify: `internal/db/db.go:70` (`Connect`)
+- Test: `internal/db/db_test.go` (существующий)
+
+- [ ] **Шаг 1: падающий тест** — открыть БД через `Database` на temp-dir,
+  выполнить запрос `PRAGMA busy_timeout` через engine, ожидать значение 5000.
+
+Run: `go test ./internal/db/ -run TestBusyTimeout -v`
+Expected: FAIL
+
+- [ ] **Шаг 2: DSN через file-URI с параметром modernc.org/sqlite:**
+
+```go
+dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", d.config.GetPaths().DBPath)
+```
+
+  (драйвер — `modernc.org/sqlite`, см. import в db.go; `_pragma` —
+  документированный параметр его DSN)
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/db/ -v`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: busy_timeout 5с для SQLite`
+
+### Task 3.4: сквозная проверка Этапа 3
+
+- Два параллельных `alr build -s <один и тот же рецепт>`: второй сразу падает
+  с «Package is already being built by another process»
+- Два параллельных `alr pull`: второй падает с ошибкой про занятый репозиторий
+- `go build ./...`, `go test ./...`, pre-commit
+
+---
+
+## Этапы 4-10: состав работ (детальный план — перед стартом каждого)
 
 ### Этап 4: разделение build dir и кэша пакетов
 - `Paths.BuildDir` (дерево) отдельно от `Paths.PkgsDir` (готовые пакеты,
