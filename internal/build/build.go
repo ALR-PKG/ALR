@@ -35,6 +35,7 @@ import (
 
 	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/manager"
 	"git.alr-pkg.ru/ALR/ALR/internal/stats"
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
@@ -332,6 +333,15 @@ func (b *Builder) BuildPackage(
 	if err != nil {
 		return nil, fmt.Errorf("failed ExecuteFirstPass: %w", err)
 	}
+
+	lock, err := fsutils.TryLock(getBaseDir(b.cfg, basePkg) + ".lock")
+	if errors.Is(err, fsutils.ErrLocked) {
+		return nil, errors.New(gotext.Get("Package is already being built by another process"))
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer lock.Close()
 
 	var builtDeps []*BuiltDep
 	var remainingVars []*alrsh.Package
