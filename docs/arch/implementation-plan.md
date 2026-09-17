@@ -515,7 +515,7 @@ Expected: PASS
 - Modify: `internal/config/config.go:123-132` (`Load`)
 - Test: `internal/config/paths_test.go`
 
-- [ ] **Шаг 1: падающий тест** — в `paths_test.go` обновить ожидания:
+- [x] **Шаг 1: падающий тест** — в `paths_test.go` обновить ожидания:
   успешный `os.UserCacheDir` → `BuildDir = <ucd>/alr/build`,
   `PkgsDir = <ucd>/alr/pkgs`; фолбэк без HOME → `BuildDir = /var/cache/alr/build`,
   `PkgsDir = /var/cache/alr/pkgs`.
@@ -523,15 +523,15 @@ Expected: PASS
 Run: `go test ./internal/config/ -v`
 Expected: FAIL
 
-- [ ] **Шаг 2: реализация** — добавить поле `BuildDir string` в `Paths`
+- [x] **Шаг 2: реализация** — добавить поле `BuildDir string` в `Paths`
   (paths.go) и заполнить оба пути в `config.go` по правилам выше.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/config/ -v && go build ./...`
 Expected: PASS (пока BuildDir никем не читается — только config)
 
-- [ ] **Шаг 4: коммит** `Добавлено: пути BuildDir и PkgsDir (кэш пакетов) в конфиг`
+- [x] **Шаг 4: коммит** `Добавлено: пути BuildDir и PkgsDir (кэш пакетов) в конфиг`
 
 ### Task 4.2: дерево сборки на BuildDir
 
@@ -540,25 +540,25 @@ Expected: PASS (пока BuildDir никем не читается — толь�
 - Modify: `cmd/fix.go:100-109` (чистка обоих каталогов)
 - Test: `internal/build/dirs_test.go` (если есть) или смежные тесты build
 
-- [ ] **Шаг 1: падающий тест** — `getDirs`/`getBaseDir`/`getSrcDir` строятся
+- [x] **Шаг 1: падающий тест** — `getDirs`/`getBaseDir`/`getSrcDir` строятся
   от `BuildDir`, а не `PkgsDir` (тест с мок-конфигом: BuildDir=/tmp/b,
   PkgsDir=/tmp/p → BaseDir=/tmp/b/<pkg>).
 
-- [ ] **Шаг 2: реализация** — `getBaseDir`/`getSrcDir`/`getDirsForPackage`
+- [x] **Шаг 2: реализация** — `getBaseDir`/`getSrcDir`/`getDirsForPackage`
   используют `cfg.GetPaths().BuildDir`. Лок-файл сборки
   (`build.go:337`, `<BaseDir>.lock`) автоматически переезжает на BuildDir —
   это желаемо (лок дерева сборки). В `cmd/fix.go` блок «Clearing build
   directory» чистит `paths.BuildDir` И `paths.PkgsDir` (оба RemoveAll +
   MkdirAll 0755, как сейчас).
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/build/ ./internal/config/ -v && go build ./...`
 Expected: PASS. ВНИМАНИЕ: после этого шага готовые пакеты всё ещё пишутся
 в дерево (BaseDir), а CheckForBuiltPackage ищет там же — поведение
 временно эквивалентно текущему, разрыв появится в Task 4.3/4.4.
 
-- [ ] **Шаг 4: коммит** `Изменено: дерево сборки переведено на Paths.BuildDir`
+- [x] **Шаг 4: коммит** `Изменено: дерево сборки переведено на Paths.BuildDir`
 
 ### Task 4.3: копирование готового пакета в кэш
 
