@@ -67,10 +67,10 @@ func New(config Config) *Database {
 }
 
 func (d *Database) Connect() error {
-	dsn := d.config.GetPaths().DBPath
+	dbPath := d.config.GetPaths().DBPath
 
 	// Проверяем директорию для БД
-	dbDir := filepath.Dir(dsn)
+	dbDir := filepath.Dir(dbPath)
 	if _, err := os.Stat(dbDir); err != nil {
 		if os.IsNotExist(err) {
 			// Директория не существует - создаем автоматически
@@ -82,6 +82,12 @@ func (d *Database) Connect() error {
 			return fmt.Errorf("failed to check database directory: %w", err)
 		}
 	}
+
+	// file-URI с busy_timeout=5с: при конкурентном доступе нескольких процессов
+	// SQLite ждёт освобождения БД вместо мгновенного "database is locked".
+	// Ограничение: путь к БД не должен содержать '?' или '#' (ломают file-URI),
+	// для реальных путей (/var/cache/alr, ~/.cache/alr) это неактуально.
+	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", dbPath)
 
 	engine, err := xorm.NewEngine("sqlite", dsn)
 	// engine.SetLogLevel(log.LOG_DEBUG)
