@@ -17,9 +17,14 @@
 package build
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"git.alr-pkg.ru/ALR/ALR/internal/config"
 )
 
 func TestRemoveDuplicatesSources(t *testing.T) {
@@ -44,4 +49,52 @@ func TestRemoveDuplicatesSources(t *testing.T) {
 			assert.Equal(t, c, tc.NewChecksums)
 		})
 	}
+}
+
+func TestCopyToCache(t *testing.T) {
+	t.Run("copies file to pkgs dir and removes source", func(t *testing.T) {
+		pkgsDir := filepath.Join(t.TempDir(), "pkgs")
+		srcPath := filepath.Join(t.TempDir(), "pkg-1.0-1-x86_64.pkg.tar.zst")
+		require.NoError(t, os.WriteFile(srcPath, []byte("package-data"), 0o644))
+
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+
+		dstPath, err := copyToCache(cfg, srcPath, "pkg-1.0-1-x86_64.pkg.tar.zst")
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(pkgsDir, "pkg-1.0-1-x86_64.pkg.tar.zst"), dstPath)
+
+		data, err := os.ReadFile(dstPath)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("package-data"), data)
+
+		fi, err := os.Stat(dstPath)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o644), fi.Mode().Perm())
+
+		_, err = os.Stat(srcPath)
+		assert.True(t, os.IsNotExist(err), "источник должен быть удалён из дерева сборки")
+	})
+
+	t.Run("replaces existing file in cache", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		dstPath := filepath.Join(pkgsDir, "pkg-1.0-1-x86_64.pkg.tar.zst")
+		require.NoError(t, os.WriteFile(dstPath, []byte("old-data"), 0o644))
+
+		srcPath := filepath.Join(t.TempDir(), "pkg-1.0-1-x86_64.pkg.tar.zst")
+		require.NoError(t, os.WriteFile(srcPath, []byte("new-data"), 0o644))
+
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+
+		gotPath, err := copyToCache(cfg, srcPath, "pkg-1.0-1-x86_64.pkg.tar.zst")
+		require.NoError(t, err)
+		assert.Equal(t, dstPath, gotPath)
+
+		data, err := os.ReadFile(dstPath)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("new-data"), data)
+	})
 }

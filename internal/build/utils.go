@@ -17,6 +17,7 @@
 package build
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -38,6 +39,7 @@ import (
 	"github.com/goreleaser/nfpm/v2"
 	"github.com/goreleaser/nfpm/v2/files"
 
+	"git.alr-pkg.ru/ALR/ALR/internal/constants"
 	"git.alr-pkg.ru/ALR/ALR/internal/cpu"
 	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/manager"
@@ -83,6 +85,57 @@ func prepareDirs(dirs types.Directories) error {
 
 	// Создаем директорию для пакетов с setgid битом
 	return utils.EnsureTempDirWithRootOwner(dirs.PkgDir, 0o2775)
+}
+
+// copyToCache обеспечивает каталог кэша пакетов и перемещает готовый пакет
+// из дерева сборки в PkgsDir. Возвращает путь к файлу в кэше.
+func copyToCache(cfg Config, srcPath, filename string) (string, error) {
+	pkgsDir := cfg.GetPaths().PkgsDir
+
+	var err error
+	if pkgsDir == constants.SystemCachePath ||
+		strings.HasPrefix(pkgsDir, constants.SystemCachePath+string(os.PathSeparator)) {
+		// Общий фолбэк-каталог: root-владелец, привилегированная группа, setgid
+		err = utils.EnsureTempDirWithRootOwner(pkgsDir, 0o2775)
+	} else {
+		err = os.MkdirAll(pkgsDir, 0o755)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	dstPath := filepath.Join(pkgsDir, filename)
+
+	// Каталог group-writable, замена чужого файла допустима: сначала удаляем
+	if err := os.Remove(dstPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return "", err
+	}
+	defer src.Close()
+
+	dst, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		return "", err
+	}
+	if err := dst.Close(); err != nil {
+		return "", err
+	}
+
+	// Пакет в дереве сборки больше не артефакт кэша
+	if err := os.Remove(srcPath); err != nil {
+		return "", err
+	}
+
+	return dstPath, nil
 }
 
 // Функция buildContents создает секцию содержимого пакета, которая содержит файлы,

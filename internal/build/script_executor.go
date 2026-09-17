@@ -224,9 +224,16 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 		}
 		slog.Info(gotext.Get("Package file verified to exist"), "path", pkgPath)
 
+		cachedPath, err := copyToCache(e.cfg, pkgPath, pkgName)
+		if err != nil {
+			slog.Error(gotext.Get("Failed to copy package to cache"), "path", pkgPath, "error", err)
+			return nil, err
+		}
+		slog.Info(gotext.Get("Package copied to cache"), "path", cachedPath)
+
 		builtDeps = append(builtDeps, &BuiltDep{
 			Name: vars.Name,
-			Path: pkgPath,
+			Path: cachedPath,
 		})
 	}
 

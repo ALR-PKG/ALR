@@ -131,3 +131,9 @@ msgstr "Unable to remove build directory"
 
 msgid "Unable to create build directory"
 msgstr "Unable to create build directory"
+
+msgid "Failed to copy package to cache"
+msgstr "Failed to copy package to cache"
+
+msgid "Package copied to cache"
+msgstr "Package copied to cache"
