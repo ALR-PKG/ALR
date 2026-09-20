@@ -795,26 +795,212 @@ Expected: PASS
 
 ---
 
-## Этапы 6-10: состав работ (детальный план — перед стартом каждого)
+## Этап 6: группа alr для dlcache + хвосты ревью
 
-### Этап 6: группа alr для dlcache
-- Установщик/пакеты создают группу `alr`; `/var/cache/alr/dl` — `root:alr 2775`
-- `fsutils.EnsureTempDirWithRootOwner` перестаёт дёргать sudo для членов
-  группы (проверка `user.GroupIds`)
-- Убрать sudo-спам из `pkg/dlcache/dlcache_prod.go`
-- **Из финального ревью Этапов 1-2 (Minor 2):** добавить
-  `CheckFreeSpace(paths.CacheDir, …)` перед `DownloadSources` — сейчас
-  проверяется только ФС дерева сборки, а `/var/cache/alr/dl` может быть
-  другой ФС (ENOSPC посреди скачивания).
-- **Из ре-ревью Этапа 5 (Important-follow-up):** реестр локов fsutils
-  (`heldLocks`) сейчас держит общий `locksMu` на время БЛОКИРУЮЩЕГО
-  `unix.Flock` в `fsutils.Lock` — все TryLock/Lock/Close процесса в этот
-  момент сериализуются (для демона с горутинами на D-Bus job реально).
-  Семантика ErrLocked не сломана, дедлока нет, но нужен рефакторинг:
-  per-path pending-записи («acquiring» под мьютексом, ожидание на
-  channel/cond), flock — вне мьютекса; заодно retry на EINTR. НЕ чинить
-  наивным «flock вне мьютекса» — это сломает реентерабельность (два
-  конкурентных Lock одного пути откроют по OFD вместо refs++).
+Результат: sudo-спам исчезает для штатной работы. Общие каталоги
+(`/var/cache/alr/*`) создаются/чинятся без sudo, если текущий пользователь —
+член группы-владельца каталога и права корректны. Целевая группа для новых
+установок — `alr` (создаётся установщиком); существующие установки на
+wheel/sudo продолжают работать (не перекидываем). Плюс два хвоста из ревью:
+CheckFreeSpace для dlcache и рефакторинг реестра локов fsutils.
+
+Модель групп:
+- Целевая группа для НОВЫХ каталогов: `alr`, если существует, иначе
+  wheel/sudo (как сейчас).
+- Fast-path (без sudo): пользователь — член группы, которой принадлежит
+  существующий каталог (или ближайший существующий предок с setgid),
+  и права корректны (2775) — работаем без эскалации. Чинить/chown через
+  sudo — только когда реально нужно (нет каталога, чужая группа, не член).
+- Миграции wheel→alr для существующего дерева НЕТ: работающая раскладка
+  не трогается; новые подкаталоги под setgid-родителем наследуют его группу.
+
+### Task 6.1: групповые хелперы в fsutils
+
+**Файлы:**
+- Modify: `internal/fsutils/privileged_group.go`
+- Test: `internal/fsutils/privileged_group_test.go` (новый)
+
+- [x] **Шаг 1: падающий тест**
+  - `CacheShareGroup()`: возвращает "alr", если группа существует в системе,
+    иначе `GetPrivilegedGroup()` (детерминировать в тесте через подмену
+    lookup — вынести `var lookupGroup = user.LookupGroup` пакетного уровня);
+  - `CurrentUserGroupGIDs()`: возвращает множество gid текущего пользователя
+    (основная + дополнительные группы);
+  - `dirSharedWith(gid uint32, ...)`: stat каталога → его группа ∈ gid'ам
+    пользователя && setgid && group rwx.
+
+- [x] **Шаг 2: реализация** — `CacheShareGroup()` (без sync.Once — чтобы
+  группа alr, появившаяся после старта процесса, подхватывалась;
+  `lookupGroup("alr")` → "alr", иначе GetPrivilegedGroup);
+  `CurrentUserGroupGIDs()` (`os/user.Current()` + `GroupIds()`);
+  хелпер проверки «каталог общий для меня» (Lstat, gid, mode).
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/fsutils/ -v -count=1`
+Expected: PASS
+
+- [x] **Шаг 4: коммит** `Добавлено: группа alr и хелперы членства (fsutils)`
+
+### Task 6.2: EnsureTempDirWithRootOwner без sudo для членов группы
+
+**Файлы:**
+- Modify: `internal/fsutils/dirs.go`
+- Test: `internal/fsutils/dirs_test.go` (новый)
+
+- [x] **Шаг 1: падающий тест** — тестируемость: префикс `/var/cache/alr`
+  выносится в пакетную переменную (`var systemCachePrefix = "/var/cache/alr"`,
+  в тесте подменяется на temp-dir через t.Cleanup). Кейсы (все на temp-dir,
+  без root):
+  - каталог существует, его группа ∈ моим, 2775 → nil без эскалации
+    (проверить отсутствие вызова sudo — через подмену exec или по факту
+    отсутствия ошибок в среде без sudo);
+  - каталога нет, предок setgid+group-writable и группа ∈ моим →
+    создание MkdirAll+chmod без sudo, наследование группы;
+  - чужая группа/не setgid → путь эскалации (в тесте без sudo — ошибка
+    эскалации, как сейчас).
+
+- [x] **Шаг 2: реализация** fast-path в EnsureTempDirWithRootOwner до
+  sudo-ветки (порядок: prefix? → CI? → root? → fast-path члена группы →
+  sudo-ветка как fallback). Целевая группа для chown в sudo/root-ветках —
+  `CacheShareGroup()`.
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/fsutils/ -v -count=1 && go build ./...`
+Expected: PASS
+
+- [x] **Шаг 4: коммит** `Изменено: общие каталоги кэша без sudo для членов группы`
+
+### Task 6.3: dlcache без лишнего враппера
+
+**Файлы:**
+- Modify: `pkg/dlcache/dlcache_prod.go`
+
+- [x] **Шаг 1: реализация** — `createDir` больше не дублирует проверку
+  префикса: просто `return utils.EnsureTempDirWithRootOwner(itemPath, mode)`
+  (хелпер сам проверяет префикс и делает MkdirAll для прочих путей).
+  Заодно унифицировать источник префикса: fsutils использует тот же
+  `systemCachePrefix`, что и Task 6.2 (убрать свой HasPrefix из
+  EnsureTempDirWithRootOwner в пользу общего — если префикс живёт в fsutils,
+  dlcache_prod просто делегирует).
+
+- [x] **Шаг 2: тесты проходят**
+
+Run: `go build ./... && go test ./pkg/dlcache/ ./internal/fsutils/ -count=1`
+Expected: PASS (существующие тесты dlcache — с тегом test, проверь оба варианта)
+
+- [x] **Шаг 3: коммит** `Изменено: dlcache делегирует создание каталогов fsutils`
+
+### Task 6.4: CheckFreeSpace для CacheDir перед скачиванием
+
+**Файлы:**
+- Modify: `internal/build/source_downloader.go` (`DownloadSources`, ~:79)
+
+- [x] **Шаг 1: падающий тест** — по возможности юнит: DownloadSources с
+  пустым списком sources всё равно проверяет место? (выбери проверяемый
+  контракт: проверка выполняется ДО цикла, даже если sources пуст — или
+  только при непустом; реши, задокументируй, покрой тестом хелпера).
+  Выбран контракт: проверка только при непустом списке sources — без
+  скачиваний dlcache не создаёт каталог dl, а CacheDir может не существовать.
+
+- [x] **Шаг 2: реализация** — до цикла скачиваний:
+  `fsutils.CheckFreeSpace(s.cfg.GetPaths().CacheDir, minDownloadSpace)`
+  (константа 1 ГиБ с комментарием: dlcache — отдельная ФС от дерева сборки;
+  точный размер неизвестен до скачивания, это страховка от ENOSPC посреди).
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ -v -count=1 && go build ./...`
+Expected: PASS
+
+- [x] **Шаг 4: коммит** `Добавлено: проверка свободного места перед скачиванием исходников`
+
+### Task 6.5: реестр локов fsutils — per-path pending, flock вне мьютекса
+
+**Файлы:**
+- Modify: `internal/fsutils/lock.go`
+- Test: `internal/fsutils/lock_test.go`
+
+- [x] **Шаг 1: падающий тест** — блокирующий `Lock` не должен останавливать
+  `TryLock` по ДРУГОМУ пути: горутина держит ожидание `Lock(pathA)` (pathA
+  залочен probe-fd), в это время `TryLock(pathB)` возвращается сразу;
+  конкурентные `Lock` одного пути из двух горутин → refs==2, одна запись в
+  реестре; EINTR-retry сложно триггерить — оставить кодом + комментарием.
+
+- [x] **Шаг 2: реализация** — реестр: map[path]*lockEntry{file, refs,
+  pending bool, ch chan}; `Lock`/`TryLock`: под мьютексом — если pending,
+  ждать на channel (вне мьютекса, цикл); если есть file — refs++; иначе
+  пометить pending, отпустить мьютекс, делать open+flock (с retry на EINTR),
+  снова под мьютексом — зарегистрировать/снять pending, разбудить ждущих.
+  Close без изменений по семантике (refs--, реальный close при 0).
+  НЕ ломать: реентерабельность, normalizeLockAccess, ErrLocked-маппинг
+  TryLock.
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/fsutils/ -v -race -count=5`
+Expected: PASS (стресс-прогон без гонок)
+
+- [x] **Шаг 4: коммит** `Исправлено: блокирующий flock больше не останавливает реестр локов`
+
+### Task 6.6: установщик создаёт группу alr
+
+**Файлы:**
+- Modify: `scripts/install.sh`
+
+- [x] **Шаг 1: после installPkg** — `$rootCmd groupadd -f alr`;
+  `$rootCmd mkdir -p /var/cache/alr/dl && $rootCmd chown root:alr
+  /var/cache/alr /var/cache/alr/dl && $rootCmd chmod 2775 ...`
+  (только если каталогов нет или владелец root:root — не ломать wheel-системы:
+  chown делать, только если текущая группа не wheel/sudo/alr? — реши и
+  задокументируй простое правило: если группа каталога уже wheel/sudo/alr —
+  не трогать; иначе выставить root:alr); добавить вызвавшего пользователя
+  (`$SUDO_USER`/`$DOAS_USER`, если не root) в группу alr
+  (`usermod -aG alr`) с сообщением о необходимости перелогина.
+- [x] **Шаг 2: проверка синтаксиса** `bash -n scripts/install.sh`
+- [x] **Шаг 3: коммит** `Добавлено: группа alr и общий каталог загрузок в установщик`
+
+### Task 6.7: сквозная проверка Этапа 6
+
+- [x] На реальной машине (пользователь в wheel, /var/cache/alr root:wheel
+  2775): сборка со скачиванием источников НЕ вызывает sudo (подмена sudo на
+  падающий логгер в PATH); до и после — diff вызовов
+  - Проверено 2026-09-20 (пользователь в wheel, /var/cache/alr root:wheel
+    2775): фейковый `sudo` в PATH пишет вызовы в лог и падает с exit 1.
+    Рецепт с `sources=(http://…)` и sha256. Ветка (c742820): сборка
+    успешна, rpm собран, `/var/cache/alr/dl` создан как user:wheel 2775,
+    лог sudo ПУСТ. Master (e8c11ea): падает — «не удалось создать
+    директорию /var/cache/alr/dl/<hash>: exit status 1», в логе
+    `sudo mkdir -p /var/cache/alr/dl/<hash>` — подтверждена проблема,
+    которую чинит этап. Перед каждым прогоном очищались dlcache, build- и
+    pkgs-кэш — иначе семантический кэш (Этап 5) пропускает сборку молча.
+- [x] `alr fix` без root — поведение не ухудшилось (известный отказ Этапа 10
+  остаётся как был)
+  - ИЗМЕНЕНИЕ ПОВЕДЕНИЯ (улучшение): master `alr fix` без root вытирает
+    содержимое `/var/cache/alr` (alr.db, repo, dl) и падает на
+    `sudo chmod 2775 /var/cache/alr` — частичный деструктивный отказ, БД не
+    пересобрана. Ветка: fast-path EnsureTempDirWithRootOwner (каталог
+    root:wheel 2775, пользователь в wheel) проходит без sudo, fix
+    завершается полностью (exit 0), БД пересоздана, вызовов sudo нет.
+  - После fix site-репозитории не переклонируются: Pull пропускает их
+    («обновляется через RPC», internal/repos/pull.go:81 — то же в master,
+    не регрессия этапа); данные подтягиваются лениво через RPC
+    (`alr info alr-bin` после fix работает). Следствие: локальный
+    git-checkout репозиториев после fix не восстанавливается, fallback на
+    локальную БД при недоступном RPC пуст до первых RPC-запросов.
+    `/var/cache/alr` после проверки восстановлен из снапшота.
+- [x] `go build ./...`, `go test ./...` (exit 0),
+  `go test ./internal/fsutils/ -race -count=3` (ok),
+  `pre-commit run --all-files` (все хуки Passed; хук покрытия обновил
+  `assets/coverage-badge.svg`)
+- [ ] Хвост: postinstall пакета alr-bin (репозиторий ALR/alr-default на
+  сайте) тоже должен создавать группу alr — открытый пункт, отдельный
+  репозиторий.
+
+---
+
+## Этапы 7-10: состав работ (детальный план — перед стартом каждого)
 
 ### Этап 7: модель привилегий CLI
 - Убрать `CheckUserPrivileges` из `cmd/build.go:49`

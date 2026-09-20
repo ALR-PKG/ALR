@@ -33,13 +33,21 @@ var ErrLocked = errors.New("resource is locked by another process")
 type lockEntry struct {
 	file *os.File
 	refs int
+	// pending=true, пока идёт захват flock (open+flock выполняются вне
+	// мьютекса); ждущие горутины блокируются на ch, который закрывается
+	// по завершении попытки захвата — и при успехе, и при ошибке
+	pending bool
+	ch      chan struct{}
 }
 
 // heldLocks — реестр локов, удерживаемых этим процессом: flock привязан
 // к open file description, поэтому повторный open+flock того же файла в
 // том же процессе вернул бы EWOULDBLOCK. Реестр делает TryLock
 // реентерабельным в пределах процесса (например, при рекурсивной сборке
-// сабпакетов одного base)
+// сабпакетов одного base). Запись с pending=true резервирует путь до
+// завершения захвата, чтобы конкурентные Lock/TryLock не открыли второй
+// open file description и не получили ложный EWOULDBLOCK от своего же
+// процесса
 var (
 	locksMu   sync.Mutex
 	heldLocks = map[string]*lockEntry{}
@@ -88,6 +96,11 @@ func Lock(path string) (*LockHandle, error) {
 // В пределах процесса вызов реентерабелен: повторный TryLock того же пути
 // возвращает новый handle на тот же flock.
 // Если блокировку уже держит другой процесс — ErrLocked.
+// Если этот процесс уже захватывает path (захват ещё не завершён), TryLock
+// ждёт завершения захвата и присоединяется к нему — немедленный ErrLocked
+// здесь был бы ложным «занято» при реентерабельных сценариях
+// (BuildPackage→deps). Ожидание ограничено длительностью чужого захвата:
+// для pending от блокирующего Lock оно может занять время ожидания flock.
 func TryLock(path string) (*LockHandle, error) {
 	l, err := flockPath(path, unix.LOCK_NB)
 	if errors.Is(err, syscall.EWOULDBLOCK) {
@@ -97,7 +110,9 @@ func TryLock(path string) (*LockHandle, error) {
 }
 
 // flockPath — общая часть Lock и TryLock: flags добавляются к LOCK_EX
-// (unix.LOCK_NB для non-blocking варианта).
+// (unix.LOCK_NB для non-blocking варианта). Блокирующий flock выполняется
+// вне мьютекса реестра: пока одна горутина ждёт чужой flock, операции по
+// другим путям не останавливаются.
 func flockPath(path string, flags int) (*LockHandle, error) {
 	dir := filepath.Dir(path)
 	_, statErr := os.Stat(dir)
@@ -107,34 +122,78 @@ func flockPath(path string, flags int) (*LockHandle, error) {
 	}
 
 	locksMu.Lock()
-	defer locksMu.Unlock()
-
-	if entry, ok := heldLocks[path]; ok {
-		entry.refs++
+	var entry *lockEntry
+	for {
+		e, ok := heldLocks[path]
+		if !ok {
+			// Пути нет в реестре — становимся приобретателем: резервируем
+			// запись до отпускания мьютекса, чтобы конкуренты по этому
+			// пути ждали на ch, а не открывали второй open file description
+			entry = &lockEntry{pending: true, ch: make(chan struct{})}
+			heldLocks[path] = entry
+			break
+		}
+		if e.pending {
+			// Захват уже идёт — ждём его завершения вне мьютекса и
+			// перепроверяем состояние: приобретатель мог завершиться
+			// ошибкой (запись удалена) — тогда сами становимся
+			// приобретателем
+			ch := e.ch
+			locksMu.Unlock()
+			<-ch
+			locksMu.Lock()
+			continue
+		}
+		e.refs++
+		locksMu.Unlock()
 		return &LockHandle{path: path}, nil
 	}
+	locksMu.Unlock()
 
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o664)
-	if err != nil {
-		return nil, fmt.Errorf("не удалось открыть файл блокировки %s: %w", path, err)
-	}
-	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|flags); err != nil {
+	f, openErr := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o664)
+	if openErr != nil {
+		openErr = fmt.Errorf("не удалось открыть файл блокировки %s: %w", path, openErr)
+	} else if openErr = flockRetry(int(f.Fd()), unix.LOCK_EX|flags); openErr != nil {
 		f.Close()
-		return nil, fmt.Errorf("не удалось заблокировать %s: %w", path, err)
+		openErr = fmt.Errorf("не удалось заблокировать %s: %w", path, openErr)
+	}
+	if openErr != nil {
+		locksMu.Lock()
+		delete(heldLocks, path)
+		close(entry.ch)
+		locksMu.Unlock()
+		return nil, openErr
 	}
 
 	normalizeLockAccess(path, dir, dirCreated)
 
-	heldLocks[path] = &lockEntry{file: f, refs: 1}
+	locksMu.Lock()
+	entry.file = f
+	entry.refs = 1
+	entry.pending = false
+	close(entry.ch)
+	locksMu.Unlock()
 	return &LockHandle{path: path}, nil
 }
 
-// normalizeLockAccess при запуске от root выставляет лок-файлу
-// привилегированную группу и режим 0660, чтобы члены группы могли брать
-// блокировку после pull/сборки от root (RepoDir — общий каталог группы).
-// Родительский каталог получает группу только если его только что создал
-// захват блокировки — существующие каталоги не трогаем. Ошибки нормализации
-// не фатальны: на системах без привилегированной группы root продолжает
+// flockRetry повторяет flock при EINTR: сигнал может прервать системный
+// вызов до взятия блокировки, повтор безопасен — лок ещё не удерживается
+func flockRetry(fd, flags int) error {
+	for {
+		err := unix.Flock(fd, flags)
+		if errors.Is(err, syscall.EINTR) {
+			continue
+		}
+		return err
+	}
+}
+
+// normalizeLockAccess при запуске от root выставляет лок-файлу целевую
+// группу общего кэша (CacheShareGroup) и режим 0660, чтобы члены группы
+// могли брать блокировку после pull/сборки от root (RepoDir — общий каталог
+// группы). Родительский каталог получает группу только если его только что
+// создал захват блокировки — существующие каталоги не трогаем. Ошибки
+// нормализации не фатальны: на системах без целевой группы root продолжает
 // работать. Реентерабельный путь (refs++) сюда не попадает — файл уже
 // нормализован при первом захвате.
 func normalizeLockAccess(path, dir string, dirCreated bool) {
@@ -144,7 +203,7 @@ func normalizeLockAccess(path, dir string, dirCreated bool) {
 
 	gid, err := privilegedGID()
 	if err != nil {
-		slog.Debug("Lock: не удалось определить привилегированную группу", "error", err)
+		slog.Debug("Lock: не удалось определить целевую группу кэша", "error", err)
 		return
 	}
 

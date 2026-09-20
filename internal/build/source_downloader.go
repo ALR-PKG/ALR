@@ -23,9 +23,16 @@ import (
 	"os"
 	"strings"
 
+	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/pkg/dl"
 	"git.alr-pkg.ru/ALR/ALR/pkg/dlcache"
 )
+
+// minDownloadSpace — минимум свободного места в CacheDir перед скачиванием
+// исходников — 1 ГиБ. dlcache — отдельная ФС от дерева сборки (оно проверяется
+// minBuildSpace в prepareDirs); точный размер скачиваний неизвестен заранее,
+// это страховка от ENOSPC посреди скачивания.
+const minDownloadSpace = 1 << 30
 
 type SourceDownloader struct {
 	cfg Config
@@ -43,6 +50,15 @@ func (s *SourceDownloader) DownloadSources(
 	basePkg string,
 	si SourcesInput,
 ) error {
+	// Проверяем место только если есть что скачивать: без скачиваний dlcache
+	// не трогает ФС (каталог dl создаётся на первое скачивание), а CacheDir
+	// может ещё не существовать.
+	if len(si.Sources) > 0 {
+		if err := fsutils.CheckFreeSpace(s.cfg.GetPaths().CacheDir, minDownloadSpace); err != nil {
+			return err
+		}
+	}
+
 	for i, src := range si.Sources {
 
 		opts := dl.Options{

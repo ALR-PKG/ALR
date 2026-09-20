@@ -20,16 +20,15 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strconv"
 )
 
-// EnsureGroupAccess рекурсивно выставляет на дереве root привилегированную
-// группу и права g+rwX (на директории также setgid), чтобы члены группы
-// могли читать и обновлять общий кэш (/var/cache/alr). Git при fetch
-// создаёт pack-файлы с правами 0600, и без нормализации пользователи
-// из группы не могут работать с репозиторным кэшем.
+// EnsureGroupAccess рекурсивно выставляет на дереве root целевую группу
+// общего кэша (CacheShareGroup) и права g+rwX (на директории также setgid),
+// чтобы члены группы могли читать и обновлять общий кэш (/var/cache/alr).
+// Git при fetch создаёт pack-файлы с правами 0600, и без нормализации
+// пользователи из группы не могут работать с репозиторным кэшем.
 //
 // Имеет смысл только при запуске от root; для остальных — no-op.
 func EnsureGroupAccess(root string) error {
@@ -72,11 +71,12 @@ func EnsureGroupAccess(root string) error {
 	})
 }
 
-// privilegedGID возвращает gid привилегированной группы текущего дистрибутива
+// privilegedGID возвращает gid целевой группы общего кэша (CacheShareGroup):
+// "alr", если она есть в системе, иначе привилегированную группу дистрибутива
 func privilegedGID() (int, error) {
-	grp, err := user.LookupGroup(GetPrivilegedGroup())
+	grp, err := lookupGroup(CacheShareGroup())
 	if err != nil {
-		return 0, fmt.Errorf("не удалось найти привилегированную группу: %w", err)
+		return 0, fmt.Errorf("не удалось найти целевую группу кэша: %w", err)
 	}
 	gid, err := strconv.Atoi(grp.Gid)
 	if err != nil {

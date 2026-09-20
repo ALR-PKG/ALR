@@ -30,7 +30,7 @@ func NoNewPrivs() error {
 	return unix.Prctl(unix.PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
 }
 
-// EnsureTempDirWithRootOwner создает каталог в /var/cache/alr с правами для привилегированной группы
+// EnsureTempDirWithRootOwner создает каталог в /var/cache/alr с правами для целевой группы кэша
 // Обёртка для обратной совместимости, делегирует вызов в fsutils
 func EnsureTempDirWithRootOwner(path string, mode os.FileMode) error {
 	return fsutils.EnsureTempDirWithRootOwner(path, mode)

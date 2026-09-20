@@ -56,6 +56,85 @@ installPkg() {
   esac
 }
 
+setupAlrGroup() {
+  # Группа alr и общий каталог загрузок /var/cache/alr/dl.
+  # Пакет уже установлен, поэтому любая ошибка здесь — только предупреждение,
+  # установка не прерывается.
+
+  # Без root и без sudo/doas системную группу настроить невозможно
+  if [ "$(id -u)" != "0" ] && [ -z "$rootCmd" ]; then
+    warn "Нет прав root: группа alr и /var/cache/alr не настроены"
+    warn "Выполните вручную: groupadd -f alr && mkdir -p /var/cache/alr/dl && chown root:alr /var/cache/alr /var/cache/alr/dl && chmod 2775 /var/cache/alr /var/cache/alr/dl"
+    return 0
+  fi
+
+  # Создаём группу alr (-f: не ошибка, если группа уже существует)
+  if command -v groupadd &>/dev/null; then
+    $rootCmd groupadd -f alr || warn "Не удалось создать группу alr"
+  elif command -v addgroup &>/dev/null; then
+    # BusyBox (Alpine): аналог groupadd
+    $rootCmd addgroup -S alr 2>/dev/null || true
+  else
+    warn "Не найдена команда создания группы (groupadd/addgroup)"
+    return 0
+  fi
+
+  # Создаём общий каталог загрузок
+  if ! $rootCmd mkdir -p /var/cache/alr/dl; then
+    warn "Не удалось создать /var/cache/alr/dl"
+    return 0
+  fi
+
+  # Правило владельца: если группа каталога уже alr/wheel/sudo — не трогаем
+  # (работающую раскладку не ломаем, fast-path в alr работает с любой из них).
+  # Иначе (например, root:root) выставляем root:alr и права 2775 (setgid).
+  for dir in /var/cache/alr /var/cache/alr/dl; do
+    dirGroup=$(stat -c %G "$dir" 2>/dev/null)
+    case "$dirGroup" in
+    alr | wheel | sudo) ;;
+    *)
+      $rootCmd chown root:alr "$dir" && $rootCmd chmod 2775 "$dir" ||
+        warn "Не удалось выставить владельца root:alr и права 2775 для $dir"
+      ;;
+    esac
+  done
+
+  # Добавляем вызвавшего пользователя в группу alr (только реального,
+  # не root). В типичном сценарии curl|bash скрипт запущен от имени
+  # пользователя, а sudo/doas используется покомандно, поэтому SUDO_USER/
+  # DOAS_USER пусты — тогда берём текущего пользователя.
+  targetUser="${SUDO_USER:-$DOAS_USER}"
+  if [ -z "$targetUser" ] && [ "$(id -u)" != "0" ]; then
+    targetUser=$(id -un)
+  fi
+  if [ -z "$targetUser" ] || [ "$targetUser" = "root" ]; then
+    return 0
+  fi
+  if ! id "$targetUser" &>/dev/null; then
+    return 0
+  fi
+  if id -nG "$targetUser" 2>/dev/null | tr ' ' '\n' | grep -qx alr; then
+    return 0
+  fi
+  if command -v usermod &>/dev/null; then
+    if ! $rootCmd usermod -aG alr "$targetUser"; then
+      warn "Не удалось добавить $targetUser в группу alr (выполните вручную: usermod -aG alr $targetUser)"
+      return 0
+    fi
+  elif command -v addgroup &>/dev/null; then
+    # BusyBox (Alpine)
+    if ! $rootCmd addgroup "$targetUser" alr; then
+      warn "Не удалось добавить $targetUser в группу alr (выполните вручную: addgroup $targetUser alr)"
+      return 0
+    fi
+  else
+    warn "Добавьте пользователя $targetUser в группу alr вручную: usermod -aG alr $targetUser"
+    return 0
+  fi
+  info "Пользователь $targetUser добавлен в группу alr"
+  info "Чтобы использовать общий кэш без sudo, перелогиньтесь или выполните: newgrp alr"
+}
+
 trackInstallation() {
   # Отправить статистику установки ALR (не критично если не получится)
   if command -v curl &>/dev/null; then
@@ -227,6 +306,9 @@ if [ -z "$noPkgMgr" ]; then
 
   info "Установка пакета ALR"
   installPkg "$pkgMgr" "$fname"
+
+  # Группа alr и общий каталог загрузок /var/cache/alr/dl
+  setupAlrGroup
 
   # Отправляем статистику установки
   trackInstallation

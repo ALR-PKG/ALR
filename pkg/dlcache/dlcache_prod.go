@@ -20,18 +20,13 @@ package dlcache
 
 import (
 	"os"
-	"strings"
 
 	"git.alr-pkg.ru/ALR/ALR/internal/utils"
 )
 
-// createDir создает директорию с правильными правами для production
+// createDir создает директорию с правильными правами для production:
+// под префиксом системного кэша — root:целевая_группа с setgid,
+// для прочих путей — обычный MkdirAll (проверка префикса внутри хелпера)
 func createDir(itemPath string, mode os.FileMode) error {
-	// Используем специальную функцию для создания каталогов с setgid битом только для /var/cache/alr/
-	// Проверяем с слешем в конце, чтобы исключить похожие тестовые директории
-	if strings.HasPrefix(itemPath, "/var/cache/alr/") {
-		return utils.EnsureTempDirWithRootOwner(itemPath, mode)
-	} else {
-		return os.MkdirAll(itemPath, mode)
-	}
+	return utils.EnsureTempDirWithRootOwner(itemPath, mode)
 }
