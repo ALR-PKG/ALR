@@ -768,6 +768,15 @@ Expected: PASS
   `CheckFreeSpace(paths.CacheDir, …)` перед `DownloadSources` — сейчас
   проверяется только ФС дерева сборки, а `/var/cache/alr/dl` может быть
   другой ФС (ENOSPC посреди скачивания).
+- **Из ре-ревью Этапа 5 (Important-follow-up):** реестр локов fsutils
+  (`heldLocks`) сейчас держит общий `locksMu` на время БЛОКИРУЮЩЕГО
+  `unix.Flock` в `fsutils.Lock` — все TryLock/Lock/Close процесса в этот
+  момент сериализуются (для демона с горутинами на D-Bus job реально).
+  Семантика ErrLocked не сломана, дедлока нет, но нужен рефакторинг:
+  per-path pending-записи («acquiring» под мьютексом, ожидание на
+  channel/cond), flock — вне мьютекса; заодно retry на EINTR. НЕ чинить
+  наивным «flock вне мьютекса» — это сломает реентерабельность (два
+  конкурентных Lock одного пути откроют по OFD вместо refs++).
 
 ### Этап 7: модель привилегий CLI
 - Убрать `CheckUserPrivileges` из `cmd/build.go:49`

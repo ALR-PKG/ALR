@@ -105,7 +105,7 @@ func TestCopyToCache(t *testing.T) {
 		var meta cacheMeta
 		require.NoError(t, json.Unmarshal(data, &meta))
 		assert.Equal(t, testKey, meta.Key)
-		assert.Equal(t, 1, meta.Version, "мета должна нести версию формата")
+		assert.Equal(t, cacheMetaVersion, meta.Version, "мета должна нести версию формата")
 
 		fi, err := os.Stat(metaPath)
 		require.NoError(t, err)
