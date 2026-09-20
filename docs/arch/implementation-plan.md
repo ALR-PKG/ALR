@@ -663,7 +663,7 @@ description/summary/группы/лицензий или форматирова�
 - Create: `internal/build/cachekey.go`
 - Test: `internal/build/cachekey_test.go`
 
-- [ ] **Шаг 1: падающий тест**
+- [x] **Шаг 1: падающий тест**
   - `ScriptFuncsKey`: стабилен для одного скрипта; меняется при правке тела
     `build()`; НЕ меняется при правке комментария/пробелов вне функций и при
     правке тела `version()` (version влияет через поле Version);
@@ -672,7 +672,7 @@ description/summary/группы/лицензий или форматирова�
     НЕ меняется при правке Summary/Description/Group/Homepage/Maintainer/
     Licenses.
 
-- [ ] **Шаг 2: реализация**
+- [x] **Шаг 2: реализация**
 
   - `ScriptFuncsKey(sf *alrsh.ScriptFile) string` — `syntax.Walk` по AST
     (`sf.File()`), для `*syntax.FuncDecl` с именами prepare/build/package
@@ -686,12 +686,12 @@ description/summary/группы/лицензий или форматирова�
     Backup (Resolved), Scripts (Resolved), AutoReq/AutoProv/skiplists,
     FireJailed/FireJailProfiles, ExtraFiles.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/build/ -run 'TestScriptFuncsKey|TestSemanticCacheKey' -v`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: семантический ключ кэша (хелперы)`
+- [x] **Шаг 4: коммит** `Добавлено: семантический ключ кэша (хелперы)`
 
 ### Task 5.2: запись .meta при публикации в кэш
 
