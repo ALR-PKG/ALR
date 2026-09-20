@@ -68,7 +68,7 @@ func TestCurrentUserGroupGIDs(t *testing.T) {
 	}
 
 	// Основная группа процесса обязана присутствовать
-	primary := uint32(os.Getgid())
+	primary := uint32(os.Getegid())
 	if !gids[primary] {
 		t.Errorf("основная gid %d отсутствует в множестве %v", primary, gids)
 	}

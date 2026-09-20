@@ -108,8 +108,10 @@ func CurrentUserGroupGIDs() (map[uint32]bool, error) {
 	}
 
 	gids := make(map[uint32]bool, len(list)+1)
-	// GroupIds включает только дополнительные группы, добавляем основную
-	gids[uint32(os.Getgid())] = true
+	// На Linux GroupIds (getgrouplist) обычно уже включает основную группу,
+	// но это не гарантировано — добавляем её явно (map дедуплицирует).
+	// Проверки членства ядро выполняет по effective gid.
+	gids[uint32(os.Getegid())] = true
 	for _, s := range list {
 		gid, err := strconv.ParseUint(s, 10, 32)
 		if err != nil {
