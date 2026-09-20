@@ -90,7 +90,7 @@ func checkCacheMeta(pkgPath, expectedKey string) bool {
 	}
 
 	if meta.Key != expectedKey {
-		slog.Debug("Семантический ключ кэша не совпал, пересборка", "path", pkgPath)
+		slog.Debug("Семантический ключ кэша не совпал, пересборка", "path", pkgPath, "expected", expectedKey, "actual", meta.Key)
 		return false
 	}
 
