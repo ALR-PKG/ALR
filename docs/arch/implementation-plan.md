@@ -877,7 +877,7 @@ Expected: PASS
 **Файлы:**
 - Modify: `pkg/dlcache/dlcache_prod.go`
 
-- [ ] **Шаг 1: реализация** — `createDir` больше не дублирует проверку
+- [x] **Шаг 1: реализация** — `createDir` больше не дублирует проверку
   префикса: просто `return utils.EnsureTempDirWithRootOwner(itemPath, mode)`
   (хелпер сам проверяет префикс и делает MkdirAll для прочих путей).
   Заодно унифицировать источник префикса: fsutils использует тот же
@@ -885,12 +885,12 @@ Expected: PASS
   EnsureTempDirWithRootOwner в пользу общего — если префикс живёт в fsutils,
   dlcache_prod просто делегирует).
 
-- [ ] **Шаг 2: тесты проходят**
+- [x] **Шаг 2: тесты проходят**
 
 Run: `go build ./... && go test ./pkg/dlcache/ ./internal/fsutils/ -count=1`
 Expected: PASS (существующие тесты dlcache — с тегом test, проверь оба варианта)
 
-- [ ] **Шаг 3: коммит** `Изменено: dlcache делегирует создание каталогов fsutils`
+- [x] **Шаг 3: коммит** `Изменено: dlcache делегирует создание каталогов fsutils`
 
 ### Task 6.4: CheckFreeSpace для CacheDir перед скачиванием
 
