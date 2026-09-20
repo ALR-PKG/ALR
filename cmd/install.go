@@ -40,10 +40,6 @@ func newInstallCmd() *cobra.Command {
 		Short:   gotext.Get("Install a new package"),
 		Aliases: []string{"in"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := utils.CheckUserPrivileges(); err != nil {
-				return err
-			}
-
 			var packages []string
 			if cmd.Flags().Changed("package") {
 				packages = []string{pkgName}
@@ -88,6 +84,10 @@ func newInstallCmd() *cobra.Command {
 				installer,
 			)
 			if err != nil {
+				return err
+			}
+
+			if err := utils.CheckUserPrivileges(); err != nil {
 				return err
 			}
 
