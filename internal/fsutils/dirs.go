@@ -31,7 +31,7 @@ var systemCachePrefix = "/var/cache/alr"
 // Все каталоги в /var/cache/alr принадлежат root:CacheShareGroup() с правами 2775
 // Для других каталогов использует стандартные права
 func EnsureTempDirWithRootOwner(path string, mode os.FileMode) error {
-	needsElevation := strings.HasPrefix(path, systemCachePrefix)
+	needsElevation := path == systemCachePrefix || strings.HasPrefix(path, systemCachePrefix+"/")
 
 	if needsElevation {
 		// В CI или если мы уже root, не нужно использовать sudo
