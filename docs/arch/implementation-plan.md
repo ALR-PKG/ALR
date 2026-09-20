@@ -687,10 +687,12 @@ Expected: PASS
   root-операций ДО удаления (fail-fast) или атомарный порядок:
   сначала гарантировать возможность пересоздания, потом удалять.
 - **Из финального ревью Этапов 1-2 (Minor 3):** в фолбэк-режиме без HOME
-  (`PkgsDir = /var/cache/alr/build`) fix создаёт системный build-каталог
-  от пользователя с 0755 вместо `root:group 2775` — либо пропускать
-  создание, когда build dir внутри `CacheDir`, либо использовать
-  `EnsureTempDirWithRootOwner`.
+  fix создаёт системные каталоги `/var/cache/alr/build` и
+  `/var/cache/alr/pkgs` от пользователя с 0755 вместо `root:group 2775`
+  (`cmd/fix.go:100-109`) — либо пропускать создание, когда каталог внутри
+  `CacheDir`, либо использовать `EnsureTempDirWithRootOwner`. Заодно:
+  сообщения fix говорят «build directory» и про кэш пакетов
+  (`Unable to remove/create build directory` для PkgsDir) — параметризовать.
 - **Из финального ревью (Minor 1):** решить конвенцию по gotext для
   ошибок внутри пакетов — `fsutils.CheckFreeSpace` сейчас возвращает
   русские строки мимо gotext (прецедент в fsutils уже был; либо принять
