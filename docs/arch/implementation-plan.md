@@ -637,14 +637,127 @@ Expected: PASS
 
 ---
 
-## Этапы 5-10: состав работ (детальный план — перед стартом каждого)
+## Этап 5: семантический ключ кэша
 
-### Этап 5: семантический ключ кэша
-- Каноническая форма сборочно-значимых полей из `alrsh.Package`
-  (версия, sources, checksums, зависимости, тексты функций) → sha256
-- Файл `<pkg>.meta` рядом с кэшированным пакетом; несовпадение — пересборка;
-  битые метаданные — пересборка
-- Тесты: правка description → кэш валиден; правка build() → инвалидация
+Результат: попадание в кэш определяется не только именем файла
+(имя+репо, версия, релиз, арх, формат — уже в conventional filename), но и
+семантическим ключом: sha256 от сборочно-значимых полей `alrsh.Package` +
+канонических текстов функций `prepare`/`build`/`package`. Правка
+description/summary/группы/лицензий или форматирования кэш НЕ
+инвалидирует; правка sources/checksums/зависимостей/тел функций —
+инвалидирует. Ключ хранится в `<PkgsDir>/<filename>.meta` (JSON),
+записывается атомарно (temp+rename) вместе с пакетом; мета
+отсутствует/битая/не совпала — пересборка.
+
+Известные ограничения (задокументировать в плане):
+- порядок элементов в списках значим (перестановка deps инвалидирует —
+  безопасная избыточная инвалидация);
+- локальные файлы-источники с checksum SKIP: изменение содержимого без
+  смены списка sources кэш не инвалидирует;
+- содержимое файлов install-скриптов (preinstall и т.д. из scriptdir)
+  хешируется только по именам.
+
+### Task 5.1: хелперы ключа (ScriptFuncsKey, SemanticCacheKey)
+
+**Файлы:**
+- Create: `internal/build/cachekey.go`
+- Test: `internal/build/cachekey_test.go`
+
+- [ ] **Шаг 1: падающий тест**
+  - `ScriptFuncsKey`: стабилен для одного скрипта; меняется при правке тела
+    `build()`; НЕ меняется при правке комментария/пробелов вне функций и при
+    правке тела `version()` (version влияет через поле Version);
+  - `SemanticCacheKey`: меняется при правке Version/Release/Epoch/Sources/
+    Checksums/Depends/BuildDepends/Scripts/Backup/FireJailed/ExtraFiles;
+    НЕ меняется при правке Summary/Description/Group/Homepage/Maintainer/
+    Licenses.
+
+- [ ] **Шаг 2: реализация**
+
+  - `ScriptFuncsKey(sf *alrsh.ScriptFile) string` — `syntax.Walk` по AST
+    (`sf.File()`), для `*syntax.FuncDecl` с именами prepare/build/package
+    каноническая печать через `syntax.NewPrinter()` (комментарии не
+    сохраняются — нормализация форматирования бесплатно), всё в sha256.
+  - `SemanticCacheKey(vars *alrsh.Package, funcsKey string) string` —
+    sha256 от `json.Marshal` структуры со сборочно-значимыми полями
+    (resolved-значения OverridableField) + funcsKey. Поля:
+    Version, Release, Epoch, Architectures, Provides, Conflicts, Replaces,
+    Depends/BuildDepends/OptDepends (Resolved), Sources/Checksums (Resolved),
+    Backup (Resolved), Scripts (Resolved), AutoReq/AutoProv/skiplists,
+    FireJailed/FireJailProfiles, ExtraFiles.
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ -run 'TestScriptFuncsKey|TestSemanticCacheKey' -v`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: семантический ключ кэша (хелперы)`
+
+### Task 5.2: запись .meta при публикации в кэш
+
+**Файлы:**
+- Modify: `internal/build/utils.go` (`copyToCache`)
+- Modify: `internal/build/script_executor.go` (`ExecuteSecondPass` — вычисление
+  ключа, вызов copyToCache)
+- Test: `internal/build/utils_internal_test.go` (расширить TestCopyToCache)
+
+- [ ] **Шаг 1: падающий тест** — после copyToCache рядом лежит
+  `<filename>.meta` (JSON `{"key": "<hex>"}`); мета пишется атомарно (нет
+  `*.tmp-*` остатков); при ошибке — ни пакета, ни меты.
+
+- [ ] **Шаг 2: реализация** — `copyToCache` получает параметр `key string`;
+  после rename пакета так же атомарно (CreateTemp+Rename) пишет мету.
+  `ExecuteSecondPass` (LocalScriptExecutor) вычисляет `funcsKey` один раз из
+  `sf`, в цикле подпакетов — `SemanticCacheKey(vars, funcsKey)`. Сигнатуры
+  интерфейса ScriptExecutor НЕ меняются (sf и vars уже параметры) — RPC
+  (plugins_executors_gen.go) не трогаем, реализация общая.
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ -v && go build ./...`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: запись .meta кэша при публикации пакета`
+
+### Task 5.3: проверка .meta в CheckForBuiltPackage
+
+**Файлы:**
+- Modify: `internal/build/cache.go` (интерфейс build.go:190, реализация Cache)
+- Modify: `internal/build/build.go` (вызовы: BuildPackage ~:352,
+  checkCacheForAllSubpackages ~:711)
+- Test: `internal/build/cache_test.go` (расширить)
+
+- [ ] **Шаг 1: падающий тест** — пакет+совпадающая мета → hit; мета
+  отсутствует/битая/не совпала → miss (даже при существующем пакете);
+  недоверенный владелец меты тоже → miss (мета проверяется как и пакет).
+
+- [ ] **Шаг 2: реализация** — `CheckForBuiltPackage(ctx, input, vars, funcsKey
+  string)`; внутри после findTrustedCachedPkg: вычислить
+  `SemanticCacheKey(vars, funcsKey)`, прочитать и сверить мету.
+  Обновить интерфейс `cacheExecutor` (build.go:190) и вызовы:
+  - BuildPackage: `funcsKey` из sf (доступен после ExecuteFirstPass);
+  - checkCacheForAllSubpackages: скрипт резолвится через
+    `b.scriptResolver.ResolveScript(ctx, pkg)` + `b.scriptExecutor.ReadScript`;
+    ошибка резолва/чтения → miss с slog.Debug (безопасная сторона), НЕ ошибка.
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ -v && go build ./...`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: проверка семантического ключа кэша (.meta)`
+
+### Task 5.4: сквозная проверка Этапа 5
+
+- Сборка → кэш-хит; правка description в alr.sh → всё ещё кэш-хит; правка
+  тела build() → пересборка; бамп version → новый файл (поведение как раньше)
+- Поток install/dep через checkCacheForAllSubpackages — проверить по логам
+  (скрипт резолвится, мета сверяется)
+- `go build ./...`, `go test ./...`, pre-commit
+
+---
+
+## Этапы 6-10: состав работ (детальный план — перед стартом каждого)
 
 ### Этап 6: группа alr для dlcache
 - Установщик/пакеты создают группу `alr`; `/var/cache/alr/dl` — `root:alr 2775`
