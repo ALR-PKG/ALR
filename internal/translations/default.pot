@@ -602,88 +602,88 @@ msgstr ""
 msgid "Package is already being built by another process"
 msgstr ""
 
-#: internal/build/build.go:367 internal/build/build.go:717
-#: internal/build/build.go:1198
+#: internal/build/build.go:368 internal/build/build.go:729
+#: internal/build/build.go:1225
 msgid "Using cached package"
 msgstr ""
 
-#: internal/build/build.go:383
+#: internal/build/build.go:384
 msgid "Failed to clean build directory"
 msgstr ""
 
-#: internal/build/build.go:385
+#: internal/build/build.go:386
 msgid "Cleaned build directory for rebuild"
 msgstr ""
 
-#: internal/build/build.go:419
+#: internal/build/build.go:420
 msgid "The checksums array must be the same length as sources"
 msgstr ""
 
-#: internal/build/build.go:483
+#: internal/build/build.go:484
 msgid "Downloading sources"
 msgstr ""
 
-#: internal/build/build.go:1002
+#: internal/build/build.go:1029
 msgid "Resolving dependencies for packages"
 msgstr ""
 
-#: internal/build/build.go:1004
+#: internal/build/build.go:1031
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1062
+#: internal/build/build.go:1089
 msgid "Installation summary"
 msgstr ""
 
-#: internal/build/build.go:1089
+#: internal/build/build.go:1116
 msgid "Proceed with installation?"
 msgstr ""
 
-#: internal/build/build.go:1109
+#: internal/build/build.go:1136
 msgid "Installing system dependencies"
 msgstr ""
 
-#: internal/build/build.go:1121
+#: internal/build/build.go:1148
 msgid "Processing optional dependencies"
 msgstr ""
 
-#: internal/build/build.go:1153
+#: internal/build/build.go:1180
 msgid "Building %d packages"
 msgstr ""
 
-#: internal/build/build.go:1159
+#: internal/build/build.go:1186
 msgid "Package %s not found in tree, skipping"
 msgstr ""
 
-#: internal/build/build.go:1177
+#: internal/build/build.go:1204
 msgid "Package %s already installed, skipping"
 msgstr ""
 
-#: internal/build/build.go:1219
+#: internal/build/build.go:1246
 msgid "Building package %s-%s"
 msgstr ""
 
-#: internal/build/build.go:1221
+#: internal/build/build.go:1248
 msgid "Building dependency %s-%s"
 msgstr ""
 
-#: internal/build/build.go:1266
+#: internal/build/build.go:1293
 msgid "Installing target packages"
 msgstr ""
 
-#: internal/build/build.go:1292
+#: internal/build/build.go:1319
 msgid "Would you like to remove all build dependencies?"
 msgstr ""
 
-#: internal/build/build.go:1302
+#: internal/build/build.go:1329
 msgid "Failed to remove build dependencies: %v"
 msgstr ""
 
-#: internal/build/cache.go:91
+#: internal/build/cache.go:148
 msgid "Unable to stat cached package"
 msgstr ""
 
-#: internal/build/cache.go:97
+#: internal/build/cache.go:154
 msgid "Cached package owner changed, refusing to install"
 msgstr ""
 
@@ -747,59 +747,59 @@ msgid ""
 "Package %s is installed with newer version %s (repo has %s), skipping build"
 msgstr ""
 
-#: internal/build/script_executor.go:177
+#: internal/build/script_executor.go:180
 msgid "Building package metadata"
 msgstr ""
 
-#: internal/build/script_executor.go:202
+#: internal/build/script_executor.go:205
 msgid "Creating package file"
 msgstr ""
 
-#: internal/build/script_executor.go:206
+#: internal/build/script_executor.go:209
 msgid "Failed to create package file"
 msgstr ""
 
-#: internal/build/script_executor.go:210
+#: internal/build/script_executor.go:213
 msgid "Packaging with nfpm"
 msgstr ""
 
-#: internal/build/script_executor.go:218
+#: internal/build/script_executor.go:221
 msgid "Failed to create package"
 msgstr ""
 
-#: internal/build/script_executor.go:222
+#: internal/build/script_executor.go:225
 msgid "Package created successfully"
 msgstr ""
 
-#: internal/build/script_executor.go:226
+#: internal/build/script_executor.go:229
 msgid "Package file not found after creation"
 msgstr ""
 
-#: internal/build/script_executor.go:229
+#: internal/build/script_executor.go:232
 msgid "Package file verified to exist"
 msgstr ""
 
-#: internal/build/script_executor.go:233
+#: internal/build/script_executor.go:236
 msgid "Failed to copy package to cache"
 msgstr ""
 
-#: internal/build/script_executor.go:236
+#: internal/build/script_executor.go:239
 msgid "Package copied to cache"
 msgstr ""
 
-#: internal/build/script_executor.go:354
+#: internal/build/script_executor.go:357
 msgid "Executing prepare()"
 msgstr ""
 
-#: internal/build/script_executor.go:363
+#: internal/build/script_executor.go:366
 msgid "Executing build()"
 msgstr ""
 
-#: internal/build/script_executor.go:392 internal/build/script_executor.go:412
+#: internal/build/script_executor.go:395 internal/build/script_executor.go:415
 msgid "Executing %s()"
 msgstr ""
 
-#: internal/build/utils.go:150
+#: internal/build/utils.go:233
 msgid "Failed to remove package from build tree"
 msgstr ""
 
