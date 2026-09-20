@@ -127,6 +127,9 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 
 	dec := decoder.New(input.info, runner)
 
+	// Ключ функций скрипта общий для всех подпакетов — вычисляем один раз
+	funcsKey := ScriptFuncsKey(sf)
+
 	// var builtPaths []string
 
 	err = e.ExecuteFunctions(ctx, dirs, dec)
@@ -228,7 +231,7 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 		}
 		slog.Info(gotext.Get("Package file verified to exist"), "path", pkgPath)
 
-		cachedPath, err := copyToCache(e.cfg, pkgPath, pkgName)
+		cachedPath, err := copyToCache(e.cfg, pkgPath, pkgName, SemanticCacheKey(vars, funcsKey))
 		if err != nil {
 			slog.Error(gotext.Get("Failed to copy package to cache"), "path", pkgPath, "error", err)
 			return nil, err
@@ -308,10 +311,6 @@ func buildPkgMetadata(
 	}
 
 	setScripts(vars, pkgInfo, dirs.ScriptDir)
-
-	if slices.Contains(vars.Architectures, "all") {
-		pkgInfo.Arch = "all"
-	}
 
 	contents, err := buildContents(vars, dirs, preferedContents)
 	if err != nil {

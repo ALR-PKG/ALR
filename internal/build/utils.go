@@ -17,6 +17,7 @@
 package build
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -87,11 +88,68 @@ func prepareDirs(dirs types.Directories) error {
 	return utils.EnsureTempDirWithRootOwner(dirs.PkgDir, 0o2775)
 }
 
+// cacheMetaVersion — текущая версия формата меты кэша. При смене формата
+// версию увеличиваем; проверка кэша трактует неизвестную версию как промах.
+const cacheMetaVersion = 1
+
+// cacheMeta — метаданные кэша пакета: семантический ключ, по которому
+// при проверке кэша решается, актуален ли лежащий рядом пакет.
+type cacheMeta struct {
+	Version int    `json:"v"`
+	Key     string `json:"key"`
+}
+
+// writeCacheMeta атомарно публикует мету кэша <filename>.meta в каталоге dir:
+// JSON пишется во временный файл в том же каталоге и переименовывается.
+func writeCacheMeta(dir, filename, key string) error {
+	data, err := json.Marshal(cacheMeta{Version: cacheMetaVersion, Key: key})
+	if err != nil {
+		return err
+	}
+
+	tmp, err := os.CreateTemp(dir, "."+filename+".meta.tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+
+	// CreateTemp создаёт файл с режимом 0600, мета в общем кэше должна быть 0644
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+
+	if err := os.Rename(tmpPath, filepath.Join(dir, filename+".meta")); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+
+	return nil
+}
+
 // copyToCache обеспечивает каталог кэша пакетов и перемещает готовый пакет
-// из дерева сборки в PkgsDir. Публикация атомарна: пакет пишется во временный
-// файл в том же каталоге и переименовывается, поэтому в кэше никогда не
-// оказывается частично записанный файл. Возвращает путь к файлу в кэше.
-func copyToCache(cfg Config, srcPath, filename string) (string, error) {
+// из дерева сборки в PkgsDir вместе с метой кэша (семантический ключ key).
+// Публикация атомарна: пакет и мета пишутся во временные файлы в том же
+// каталоге и переименовываются, поэтому в кэше никогда не оказывается
+// частично записанный файл. Пара rename (пакет + мета) выполняется под
+// блокирующим flock на <PkgsDir>/.alr-cache.lock: иначе при конкурентной
+// публикации пакет и мета могли бы остаться от разных сборок. Критическая
+// секция короткая — только rename'ы и откат, копирование данных снаружи.
+// Если мету записать не удалось, уже опубликованный пакет откатывается:
+// пакет без меты — вечный промах кэша, который скрыл бы проблему.
+// Возвращает путь к файлу в кэше.
+func copyToCache(cfg Config, srcPath, filename, key string) (string, error) {
 	pkgsDir := cfg.GetPaths().PkgsDir
 
 	var err error
@@ -137,11 +195,36 @@ func copyToCache(cfg Config, srcPath, filename string) (string, error) {
 		return "", err
 	}
 
+	// Пара rename (пакет + мета) под блокирующим flock кэша: сериализуем
+	// публикацию с другими процессами (демон, параллельная сборка), чтобы
+	// пакет и мета не оказались от разных сборок. Копирование данных выше —
+	// вне критической секции.
+	cacheLock, err := fsutils.Lock(filepath.Join(pkgsDir, ".alr-cache.lock"))
+	if err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+
 	// Rename атомарно заменяет существующий файл: каталог group-writable,
 	// замена чужого файла допустима
 	if err := os.Rename(tmpPath, dstPath); err != nil {
+		cacheLock.Close()
 		os.Remove(tmpPath)
 		return "", err
+	}
+
+	// Мета публикуется после пакета; при ошибке пакет откатываем, чтобы
+	// в кэше не остался пакет без меты (вечный промах при проверке кэша)
+	if err := writeCacheMeta(pkgsDir, filename, key); err != nil {
+		if removeErr := os.Remove(dstPath); removeErr != nil {
+			slog.Debug("Failed to roll back cached package after meta write failure", "path", dstPath, "error", removeErr)
+		}
+		cacheLock.Close()
+		return "", fmt.Errorf("не удалось записать мету кэша: %w", err)
+	}
+
+	if err := cacheLock.Close(); err != nil {
+		slog.Debug("Failed to release cache lock", "dir", pkgsDir, "error", err)
 	}
 
 	// Пакет в дереве сборки больше не артефакт кэша; файл уже в кэше,
@@ -304,6 +387,18 @@ func goArchToRPMISA(goarch string) string {
 	}
 }
 
+// resolvePkgArch возвращает архитектуру пакета для nfpm: "all", если пакет
+// объявлен архитектурно-независимым (architectures содержит "all"), иначе
+// архитектуру текущей машины. Правило общее для публикации пакета и для
+// вычисления имени файла при проверке кэша — иначе имена расходятся
+// (например, noarch.rpm при публикации против x86_64.rpm при проверке).
+func resolvePkgArch(vars *alrsh.Package) string {
+	if slices.Contains(vars.Architectures, "all") {
+		return "all"
+	}
+	return cpu.Arch()
+}
+
 func getBasePkgInfo(vars *alrsh.Package, input interface {
 	RepositoryProvider
 	OsInfoProvider
@@ -312,7 +407,7 @@ func getBasePkgInfo(vars *alrsh.Package, input interface {
 	repo := input.Repository()
 	return &nfpm.Info{
 		Name:    fmt.Sprintf("%s+%s", vars.Name, repo),
-		Arch:    cpu.Arch(),
+		Arch:    resolvePkgArch(vars),
 		Version: vars.Version,
 		Release: overrides.ReleasePlatformSpecific(vars.Release, input.OSRelease()),
 		Epoch:   strconv.FormatUint(uint64(vars.Epoch), 10),

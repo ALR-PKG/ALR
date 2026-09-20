@@ -45,15 +45,15 @@ var (
 	heldLocks = map[string]*lockEntry{}
 )
 
-// Lock — handle удерживаемой блокировки. Close уменьшает счётчик ссылок;
-// реальное снятие flock происходит при Close последнего handle на путь
-type Lock struct {
+// LockHandle — handle удерживаемой блокировки. Close уменьшает счётчик
+// ссылок; реальное снятие flock происходит при Close последнего handle на путь
+type LockHandle struct {
 	path   string
 	closed bool
 }
 
 // Close освобождает блокировку. Повторный вызов — no-op.
-func (l *Lock) Close() error {
+func (l *LockHandle) Close() error {
 	locksMu.Lock()
 	defer locksMu.Unlock()
 	if l.closed {
@@ -74,12 +74,31 @@ func (l *Lock) Close() error {
 	return err
 }
 
+// Lock создаёт (при необходимости) файл path и берёт exclusive блокирующий
+// flock(2): если блокировку держит другой процесс, вызов ждёт её
+// освобождения. Возвращённый LockHandle снимает блокировку при Close.
+// В пределах процесса вызов реентерабелен: повторный Lock того же пути
+// возвращает новый handle на тот же flock.
+func Lock(path string) (*LockHandle, error) {
+	return flockPath(path, 0)
+}
+
 // TryLock создаёт (при необходимости) файл path и берёт exclusive
-// non-blocking flock(2). Возвращённый Lock снимает блокировку при Close.
+// non-blocking flock(2). Возвращённый LockHandle снимает блокировку при Close.
 // В пределах процесса вызов реентерабелен: повторный TryLock того же пути
 // возвращает новый handle на тот же flock.
 // Если блокировку уже держит другой процесс — ErrLocked.
-func TryLock(path string) (*Lock, error) {
+func TryLock(path string) (*LockHandle, error) {
+	l, err := flockPath(path, unix.LOCK_NB)
+	if errors.Is(err, syscall.EWOULDBLOCK) {
+		return nil, ErrLocked
+	}
+	return l, err
+}
+
+// flockPath — общая часть Lock и TryLock: flags добавляются к LOCK_EX
+// (unix.LOCK_NB для non-blocking варианта).
+func flockPath(path string, flags int) (*LockHandle, error) {
 	dir := filepath.Dir(path)
 	_, statErr := os.Stat(dir)
 	dirCreated := os.IsNotExist(statErr)
@@ -92,34 +111,31 @@ func TryLock(path string) (*Lock, error) {
 
 	if entry, ok := heldLocks[path]; ok {
 		entry.refs++
-		return &Lock{path: path}, nil
+		return &LockHandle{path: path}, nil
 	}
 
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o664)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось открыть файл блокировки %s: %w", path, err)
 	}
-	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|flags); err != nil {
 		f.Close()
-		if errors.Is(err, syscall.EWOULDBLOCK) {
-			return nil, ErrLocked
-		}
 		return nil, fmt.Errorf("не удалось заблокировать %s: %w", path, err)
 	}
 
 	normalizeLockAccess(path, dir, dirCreated)
 
 	heldLocks[path] = &lockEntry{file: f, refs: 1}
-	return &Lock{path: path}, nil
+	return &LockHandle{path: path}, nil
 }
 
 // normalizeLockAccess при запуске от root выставляет лок-файлу
 // привилегированную группу и режим 0660, чтобы члены группы могли брать
 // блокировку после pull/сборки от root (RepoDir — общий каталог группы).
 // Родительский каталог получает группу только если его только что создал
-// TryLock — существующие каталоги не трогаем. Ошибки нормализации
+// захват блокировки — существующие каталоги не трогаем. Ошибки нормализации
 // не фатальны: на системах без привилегированной группы root продолжает
-// работать. Реентерабельный путь TryLock сюда не попадает — файл уже
+// работать. Реентерабельный путь (refs++) сюда не попадает — файл уже
 // нормализован при первом захвате.
 func normalizeLockAccess(path, dir string, dirCreated bool) {
 	if os.Geteuid() != 0 {
@@ -128,20 +144,20 @@ func normalizeLockAccess(path, dir string, dirCreated bool) {
 
 	gid, err := privilegedGID()
 	if err != nil {
-		slog.Debug("TryLock: не удалось определить привилегированную группу", "error", err)
+		slog.Debug("Lock: не удалось определить привилегированную группу", "error", err)
 		return
 	}
 
 	if err := os.Chown(path, 0, gid); err != nil {
-		slog.Debug("TryLock: не удалось сменить группу лок-файла", "path", path, "error", err)
+		slog.Debug("Lock: не удалось сменить группу лок-файла", "path", path, "error", err)
 	}
 	if err := os.Chmod(path, 0o660); err != nil {
-		slog.Debug("TryLock: не удалось сменить права лок-файла", "path", path, "error", err)
+		slog.Debug("Lock: не удалось сменить права лок-файла", "path", path, "error", err)
 	}
 
 	if dirCreated {
 		if err := os.Chown(dir, 0, gid); err != nil {
-			slog.Debug("TryLock: не удалось сменить группу каталога блокировки", "dir", dir, "error", err)
+			slog.Debug("Lock: не удалось сменить группу каталога блокировки", "dir", dir, "error", err)
 		}
 	}
 }
