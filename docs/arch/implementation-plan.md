@@ -949,7 +949,7 @@ Expected: PASS (стресс-прогон без гонок)
 **Файлы:**
 - Modify: `scripts/install.sh`
 
-- [ ] **Шаг 1: после installPkg** — `$rootCmd groupadd -f alr`;
+- [x] **Шаг 1: после installPkg** — `$rootCmd groupadd -f alr`;
   `$rootCmd mkdir -p /var/cache/alr/dl && $rootCmd chown root:alr
   /var/cache/alr /var/cache/alr/dl && $rootCmd chmod 2775 ...`
   (только если каталогов нет или владелец root:root — не ломать wheel-системы:
@@ -958,8 +958,8 @@ Expected: PASS (стресс-прогон без гонок)
   не трогать; иначе выставить root:alr); добавить вызвавшего пользователя
   (`$SUDO_USER`/`$DOAS_USER`, если не root) в группу alr
   (`usermod -aG alr`) с сообщением о необходимости перелогина.
-- [ ] **Шаг 2: проверка синтаксиса** `bash -n scripts/install.sh`
-- [ ] **Шаг 3: коммит** `Добавлено: группа alr и общий каталог загрузок в установщик`
+- [x] **Шаг 2: проверка синтаксиса** `bash -n scripts/install.sh`
+- [x] **Шаг 3: коммит** `Добавлено: группа alr и общий каталог загрузок в установщик`
 
 ### Task 6.7: сквозная проверка Этапа 6
 
