@@ -17,6 +17,7 @@
 package build
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -87,11 +88,59 @@ func prepareDirs(dirs types.Directories) error {
 	return utils.EnsureTempDirWithRootOwner(dirs.PkgDir, 0o2775)
 }
 
+// cacheMeta — метаданные кэша пакета: семантический ключ, по которому
+// при проверке кэша решается, актуален ли лежащий рядом пакет.
+type cacheMeta struct {
+	Key string `json:"key"`
+}
+
+// writeCacheMeta атомарно публикует мету кэша <filename>.meta в каталоге dir:
+// JSON пишется во временный файл в том же каталоге и переименовывается.
+func writeCacheMeta(dir, filename, key string) error {
+	data, err := json.Marshal(cacheMeta{Key: key})
+	if err != nil {
+		return err
+	}
+
+	tmp, err := os.CreateTemp(dir, "."+filename+".meta.tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+
+	// CreateTemp создаёт файл с режимом 0600, мета в общем кэше должна быть 0644
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+
+	if err := os.Rename(tmpPath, filepath.Join(dir, filename+".meta")); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+
+	return nil
+}
+
 // copyToCache обеспечивает каталог кэша пакетов и перемещает готовый пакет
-// из дерева сборки в PkgsDir. Публикация атомарна: пакет пишется во временный
-// файл в том же каталоге и переименовывается, поэтому в кэше никогда не
-// оказывается частично записанный файл. Возвращает путь к файлу в кэше.
-func copyToCache(cfg Config, srcPath, filename string) (string, error) {
+// из дерева сборки в PkgsDir вместе с метой кэша (семантический ключ key).
+// Публикация атомарна: пакет и мета пишутся во временные файлы в том же
+// каталоге и переименовываются, поэтому в кэше никогда не оказывается
+// частично записанный файл. Если мету записать не удалось, уже
+// опубликованный пакет откатывается: пакет без меты — вечный промах кэша,
+// который скрыл бы проблему. Возвращает путь к файлу в кэше.
+func copyToCache(cfg Config, srcPath, filename, key string) (string, error) {
 	pkgsDir := cfg.GetPaths().PkgsDir
 
 	var err error
@@ -142,6 +191,15 @@ func copyToCache(cfg Config, srcPath, filename string) (string, error) {
 	if err := os.Rename(tmpPath, dstPath); err != nil {
 		os.Remove(tmpPath)
 		return "", err
+	}
+
+	// Мета публикуется после пакета; при ошибке пакет откатываем, чтобы
+	// в кэше не остался пакет без меты (вечный промах при проверке кэша)
+	if err := writeCacheMeta(pkgsDir, filename, key); err != nil {
+		if removeErr := os.Remove(dstPath); removeErr != nil {
+			slog.Debug("Failed to roll back cached package after meta write failure", "path", dstPath, "error", removeErr)
+		}
+		return "", fmt.Errorf("не удалось записать мету кэша: %w", err)
 	}
 
 	// Пакет в дереве сборки больше не артефакт кэша; файл уже в кэше,

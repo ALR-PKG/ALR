@@ -701,23 +701,23 @@ Expected: PASS
   ключа, вызов copyToCache)
 - Test: `internal/build/utils_internal_test.go` (расширить TestCopyToCache)
 
-- [ ] **Шаг 1: падающий тест** — после copyToCache рядом лежит
+- [x] **Шаг 1: падающий тест** — после copyToCache рядом лежит
   `<filename>.meta` (JSON `{"key": "<hex>"}`); мета пишется атомарно (нет
   `*.tmp-*` остатков); при ошибке — ни пакета, ни меты.
 
-- [ ] **Шаг 2: реализация** — `copyToCache` получает параметр `key string`;
+- [x] **Шаг 2: реализация** — `copyToCache` получает параметр `key string`;
   после rename пакета так же атомарно (CreateTemp+Rename) пишет мету.
   `ExecuteSecondPass` (LocalScriptExecutor) вычисляет `funcsKey` один раз из
   `sf`, в цикле подпакетов — `SemanticCacheKey(vars, funcsKey)`. Сигнатуры
   интерфейса ScriptExecutor НЕ меняются (sf и vars уже параметры) — RPC
   (plugins_executors_gen.go) не трогаем, реализация общая.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/build/ -v && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: запись .meta кэша при публикации пакета`
+- [x] **Шаг 4: коммит** `Добавлено: запись .meta кэша при публикации пакета`
 
 ### Task 5.3: проверка .meta в CheckForBuiltPackage
 

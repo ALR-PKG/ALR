@@ -32,6 +32,11 @@ version="1.0"
 release=1
 
 # Комментарий вне функций
+prepare() {
+	cd "$pkgname"
+	patch -p1 < fix.patch
+}
+
 build() {
 	cd "$pkgname"
 	make
@@ -57,6 +62,11 @@ func funcsKeyOf(t *testing.T, src string) string {
 func TestScriptFuncsKey(t *testing.T) {
 	t.Run("stable for the same script", func(t *testing.T) {
 		assert.Equal(t, funcsKeyOf(t, testScript), funcsKeyOf(t, testScript))
+	})
+
+	t.Run("changes when prepare() body changes", func(t *testing.T) {
+		changed := strings.Replace(testScript, "patch -p1", "patch -p0", 1)
+		assert.NotEqual(t, funcsKeyOf(t, testScript), funcsKeyOf(t, changed))
 	})
 
 	t.Run("changes when build() body changes", func(t *testing.T) {
