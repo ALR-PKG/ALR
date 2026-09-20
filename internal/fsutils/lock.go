@@ -144,20 +144,20 @@ func normalizeLockAccess(path, dir string, dirCreated bool) {
 
 	gid, err := privilegedGID()
 	if err != nil {
-		slog.Debug("TryLock: не удалось определить привилегированную группу", "error", err)
+		slog.Debug("Lock: не удалось определить привилегированную группу", "error", err)
 		return
 	}
 
 	if err := os.Chown(path, 0, gid); err != nil {
-		slog.Debug("TryLock: не удалось сменить группу лок-файла", "path", path, "error", err)
+		slog.Debug("Lock: не удалось сменить группу лок-файла", "path", path, "error", err)
 	}
 	if err := os.Chmod(path, 0o660); err != nil {
-		slog.Debug("TryLock: не удалось сменить права лок-файла", "path", path, "error", err)
+		slog.Debug("Lock: не удалось сменить права лок-файла", "path", path, "error", err)
 	}
 
 	if dirCreated {
 		if err := os.Chown(dir, 0, gid); err != nil {
-			slog.Debug("TryLock: не удалось сменить группу каталога блокировки", "dir", dir, "error", err)
+			slog.Debug("Lock: не удалось сменить группу каталога блокировки", "dir", dir, "error", err)
 		}
 	}
 }
