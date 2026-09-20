@@ -187,7 +187,7 @@ type ScriptResolverExecutor interface {
 }
 
 type CacheExecutor interface {
-	CheckForBuiltPackage(ctx context.Context, input *BuildInput, vars *alrsh.Package) (string, bool, error)
+	CheckForBuiltPackage(ctx context.Context, input *BuildInput, vars *alrsh.Package, funcsKey string) (string, bool, error)
 }
 
 type ScriptViewerExecutor interface {
@@ -348,8 +348,9 @@ func (b *Builder) BuildPackage(
 	var remainingVars []*alrsh.Package
 
 	if !input.opts.Clean {
+		funcsKey := ScriptFuncsKey(sf)
 		for _, vars := range varsOfPackages {
-			builtPkgPath, ok, err := b.cacheExecutor.CheckForBuiltPackage(ctx, input, vars)
+			builtPkgPath, ok, err := b.cacheExecutor.CheckForBuiltPackage(ctx, input, vars, funcsKey)
 			if err != nil {
 				return nil, err
 			}
@@ -693,6 +694,11 @@ func (b *Builder) checkCacheForAllSubpackages(
 	var cachedDeps []*BuiltDep
 	allInCache := true
 
+	// funcsKey — ключ функций скрипта, общий для всех подпакетов
+	// одного basePkgName; вычисляется лениво при первой проверке
+	var funcsKey string
+	var funcsKeySet bool
+
 	// Получаем информацию обо всех подпакетах
 	pkgsInfo, _, err := b.repos.FindPkgs(ctx, subpkgs)
 	if err != nil {
@@ -708,7 +714,13 @@ func (b *Builder) checkCacheForAllSubpackages(
 		}
 
 		if pkgForCheck != nil {
-			pkgPath, found, err := b.cacheExecutor.CheckForBuiltPackage(ctx, buildInput, pkgForCheck)
+			// funcsKey считаем лениво один раз на вызов: все подпакеты
+			// одного basePkgName используют один и тот же скрипт
+			if !funcsKeySet {
+				funcsKey, funcsKeySet = b.scriptFuncsKey(ctx, pkgForCheck), true
+			}
+
+			pkgPath, found, err := b.cacheExecutor.CheckForBuiltPackage(ctx, buildInput, pkgForCheck, funcsKey)
 			if err != nil {
 				return nil, false, fmt.Errorf("failed to check cache: %w", err)
 			}
@@ -727,6 +739,21 @@ func (b *Builder) checkCacheForAllSubpackages(
 	}
 
 	return cachedDeps, allInCache && len(cachedDeps) > 0, nil
+}
+
+// scriptFuncsKey резолвит и читает скрипт пакета и возвращает ключ его
+// сборочных функций. Любая ошибка резолва или чтения — безопасная сторона:
+// пустой ключ не совпадёт с записанной метой, и пакет пересоберётся.
+func (b *Builder) scriptFuncsKey(ctx context.Context, pkg *alrsh.Package) string {
+	scriptInfo := b.scriptResolver.ResolveScript(ctx, pkg)
+
+	sf, err := b.scriptExecutor.ReadScript(ctx, scriptInfo.Script)
+	if err != nil {
+		slog.Debug("Не удалось прочитать скрипт для проверки кэша, пересборка", "pkg", pkg.Name, "error", err)
+		return ""
+	}
+
+	return ScriptFuncsKey(sf)
 }
 
 func (i *Builder) installBuildDeps(

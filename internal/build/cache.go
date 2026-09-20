@@ -18,6 +18,7 @@ package build
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -34,10 +35,14 @@ type Cache struct {
 	cfg Config
 }
 
+// CheckForBuiltPackage ищет готовый пакет в кэше и засчитывает попадание,
+// только если рядом лежит доверенная мета с актуальным семантическим
+// ключом. Любая проблема с метой — промах (безопасная сторона: пересборка).
 func (c *Cache) CheckForBuiltPackage(
 	ctx context.Context,
 	input *BuildInput,
 	vars *alrsh.Package,
+	funcsKey string,
 ) (string, bool, error) {
 	filename, err := pkgFileName(input, vars)
 	if err != nil {
@@ -45,41 +50,93 @@ func (c *Cache) CheckForBuiltPackage(
 	}
 
 	path, found := findTrustedCachedPkg(c.cfg, filename)
-	return path, found, nil
+	if !found {
+		return "", false, nil
+	}
+
+	if !checkCacheMeta(path, SemanticCacheKey(vars, funcsKey)) {
+		return "", false, nil
+	}
+
+	return path, true, nil
+}
+
+// checkCacheMeta сверяет мету кэша <pkgPath>.meta с ожидаемым ключом.
+// Мета проверяется так же, как сам пакет: регулярный файл с доверенным
+// владельцем. Отсутствие, битый JSON, неизвестная версия формата или
+// несовпадение ключа — промах.
+func checkCacheMeta(pkgPath, expectedKey string) bool {
+	metaPath := pkgPath + ".meta"
+
+	if !isTrustedRegularFile(metaPath) {
+		return false
+	}
+
+	data, err := os.ReadFile(metaPath)
+	if err != nil {
+		slog.Debug("Не удалось прочитать мету кэша, пересборка", "path", metaPath, "error", err)
+		return false
+	}
+
+	var meta cacheMeta
+	if err := json.Unmarshal(data, &meta); err != nil {
+		slog.Debug("Мета кэша повреждена, пересборка", "path", metaPath, "error", err)
+		return false
+	}
+
+	if meta.Version != cacheMetaVersion {
+		slog.Debug("Неизвестная версия меты кэша, пересборка", "path", metaPath, "version", meta.Version)
+		return false
+	}
+
+	if meta.Key != expectedKey {
+		slog.Debug("Семантический ключ кэша не совпал, пересборка", "path", pkgPath)
+		return false
+	}
+
+	return true
 }
 
 // findTrustedCachedPkg ищет готовый пакет в плоском кэше PkgsDir и
 // возвращает его, только если это регулярный файл с доверенным владельцем.
 func findTrustedCachedPkg(cfg Config, filename string) (string, bool) {
 	pkgPath := filepath.Join(cfg.GetPaths().PkgsDir, filename)
+	if !isTrustedRegularFile(pkgPath) {
+		return "", false
+	}
+	return pkgPath, true
+}
 
-	stat, err := os.Lstat(pkgPath)
+// isTrustedRegularFile проверяет, что path — регулярный файл (не симлинк)
+// с доверенным владельцем.
+func isTrustedRegularFile(path string) bool {
+	stat, err := os.Lstat(path)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			slog.Debug("Не удалось прочитать файл кэша, пересборка", "path", pkgPath, "error", err)
+			slog.Debug("Не удалось прочитать файл кэша, пересборка", "path", path, "error", err)
 		}
-		return "", false
+		return false
 	}
 
 	// Симлинк или не-регулярный файл в общем кэше не доверен:
 	// симлинк на root-owned файл иначе прошёл бы проверку владельца
 	if !stat.Mode().IsRegular() {
-		slog.Debug("Файл кэша не является регулярным файлом, пересборка", "path", pkgPath)
-		return "", false
+		slog.Debug("Файл кэша не является регулярным файлом, пересборка", "path", path)
+		return false
 	}
 
 	sys, ok := stat.Sys().(*syscall.Stat_t)
 	if !ok {
-		slog.Debug("Не удалось получить владельца файла кэша, пересборка", "path", pkgPath)
-		return "", false
+		slog.Debug("Не удалось получить владельца файла кэша, пересборка", "path", path)
+		return false
 	}
 
 	if !isTrustedOwner(sys.Uid) {
-		slog.Debug("Пакет в кэше принадлежит недоверенному владельцу, пересборка", "path", pkgPath, "uid", sys.Uid)
-		return "", false
+		slog.Debug("Файл кэша принадлежит недоверенному владельцу, пересборка", "path", path, "uid", sys.Uid)
+		return false
 	}
 
-	return pkgPath, true
+	return true
 }
 
 // verifyTrustedPaths перепроверяет владельца путей непосредственно перед

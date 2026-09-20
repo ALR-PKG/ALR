@@ -30,6 +30,8 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
+const testFuncsKey = "test-funcs-key"
+
 func newTestCacheInput() (*BuildInput, *alrsh.Package) {
 	input := &BuildInput{
 		info:       &distro.OSRelease{},
@@ -44,6 +46,14 @@ func newTestCacheInput() (*BuildInput, *alrsh.Package) {
 	return input, vars
 }
 
+// placeCachedPkg кладёт пакет в PkgsDir и пишет ему мету с ключом,
+// соответствующим vars и funcsKey (как это делает copyToCache).
+func placeCachedPkg(t *testing.T, pkgsDir, filename string, vars *alrsh.Package, funcsKey string) {
+	t.Helper()
+	require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename), []byte("pkg"), 0o644))
+	require.NoError(t, writeCacheMeta(pkgsDir, filename, SemanticCacheKey(vars, funcsKey)))
+}
+
 func TestCheckForBuiltPackage(t *testing.T) {
 	t.Run("finds package in PkgsDir", func(t *testing.T) {
 		pkgsDir := t.TempDir()
@@ -55,9 +65,9 @@ func TestCheckForBuiltPackage(t *testing.T) {
 
 		filename, err := pkgFileName(input, vars)
 		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename), []byte("pkg"), 0o644))
+		placeCachedPkg(t, pkgsDir, filename, vars, testFuncsKey)
 
-		path, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars)
+		path, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
 		require.NoError(t, err)
 		assert.True(t, found)
 		assert.Equal(t, filepath.Join(pkgsDir, filename), path)
@@ -70,7 +80,137 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cache := &Cache{cfg}
 		input, vars := newTestCacheInput()
 
-		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars)
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
+	t.Run("package without meta is not a cache hit", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+		cache := &Cache{cfg}
+		input, vars := newTestCacheInput()
+
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename), []byte("pkg"), 0o644))
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
+	t.Run("broken meta is not a cache hit", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+		cache := &Cache{cfg}
+		input, vars := newTestCacheInput()
+
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename), []byte("pkg"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename+".meta"), []byte("{not json"), 0o644))
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
+	t.Run("meta with unknown version is not a cache hit", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+		cache := &Cache{cfg}
+		input, vars := newTestCacheInput()
+
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename), []byte("pkg"), 0o644))
+		meta := `{"v":999,"key":"` + SemanticCacheKey(vars, testFuncsKey) + `"}`
+		require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename+".meta"), []byte(meta), 0o644))
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
+	t.Run("meta key mismatch is not a cache hit", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+		cache := &Cache{cfg}
+		input, vars := newTestCacheInput()
+
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		// Мета записана для другого vars (другая версия пакета)
+		otherVars := &alrsh.Package{Name: "somepkg", Version: "2.0", Release: 1}
+		placeCachedPkg(t, pkgsDir, filename, otherVars, testFuncsKey)
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
+	t.Run("funcsKey mismatch is not a cache hit", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+		cache := &Cache{cfg}
+		input, vars := newTestCacheInput()
+
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		placeCachedPkg(t, pkgsDir, filename, vars, "old-funcs-key")
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
+	t.Run("non-regular meta is not a cache hit", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+		cache := &Cache{cfg}
+		input, vars := newTestCacheInput()
+
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename), []byte("pkg"), 0o644))
+		require.NoError(t, os.Mkdir(filepath.Join(pkgsDir, filename+".meta"), 0o755))
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
+	t.Run("meta symlink is not a cache hit", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+		cache := &Cache{cfg}
+		input, vars := newTestCacheInput()
+
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(pkgsDir, filename), []byte("pkg"), 0o644))
+		// Симлинк на валидную мету не доверен: цель могла бы быть подменена
+		realMeta := filepath.Join(t.TempDir(), "real.meta")
+		require.NoError(t, os.WriteFile(realMeta,
+			[]byte(`{"v":1,"key":"`+SemanticCacheKey(vars, testFuncsKey)+`"}`), 0o644))
+		require.NoError(t, os.Symlink(realMeta, filepath.Join(pkgsDir, filename+".meta")))
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
 		require.NoError(t, err)
 		assert.False(t, found)
 	})
@@ -89,7 +229,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		require.NoError(t, os.WriteFile(target, []byte("pkg"), 0o644))
 		require.NoError(t, os.Symlink(target, filepath.Join(pkgsDir, filename)))
 
-		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars)
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
 		require.NoError(t, err)
 		assert.False(t, found)
 	})
@@ -111,7 +251,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(oldPath), 0o755))
 		require.NoError(t, os.WriteFile(oldPath, []byte("pkg"), 0o644))
 
-		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars)
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
 		require.NoError(t, err)
 		assert.False(t, found)
 	})

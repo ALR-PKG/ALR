@@ -727,11 +727,11 @@ Expected: PASS
   checkCacheForAllSubpackages ~:711)
 - Test: `internal/build/cache_test.go` (расширить)
 
-- [ ] **Шаг 1: падающий тест** — пакет+совпадающая мета → hit; мета
+- [x] **Шаг 1: падающий тест** — пакет+совпадающая мета → hit; мета
   отсутствует/битая/не совпала → miss (даже при существующем пакете);
   недоверенный владелец меты тоже → miss (мета проверяется как и пакет).
 
-- [ ] **Шаг 2: реализация** — `CheckForBuiltPackage(ctx, input, vars, funcsKey
+- [x] **Шаг 2: реализация** — `CheckForBuiltPackage(ctx, input, vars, funcsKey
   string)`; внутри после findTrustedCachedPkg: вычислить
   `SemanticCacheKey(vars, funcsKey)`, прочитать и сверить мету.
   Обновить интерфейс `cacheExecutor` (build.go:190) и вызовы:
@@ -740,12 +740,12 @@ Expected: PASS
     `b.scriptResolver.ResolveScript(ctx, pkg)` + `b.scriptExecutor.ReadScript`;
     ошибка резолва/чтения → miss с slog.Debug (безопасная сторона), НЕ ошибка.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/build/ -v && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: проверка семантического ключа кэша (.meta)`
+- [x] **Шаг 4: коммит** `Добавлено: проверка семантического ключа кэша (.meta)`
 
 ### Task 5.4: сквозная проверка Этапа 5
 
