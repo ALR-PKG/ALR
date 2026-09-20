@@ -49,6 +49,12 @@ func Move(sourcePath, destPath string) error {
 	return nil
 }
 
+// Copy copies the source file or directory to the destination,
+// leaving the source in place.
+func Copy(sourcePath, destPath string) error {
+	return copyDirOrFile(sourcePath, destPath)
+}
+
 func copyDirOrFile(sourcePath, destPath string) error {
 	sourceInfo, err := os.Stat(sourcePath)
 	if err != nil {

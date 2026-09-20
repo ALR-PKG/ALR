@@ -54,6 +54,12 @@ msgstr "Repository %s is already being pulled by another process"
 msgid "Using cached package"
 msgstr "Using cached package"
 
+msgid "Package file already removed, skipping"
+msgstr "Package file already removed, skipping"
+
+msgid "Error copying the package"
+msgstr "Error copying the package"
+
 msgid "Building package %s-%s"
 msgstr "Building package %s-%s"
 

@@ -41,12 +41,12 @@ msgid "Nothing to build"
 msgstr "Нечего собирать"
 
 #: cmd/build.go:174
-msgid "Package file already moved or removed, skipping"
-msgstr "Файл пакета уже перемещён или удалён, пропускаем"
+msgid "Package file already removed, skipping"
+msgstr "Файл пакета уже удалён, пропускаем"
 
 #: cmd/build.go:178
-msgid "Error moving the package"
-msgstr "Ошибка при перемещении пакета"
+msgid "Error copying the package"
+msgstr "Ошибка копирования пакета"
 
 #: cmd/build.go:182
 msgid "Done"

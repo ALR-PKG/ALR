@@ -34,11 +34,11 @@ msgid "Nothing to build"
 msgstr ""
 
 #: cmd/build.go:174
-msgid "Package file already moved or removed, skipping"
+msgid "Package file already removed, skipping"
 msgstr ""
 
 #: cmd/build.go:178
-msgid "Error moving the package"
+msgid "Error copying the package"
 msgstr ""
 
 #: cmd/build.go:182
