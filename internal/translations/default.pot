@@ -787,15 +787,15 @@ msgstr ""
 msgid "Package copied to cache"
 msgstr ""
 
-#: internal/build/script_executor.go:357
+#: internal/build/script_executor.go:353
 msgid "Executing prepare()"
 msgstr ""
 
-#: internal/build/script_executor.go:366
+#: internal/build/script_executor.go:362
 msgid "Executing build()"
 msgstr ""
 
-#: internal/build/script_executor.go:395 internal/build/script_executor.go:415
+#: internal/build/script_executor.go:391 internal/build/script_executor.go:411
 msgid "Executing %s()"
 msgstr ""
 
