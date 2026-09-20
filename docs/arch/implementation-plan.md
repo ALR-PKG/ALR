@@ -498,14 +498,146 @@ Expected: PASS
 
 ---
 
-## Этапы 4-10: состав работ (детальный план — перед стартом каждого)
+## Этап 4: разделение build dir и кэша пакетов
 
-### Этап 4: разделение build dir и кэша пакетов
-- `Paths.BuildDir` (дерево) отдельно от `Paths.PkgsDir` (готовые пакеты,
-  `~/.cache/alr/pkgs`); готовый пакет копируется из дерева в кэш
-- `CheckForBuiltPackage`: поиск в `PkgsDir` + проверка владельца файла
-  (`syscall.Stat_t.Uid`: свой или 0/65534), чужой — пересборка
-- `internal/build/dirs.go`, `cache.go`, `script_executor.go` (вывод пакета)
+Результат: дерево сборки (`Paths.BuildDir`, `~/.cache/alr/build/<pkg>/{src,pkg}`)
+отделено от кэша готовых пакетов (`Paths.PkgsDir`, `~/.cache/alr/pkgs`, плоский).
+Готовый пакет после сборки копируется из дерева в кэш. Попадание в кэш
+определяется поиском в `PkgsDir` + проверкой владельца файла: доверен
+свой uid, root (0) и nobody (65534); чужой владелец — пересборка.
+Миграция: старые пакеты внутри деревьев сборки просто не находятся
+(разовая пересборка); `alr fix` чистит оба каталога.
+
+### Task 4.1: Paths.BuildDir в config
+
+**Файлы:**
+- Modify: `internal/config/paths.go` (поле `BuildDir`)
+- Modify: `internal/config/config.go:123-132` (`Load`)
+- Test: `internal/config/paths_test.go`
+
+- [x] **Шаг 1: падающий тест** — в `paths_test.go` обновить ожидания:
+  успешный `os.UserCacheDir` → `BuildDir = <ucd>/alr/build`,
+  `PkgsDir = <ucd>/alr/pkgs`; фолбэк без HOME → `BuildDir = /var/cache/alr/build`,
+  `PkgsDir = /var/cache/alr/pkgs`.
+
+Run: `go test ./internal/config/ -v`
+Expected: FAIL
+
+- [x] **Шаг 2: реализация** — добавить поле `BuildDir string` в `Paths`
+  (paths.go) и заполнить оба пути в `config.go` по правилам выше.
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/config/ -v && go build ./...`
+Expected: PASS (пока BuildDir никем не читается — только config)
+
+- [x] **Шаг 4: коммит** `Добавлено: пути BuildDir и PkgsDir (кэш пакетов) в конфиг`
+
+### Task 4.2: дерево сборки на BuildDir
+
+**Файлы:**
+- Modify: `internal/build/dirs.go` (`getDirsForPackage`, `getBaseDir`, `getSrcDir`)
+- Modify: `cmd/fix.go:100-109` (чистка обоих каталогов)
+- Test: `internal/build/dirs_test.go` (если есть) или смежные тесты build
+
+- [x] **Шаг 1: падающий тест** — `getDirs`/`getBaseDir`/`getSrcDir` строятся
+  от `BuildDir`, а не `PkgsDir` (тест с мок-конфигом: BuildDir=/tmp/b,
+  PkgsDir=/tmp/p → BaseDir=/tmp/b/<pkg>).
+
+- [x] **Шаг 2: реализация** — `getBaseDir`/`getSrcDir`/`getDirsForPackage`
+  используют `cfg.GetPaths().BuildDir`. Лок-файл сборки
+  (`build.go:337`, `<BaseDir>.lock`) автоматически переезжает на BuildDir —
+  это желаемо (лок дерева сборки). В `cmd/fix.go` блок «Clearing build
+  directory» чистит `paths.BuildDir` И `paths.PkgsDir` (оба RemoveAll +
+  MkdirAll 0755, как сейчас).
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ ./internal/config/ -v && go build ./...`
+Expected: PASS. ВНИМАНИЕ: после этого шага готовые пакеты всё ещё пишутся
+в дерево (BaseDir), а CheckForBuiltPackage ищет там же — поведение
+временно эквивалентно текущему, разрыв появится в Task 4.3/4.4.
+
+- [x] **Шаг 4: коммит** `Изменено: дерево сборки переведено на Paths.BuildDir`
+
+### Task 4.3: копирование готового пакета в кэш
+
+**Файлы:**
+- Modify: `internal/build/script_executor.go:194-231` (вывод nfpm-пакета)
+
+- [x] **Шаг 1: падающий тест** — если есть тестовая инфраструктура для
+  ExecuteSecondPass — тест, что после упаковки файл лежит в `PkgsDir`.
+  Если инфраструктуры нет — вынести копирование в хелпер
+  `copyToCache(cfg, srcPath, filename) (dstPath string, err error)` и
+  покрыть его юнит-тестом (temp-dir: файл копируется, режим 0644,
+  существующий чужой файл заменяется через Remove+Create).
+
+- [x] **Шаг 2: реализация** — после `packager.Package` и проверки
+  существования файла: обеспечить `PkgsDir` (per-user — `os.MkdirAll(dir,
+  0o755)`; общий фолбэк под `/var/cache` — `utils.EnsureTempDirWithRootOwner`
+  как в prepareDirs, выбирать по тому же признаку, что config: если
+  PkgsDir внутри `constants.SystemCachePath`), скопировать пакет в
+  `filepath.Join(PkgsDir, pkgName)` (если dst существует — сначала
+  `os.Remove`: каталог group-writable, замена чужого файла допустима),
+  после успешного копирования удалить файл из дерева (он больше не
+  артефакт кэша). `BuiltDep.Path` = путь в кэше.
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ -v && go build ./...`
+Expected: PASS
+
+- [x] **Шаг 4: коммит** `Добавлено: копирование готового пакета в кэш PkgsDir`
+
+### Task 4.4: CheckForBuiltPackage — кэш + доверие по владельцу
+
+**Файлы:**
+- Modify: `internal/build/cache.go`
+- Test: `internal/build/cache_test.go` (новый или существующий)
+
+- [x] **Шаг 1: падающий тест** — файл пакета в `PkgsDir` (temp-dir)
+  от текущего пользователя → найден; отсутствует → не найден; юнит на
+  хелпер `isTrustedOwner(uid uint32) bool`: доверенные — `os.Geteuid()`,
+  0, 65534; остальные — нет.
+
+- [x] **Шаг 2: реализация** — `CheckForBuiltPackage` ищет
+  `filepath.Join(c.cfg.GetPaths().PkgsDir, filename)` (плоско, без
+  baseName-подкаталога — conventional filename уже уникален: имя+репо,
+  версия, релиз, арх, формат). При находке: `os.Stat` →
+  `stat.Sys().(*syscall.Stat_t).Uid`; владелец не из доверенных
+  (`os.Geteuid()`, 0, 65534) → `slog.Debug` о недоверии и `false`
+  (пересборка; файл будет заменён на шаге копирования).
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ -v && go build ./...`
+Expected: PASS
+
+- [x] **Шаг 4: коммит** `Изменено: кэш пакетов в PkgsDir с проверкой владельца`
+
+### Task 4.5: сквозная проверка Этапа 4
+
+- [x] Сборка тестового пакета: файл появляется в `~/.cache/alr/pkgs`, в дереве
+  не остаётся; повторная сборка → «Using cached package»
+- [x] `alr fix` чистит оба каталога (проверить от пользователя)
+- [x] Параллельная сборка того же пакета → ErrLocked (Этап 3 не сломан)
+- [x] `go build ./...`, `go test ./...`, pre-commit
+- **Найдено при проверке (Task 4.5), ИСПРАВЛЕНО:** «Using cached package»
+  через CLI `alr build` был недостижим — `cmd/build.go` в конце перемещал
+  готовый пакет из `PkgsDir` в рабочий каталог, осушая кэш после каждой
+  сборки. Исправлено: `osutils.Move` заменён на `osutils.Copy`
+  (`cmd/build.go:177`), пакет остаётся в кэше, копия — в cwd; кэш-хит
+  через CLI подтверждён повторной сквозной проверкой. Осталось в силе:
+  `-c/--clean` обходит проверку кэша (`internal/build/build.go:350`),
+  кэш-хит проверяется без `-c`.
+- **Подтверждено повторно (Task 4.5):** частичный деструктивный отказ
+  `alr fix` без root (уже зафиксирован в Этапе 10): содержимое
+  `/var/cache/alr` вытерто, затем падение на `sudo chmod` в
+  `EnsureTempDirWithRootOwner` без пересборки БД.
+
+---
+
+## Этапы 5-10: состав работ (детальный план — перед стартом каждого)
 
 ### Этап 5: семантический ключ кэша
 - Каноническая форма сборочно-значимых полей из `alrsh.Package`
@@ -555,10 +687,12 @@ Expected: PASS
   root-операций ДО удаления (fail-fast) или атомарный порядок:
   сначала гарантировать возможность пересоздания, потом удалять.
 - **Из финального ревью Этапов 1-2 (Minor 3):** в фолбэк-режиме без HOME
-  (`PkgsDir = /var/cache/alr/build`) fix создаёт системный build-каталог
-  от пользователя с 0755 вместо `root:group 2775` — либо пропускать
-  создание, когда build dir внутри `CacheDir`, либо использовать
-  `EnsureTempDirWithRootOwner`.
+  fix создаёт системные каталоги `/var/cache/alr/build` и
+  `/var/cache/alr/pkgs` от пользователя с 0755 вместо `root:group 2775`
+  (`cmd/fix.go:100-109`) — либо пропускать создание, когда каталог внутри
+  `CacheDir`, либо использовать `EnsureTempDirWithRootOwner`. Заодно:
+  сообщения fix говорят «build directory» и про кэш пакетов
+  (`Unable to remove/create build directory` для PkgsDir) — параметризовать.
 - **Из финального ревью (Minor 1):** решить конвенцию по gotext для
   ошибок внутри пакетов — `fsutils.CheckFreeSpace` сейчас возвращает
   русские строки мимо gotext (прецедент в fsutils уже был; либо принять

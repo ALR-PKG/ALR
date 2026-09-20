@@ -171,11 +171,11 @@ func newBuildCmd() *cobra.Command {
 			for _, pkg := range res {
 				name := filepath.Base(pkg.Path)
 				if _, err := os.Stat(pkg.Path); os.IsNotExist(err) {
-					slog.Info(gotext.Get("Package file already moved or removed, skipping"), "path", pkg.Path)
+					slog.Info(gotext.Get("Package file already removed, skipping"), "path", pkg.Path)
 					continue
 				}
-				if err := osutils.Move(pkg.Path, filepath.Join(wd, name)); err != nil {
-					return fmt.Errorf("%s: %w", gotext.Get("Error moving the package"), err)
+				if err := osutils.Copy(pkg.Path, filepath.Join(wd, name)); err != nil {
+					return fmt.Errorf("%s: %w", gotext.Get("Error copying the package"), err)
 				}
 			}
 

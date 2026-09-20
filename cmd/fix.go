@@ -98,14 +98,15 @@ func newFixCmd() *cobra.Command {
 			}
 
 			slog.Info(gotext.Get("Clearing build directory"))
-			buildDir := paths.PkgsDir
-			if _, err := os.Stat(buildDir); err == nil {
-				if err := os.RemoveAll(buildDir); err != nil {
-					return fmt.Errorf("%s: %w", gotext.Get("Unable to remove build directory"), err)
+			for _, dirPath := range []string{paths.BuildDir, paths.PkgsDir} {
+				if _, err := os.Stat(dirPath); err == nil {
+					if err := os.RemoveAll(dirPath); err != nil {
+						return fmt.Errorf("%s: %w", gotext.Get("Unable to remove build directory"), err)
+					}
 				}
-			}
-			if err := os.MkdirAll(buildDir, 0o755); err != nil {
-				return fmt.Errorf("%s: %w", gotext.Get("Unable to create build directory"), err)
+				if err := os.MkdirAll(dirPath, 0o755); err != nil {
+					return fmt.Errorf("%s: %w", gotext.Get("Unable to create build directory"), err)
+				}
 			}
 
 			slog.Info(gotext.Get("Rebuilding cache"))

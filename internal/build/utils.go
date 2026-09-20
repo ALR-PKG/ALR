@@ -37,7 +37,9 @@ import (
 
 	"github.com/goreleaser/nfpm/v2"
 	"github.com/goreleaser/nfpm/v2/files"
+	"github.com/leonelquinteros/gotext"
 
+	"git.alr-pkg.ru/ALR/ALR/internal/constants"
 	"git.alr-pkg.ru/ALR/ALR/internal/cpu"
 	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/manager"
@@ -83,6 +85,72 @@ func prepareDirs(dirs types.Directories) error {
 
 	// Создаем директорию для пакетов с setgid битом
 	return utils.EnsureTempDirWithRootOwner(dirs.PkgDir, 0o2775)
+}
+
+// copyToCache обеспечивает каталог кэша пакетов и перемещает готовый пакет
+// из дерева сборки в PkgsDir. Публикация атомарна: пакет пишется во временный
+// файл в том же каталоге и переименовывается, поэтому в кэше никогда не
+// оказывается частично записанный файл. Возвращает путь к файлу в кэше.
+func copyToCache(cfg Config, srcPath, filename string) (string, error) {
+	pkgsDir := cfg.GetPaths().PkgsDir
+
+	var err error
+	if pkgsDir == constants.SystemCachePath ||
+		strings.HasPrefix(pkgsDir, constants.SystemCachePath+string(os.PathSeparator)) {
+		// Общий фолбэк-каталог: root-владелец, привилегированная группа, setgid
+		err = utils.EnsureTempDirWithRootOwner(pkgsDir, 0o2775)
+	} else {
+		err = os.MkdirAll(pkgsDir, 0o755)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	dstPath := filepath.Join(pkgsDir, filename)
+
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return "", err
+	}
+	defer src.Close()
+
+	tmp, err := os.CreateTemp(pkgsDir, "."+filename+".tmp-*")
+	if err != nil {
+		return "", err
+	}
+	tmpPath := tmp.Name()
+
+	// CreateTemp создаёт файл с режимом 0600, пакет в общем кэше должен быть 0644
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return "", err
+	}
+
+	if _, err := io.Copy(tmp, src); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return "", err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+
+	// Rename атомарно заменяет существующий файл: каталог group-writable,
+	// замена чужого файла допустима
+	if err := os.Rename(tmpPath, dstPath); err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+
+	// Пакет в дереве сборки больше не артефакт кэша; файл уже в кэше,
+	// поэтому ошибка удаления не должна проваливать сборку
+	if err := os.Remove(srcPath); err != nil {
+		slog.Warn(gotext.Get("Failed to remove package from build tree"), "path", srcPath, "error", err)
+	}
+
+	return dstPath, nil
 }
 
 // Функция buildContents создает секцию содержимого пакета, которая содержит файлы,

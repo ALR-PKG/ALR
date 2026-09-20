@@ -206,10 +206,14 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 			slog.Error(gotext.Get("Failed to create package file"), "path", pkgPath, "error", err)
 			return nil, err
 		}
-		defer pkgFile.Close()
 
 		slog.Info(gotext.Get("Packaging with nfpm"), "format", pkgFormat)
 		err = packager.Package(pkgInfo, pkgFile)
+		// Закрываем файл явно до проверки и копирования в кэш:
+		// иначе кэш может получить недописанные данные из буфера
+		if closeErr := pkgFile.Close(); err == nil {
+			err = closeErr
+		}
 		if err != nil {
 			slog.Error(gotext.Get("Failed to create package"), "path", pkgPath, "error", err)
 			return nil, err
@@ -224,9 +228,16 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 		}
 		slog.Info(gotext.Get("Package file verified to exist"), "path", pkgPath)
 
+		cachedPath, err := copyToCache(e.cfg, pkgPath, pkgName)
+		if err != nil {
+			slog.Error(gotext.Get("Failed to copy package to cache"), "path", pkgPath, "error", err)
+			return nil, err
+		}
+		slog.Info(gotext.Get("Package copied to cache"), "path", cachedPath)
+
 		builtDeps = append(builtDeps, &BuiltDep{
 			Name: vars.Name,
-			Path: pkgPath,
+			Path: cachedPath,
 		})
 	}
 

@@ -34,11 +34,11 @@ msgid "Nothing to build"
 msgstr ""
 
 #: cmd/build.go:174
-msgid "Package file already moved or removed, skipping"
+msgid "Package file already removed, skipping"
 msgstr ""
 
 #: cmd/build.go:178
-msgid "Error moving the package"
+msgid "Error copying the package"
 msgstr ""
 
 #: cmd/build.go:182
@@ -275,15 +275,15 @@ msgstr ""
 msgid "Unable to create build directory"
 msgstr ""
 
-#: cmd/fix.go:111
+#: cmd/fix.go:112
 msgid "Rebuilding cache"
 msgstr ""
 
-#: cmd/fix.go:112
+#: cmd/fix.go:113
 msgid "Creating cache directory"
 msgstr ""
 
-#: cmd/fix.go:115
+#: cmd/fix.go:116
 msgid "Unable to create new cache directory"
 msgstr ""
 
@@ -671,12 +671,20 @@ msgstr ""
 msgid "Installing target packages"
 msgstr ""
 
-#: internal/build/build.go:1285
+#: internal/build/build.go:1292
 msgid "Would you like to remove all build dependencies?"
 msgstr ""
 
-#: internal/build/build.go:1295
+#: internal/build/build.go:1302
 msgid "Failed to remove build dependencies: %v"
+msgstr ""
+
+#: internal/build/cache.go:91
+msgid "Unable to stat cached package"
+msgstr ""
+
+#: internal/build/cache.go:97
+msgid "Cached package owner changed, refusing to install"
 msgstr ""
 
 #: internal/build/checker.go:43
@@ -751,36 +759,48 @@ msgstr ""
 msgid "Failed to create package file"
 msgstr ""
 
-#: internal/build/script_executor.go:211
+#: internal/build/script_executor.go:210
 msgid "Packaging with nfpm"
 msgstr ""
 
-#: internal/build/script_executor.go:214
+#: internal/build/script_executor.go:218
 msgid "Failed to create package"
 msgstr ""
 
-#: internal/build/script_executor.go:218
+#: internal/build/script_executor.go:222
 msgid "Package created successfully"
 msgstr ""
 
-#: internal/build/script_executor.go:222
+#: internal/build/script_executor.go:226
 msgid "Package file not found after creation"
 msgstr ""
 
-#: internal/build/script_executor.go:225
+#: internal/build/script_executor.go:229
 msgid "Package file verified to exist"
 msgstr ""
 
-#: internal/build/script_executor.go:343
+#: internal/build/script_executor.go:233
+msgid "Failed to copy package to cache"
+msgstr ""
+
+#: internal/build/script_executor.go:236
+msgid "Package copied to cache"
+msgstr ""
+
+#: internal/build/script_executor.go:354
 msgid "Executing prepare()"
 msgstr ""
 
-#: internal/build/script_executor.go:352
+#: internal/build/script_executor.go:363
 msgid "Executing build()"
 msgstr ""
 
-#: internal/build/script_executor.go:381 internal/build/script_executor.go:401
+#: internal/build/script_executor.go:392 internal/build/script_executor.go:412
 msgid "Executing %s()"
+msgstr ""
+
+#: internal/build/utils.go:150
+msgid "Failed to remove package from build tree"
 msgstr ""
 
 #: internal/cliutils/app_builder/builder.go:45

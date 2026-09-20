@@ -125,9 +125,11 @@ func (c *ALRConfig) Load() error {
 		// Фолбэк для сред без HOME/XDG (сервисные аккаунты):
 		// системный каталог, права обеспечит fsutils
 		userCacheDir = constants.SystemCachePath
-		c.paths.PkgsDir = filepath.Join(userCacheDir, "build")
+		c.paths.BuildDir = filepath.Join(userCacheDir, "build")
+		c.paths.PkgsDir = filepath.Join(userCacheDir, "pkgs")
 	} else {
-		c.paths.PkgsDir = filepath.Join(userCacheDir, "alr", "build")
+		c.paths.BuildDir = filepath.Join(userCacheDir, "alr", "build")
+		c.paths.PkgsDir = filepath.Join(userCacheDir, "alr", "pkgs")
 	}
 	c.paths.DBPath = filepath.Join(c.paths.CacheDir, "alr.db")
 

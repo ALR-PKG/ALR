@@ -18,10 +18,14 @@ package build
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/goreleaser/nfpm/v2"
+	"github.com/leonelquinteros/gotext"
 
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
@@ -40,19 +44,66 @@ func (c *Cache) CheckForBuiltPackage(
 		return "", false, err
 	}
 
-	// Для подпакетов используем BasePkgName, чтобы искать в правильной директории
-	baseName := vars.BasePkgName
-	if baseName == "" {
-		baseName = vars.Name
-	}
-	pkgPath := filepath.Join(getBaseDir(c.cfg, baseName), filename)
+	path, found := findTrustedCachedPkg(c.cfg, filename)
+	return path, found, nil
+}
 
-	_, err = os.Stat(pkgPath)
+// findTrustedCachedPkg ищет готовый пакет в плоском кэше PkgsDir и
+// возвращает его, только если это регулярный файл с доверенным владельцем.
+func findTrustedCachedPkg(cfg Config, filename string) (string, bool) {
+	pkgPath := filepath.Join(cfg.GetPaths().PkgsDir, filename)
+
+	stat, err := os.Lstat(pkgPath)
 	if err != nil {
-		return "", false, nil
+		if !os.IsNotExist(err) {
+			slog.Debug("Не удалось прочитать файл кэша, пересборка", "path", pkgPath, "error", err)
+		}
+		return "", false
 	}
 
-	return pkgPath, true, nil
+	// Симлинк или не-регулярный файл в общем кэше не доверен:
+	// симлинк на root-owned файл иначе прошёл бы проверку владельца
+	if !stat.Mode().IsRegular() {
+		slog.Debug("Файл кэша не является регулярным файлом, пересборка", "path", pkgPath)
+		return "", false
+	}
+
+	sys, ok := stat.Sys().(*syscall.Stat_t)
+	if !ok {
+		slog.Debug("Не удалось получить владельца файла кэша, пересборка", "path", pkgPath)
+		return "", false
+	}
+
+	if !isTrustedOwner(sys.Uid) {
+		slog.Debug("Пакет в кэше принадлежит недоверенному владельцу, пересборка", "path", pkgPath, "uid", sys.Uid)
+		return "", false
+	}
+
+	return pkgPath, true
+}
+
+// verifyTrustedPaths перепроверяет владельца путей непосредственно перед
+// установкой, закрывая TOCTOU-окно между попаданием в кэш и InstallLocal.
+func verifyTrustedPaths(paths []string) error {
+	for _, path := range paths {
+		stat, err := os.Lstat(path)
+		if err != nil {
+			return fmt.Errorf("%s: %s: %w", gotext.Get("Unable to stat cached package"), path, err)
+		}
+
+		sys, ok := stat.Sys().(*syscall.Stat_t)
+		if !ok || !stat.Mode().IsRegular() || !isTrustedOwner(sys.Uid) {
+			slog.Debug("Отказ в установке пакета из кэша", "path", path)
+			return fmt.Errorf("%s: %s", gotext.Get("Cached package owner changed, refusing to install"), path)
+		}
+	}
+	return nil
+}
+
+// isTrustedOwner возвращает true, если uid — сам пользователь, root (фолбэк
+// демона) или nobody (тоже фолбэк демона в общем кэше).
+func isTrustedOwner(uid uint32) bool {
+	return uid == uint32(os.Geteuid()) || uid == 0 || uid == 65534
 }
 
 func pkgFileName(
