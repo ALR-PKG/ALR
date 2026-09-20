@@ -29,7 +29,6 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
 	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/ALR/ALR/internal/osutils"
-	"git.alr-pkg.ru/ALR/ALR/internal/utils"
 
 	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
@@ -46,10 +45,6 @@ func newBuildCmd() *cobra.Command {
 		Use:   "build",
 		Short: gotext.Get("Build a local package"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := utils.CheckUserPrivileges(); err != nil {
-				return err
-			}
-
 			wd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("%s: %w", gotext.Get("Error getting working directory"), err)
