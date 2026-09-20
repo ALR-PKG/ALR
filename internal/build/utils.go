@@ -387,6 +387,18 @@ func goArchToRPMISA(goarch string) string {
 	}
 }
 
+// resolvePkgArch возвращает архитектуру пакета для nfpm: "all", если пакет
+// объявлен архитектурно-независимым (architectures содержит "all"), иначе
+// архитектуру текущей машины. Правило общее для публикации пакета и для
+// вычисления имени файла при проверке кэша — иначе имена расходятся
+// (например, noarch.rpm при публикации против x86_64.rpm при проверке).
+func resolvePkgArch(vars *alrsh.Package) string {
+	if slices.Contains(vars.Architectures, "all") {
+		return "all"
+	}
+	return cpu.Arch()
+}
+
 func getBasePkgInfo(vars *alrsh.Package, input interface {
 	RepositoryProvider
 	OsInfoProvider
@@ -395,7 +407,7 @@ func getBasePkgInfo(vars *alrsh.Package, input interface {
 	repo := input.Repository()
 	return &nfpm.Info{
 		Name:    fmt.Sprintf("%s+%s", vars.Name, repo),
-		Arch:    cpu.Arch(),
+		Arch:    resolvePkgArch(vars),
 		Version: vars.Version,
 		Release: overrides.ReleasePlatformSpecific(vars.Release, input.OSRelease()),
 		Epoch:   strconv.FormatUint(uint64(vars.Epoch), 10),

@@ -17,15 +17,19 @@
 package build
 
 import (
+	"slices"
+	"strings"
 	"testing"
 
+	"git.alr-pkg.ru/ALR/ALR/internal/cpu"
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
 
 type mockInput struct {
-	repo   string
-	osInfo *distro.OSRelease
+	repo      string
+	osInfo    *distro.OSRelease
+	pkgFormat string
 }
 
 func (m *mockInput) Repository() string {
@@ -34,6 +38,10 @@ func (m *mockInput) Repository() string {
 
 func (m *mockInput) OSRelease() *distro.OSRelease {
 	return m.osInfo
+}
+
+func (m *mockInput) PkgFormat() string {
+	return m.pkgFormat
 }
 
 func TestGetBasePkgInfo(t *testing.T) {
@@ -82,6 +90,119 @@ func TestGetBasePkgInfo(t *testing.T) {
 
 			if info.Name != tt.expectedName {
 				t.Errorf("getBasePkgInfo() имя пакета = %v, ожидается %v", info.Name, tt.expectedName)
+			}
+		})
+	}
+}
+
+func TestGetBasePkgInfoArch(t *testing.T) {
+	tests := []struct {
+		name          string
+		architectures []string
+		expectedArch  string
+	}{
+		{
+			name:          "architectures=all даёт arch all",
+			architectures: []string{"all"},
+			expectedArch:  "all",
+		},
+		{
+			name:          "all среди прочих архитектур даёт arch all",
+			architectures: []string{"amd64", "all"},
+			expectedArch:  "all",
+		},
+		{
+			name:          "обычная архитектура берётся из cpu.Arch()",
+			architectures: []string{"amd64"},
+			expectedArch:  cpu.Arch(),
+		},
+		{
+			name:          "пустые architectures берутся из cpu.Arch()",
+			architectures: nil,
+			expectedArch:  cpu.Arch(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkg := &alrsh.Package{
+				Name:          "test-package",
+				Version:       "1.0.0",
+				Release:       1,
+				Architectures: tt.architectures,
+			}
+
+			input := &mockInput{
+				repo:   "default",
+				osInfo: &distro.OSRelease{ID: "test"},
+			}
+
+			info := getBasePkgInfo(pkg, input)
+
+			if info.Arch != tt.expectedArch {
+				t.Errorf("getBasePkgInfo() arch = %v, ожидается %v", info.Arch, tt.expectedArch)
+			}
+		})
+	}
+}
+
+// TestPkgFileNameArchAll проверяет, что имя файла для проверки кэша
+// совпадает с именем, под которым пакет публикуется: при
+// architectures=('all') nfpm для rpm подставляет noarch, для deb — all.
+func TestPkgFileNameArchAll(t *testing.T) {
+	tests := []struct {
+		name          string
+		pkgFormat     string
+		architectures []string
+		wantContains  string
+	}{
+		{
+			name:          "rpm с architectures=all",
+			pkgFormat:     "rpm",
+			architectures: []string{"all"},
+			wantContains:  ".noarch.rpm",
+		},
+		{
+			name:          "deb с architectures=all",
+			pkgFormat:     "deb",
+			architectures: []string{"all"},
+			wantContains:  "_all.deb",
+		},
+		{
+			name:          "rpm с обычной архитектурой не noarch",
+			pkgFormat:     "rpm",
+			architectures: []string{cpu.Arch()},
+			wantContains:  "+default-1.0.0-1.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkg := &alrsh.Package{
+				Name:          "test-package",
+				Version:       "1.0.0",
+				Release:       1,
+				Architectures: tt.architectures,
+			}
+
+			input := &mockInput{
+				repo:      "default",
+				osInfo:    &distro.OSRelease{ID: "test"},
+				pkgFormat: tt.pkgFormat,
+			}
+
+			filename, err := pkgFileName(input, pkg)
+			if err != nil {
+				t.Fatalf("pkgFileName() ошибка: %v", err)
+			}
+
+			if !strings.Contains(filename, tt.wantContains) {
+				t.Errorf("pkgFileName() = %q, ожидается подстрока %q", filename, tt.wantContains)
+			}
+
+			isAll := slices.Contains(tt.architectures, "all")
+			if isAll && strings.Contains(filename, cpu.Arch()) {
+				t.Errorf("pkgFileName() = %q содержит host-архитектуру %q при architectures=all", filename, cpu.Arch())
 			}
 		})
 	}

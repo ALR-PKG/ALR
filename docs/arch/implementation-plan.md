@@ -772,17 +772,20 @@ Expected: PASS
 
 **Находки 5.4:**
 
-1. **(pre-existing, не Этап 5) arch='all' → вечный cache-miss.**
-   `getBasePkgInfo` (internal/build/utils.go:390) всегда ставит
-   `Arch: cpu.Arch()`, а publish-путь `buildPkgInfo`
-   (internal/build/script_executor.go:315) при `architectures=('all')` ставит
-   `Arch = "all"` (nfpm rpm → `noarch`). Проверка кэша ищет
+1. **(pre-existing, ИСПРАВЛЕНО в этой ветке) arch='all' → вечный cache-miss.**
+   `getBasePkgInfo` (internal/build/utils.go) всегда ставил
+   `Arch: cpu.Arch()`, а publish-путь `buildPkgMetadata`
+   (internal/build/script_executor.go) при `architectures=('all')` ставил
+   `Arch = "all"` (nfpm rpm → `noarch`). Проверка кэша искала
    `…-1.x86_64.rpm`, опубликован `…-1.noarch.rpm` — miss до сверки меты.
-   В master тот же код (баг старше семантического ключа). Подтверждено на
-   RPC-сборке `alr-default/alr-bin`: с временным патчем
-   (`if slices.Contains(vars.Architectures, "all") { arch = "all" }` в
-   getBasePkgInfo) повторная сборка — hit, мета и ключ сверяются успешно.
-   Кандидат на отдельный фикс.
+   Баг старше семантического ключа (в master тот же код).
+   Фикс: общий хелпер `resolvePkgArch(vars)` ("all", если architectures
+   содержит "all", иначе cpu.Arch()), используется в getBasePkgInfo;
+   дублирующий override в buildPkgMetadata удалён. Тесты:
+   TestGetBasePkgInfoArch, TestPkgFileNameArchAll (rpm→noarch, deb→all,
+   регрессия для обычной архитектуры). Сквозная проверка: рецепт с
+   architectures=('all') — публикация `…noarch.rpm`, повторная сборка —
+   кэш-хит.
 2. **RPC-режим:** downloadUrl скриптов указывает на `git.alr-pkg.ru`, а
    trusted-host — только site.url (`alr-pkg.ru`) → WARN «не относится к
    доверенным хостам» и fallback на локальный git-клон репозитория. Работает,
