@@ -31,7 +31,8 @@ import (
 
 // buildScriptFuncs — функции alr.sh, влияющие на содержимое пакета.
 // version() влияет на кэш через поле Version, meta_*() — через поля Package,
-// поэтому в ключ не входят.
+// поэтому в ключ не входят. Помимо перечисленных, в ключ входят функции
+// подпакетов package_<name> — их тела формируют содержимое подпакетов.
 var buildScriptFuncs = []string{"prepare", "build", "package"}
 
 type scriptFuncText struct {
@@ -57,7 +58,8 @@ func ScriptFuncsKey(sf *alrsh.ScriptFile) string {
 		if !ok {
 			return true
 		}
-		if !slices.Contains(buildScriptFuncs, fd.Name.Value) {
+		if !slices.Contains(buildScriptFuncs, fd.Name.Value) &&
+			!strings.HasPrefix(fd.Name.Value, "package_") {
 			return true
 		}
 		var sb strings.Builder

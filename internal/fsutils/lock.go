@@ -45,15 +45,15 @@ var (
 	heldLocks = map[string]*lockEntry{}
 )
 
-// Lock — handle удерживаемой блокировки. Close уменьшает счётчик ссылок;
-// реальное снятие flock происходит при Close последнего handle на путь
-type Lock struct {
+// LockHandle — handle удерживаемой блокировки. Close уменьшает счётчик
+// ссылок; реальное снятие flock происходит при Close последнего handle на путь
+type LockHandle struct {
 	path   string
 	closed bool
 }
 
 // Close освобождает блокировку. Повторный вызов — no-op.
-func (l *Lock) Close() error {
+func (l *LockHandle) Close() error {
 	locksMu.Lock()
 	defer locksMu.Unlock()
 	if l.closed {
@@ -74,12 +74,31 @@ func (l *Lock) Close() error {
 	return err
 }
 
+// Lock создаёт (при необходимости) файл path и берёт exclusive блокирующий
+// flock(2): если блокировку держит другой процесс, вызов ждёт её
+// освобождения. Возвращённый LockHandle снимает блокировку при Close.
+// В пределах процесса вызов реентерабелен: повторный Lock того же пути
+// возвращает новый handle на тот же flock.
+func Lock(path string) (*LockHandle, error) {
+	return flockPath(path, 0)
+}
+
 // TryLock создаёт (при необходимости) файл path и берёт exclusive
-// non-blocking flock(2). Возвращённый Lock снимает блокировку при Close.
+// non-blocking flock(2). Возвращённый LockHandle снимает блокировку при Close.
 // В пределах процесса вызов реентерабелен: повторный TryLock того же пути
 // возвращает новый handle на тот же flock.
 // Если блокировку уже держит другой процесс — ErrLocked.
-func TryLock(path string) (*Lock, error) {
+func TryLock(path string) (*LockHandle, error) {
+	l, err := flockPath(path, unix.LOCK_NB)
+	if errors.Is(err, syscall.EWOULDBLOCK) {
+		return nil, ErrLocked
+	}
+	return l, err
+}
+
+// flockPath — общая часть Lock и TryLock: flags добавляются к LOCK_EX
+// (unix.LOCK_NB для non-blocking варианта).
+func flockPath(path string, flags int) (*LockHandle, error) {
 	dir := filepath.Dir(path)
 	_, statErr := os.Stat(dir)
 	dirCreated := os.IsNotExist(statErr)
@@ -92,25 +111,22 @@ func TryLock(path string) (*Lock, error) {
 
 	if entry, ok := heldLocks[path]; ok {
 		entry.refs++
-		return &Lock{path: path}, nil
+		return &LockHandle{path: path}, nil
 	}
 
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o664)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось открыть файл блокировки %s: %w", path, err)
 	}
-	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|flags); err != nil {
 		f.Close()
-		if errors.Is(err, syscall.EWOULDBLOCK) {
-			return nil, ErrLocked
-		}
 		return nil, fmt.Errorf("не удалось заблокировать %s: %w", path, err)
 	}
 
 	normalizeLockAccess(path, dir, dirCreated)
 
 	heldLocks[path] = &lockEntry{file: f, refs: 1}
-	return &Lock{path: path}, nil
+	return &LockHandle{path: path}, nil
 }
 
 // normalizeLockAccess при запуске от root выставляет лок-файлу

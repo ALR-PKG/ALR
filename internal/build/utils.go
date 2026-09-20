@@ -88,16 +88,21 @@ func prepareDirs(dirs types.Directories) error {
 	return utils.EnsureTempDirWithRootOwner(dirs.PkgDir, 0o2775)
 }
 
+// cacheMetaVersion — текущая версия формата меты кэша. При смене формата
+// версию увеличиваем; проверка кэша трактует неизвестную версию как промах.
+const cacheMetaVersion = 1
+
 // cacheMeta — метаданные кэша пакета: семантический ключ, по которому
 // при проверке кэша решается, актуален ли лежащий рядом пакет.
 type cacheMeta struct {
-	Key string `json:"key"`
+	Version int    `json:"v"`
+	Key     string `json:"key"`
 }
 
 // writeCacheMeta атомарно публикует мету кэша <filename>.meta в каталоге dir:
 // JSON пишется во временный файл в том же каталоге и переименовывается.
 func writeCacheMeta(dir, filename, key string) error {
-	data, err := json.Marshal(cacheMeta{Key: key})
+	data, err := json.Marshal(cacheMeta{Version: cacheMetaVersion, Key: key})
 	if err != nil {
 		return err
 	}
@@ -137,9 +142,13 @@ func writeCacheMeta(dir, filename, key string) error {
 // из дерева сборки в PkgsDir вместе с метой кэша (семантический ключ key).
 // Публикация атомарна: пакет и мета пишутся во временные файлы в том же
 // каталоге и переименовываются, поэтому в кэше никогда не оказывается
-// частично записанный файл. Если мету записать не удалось, уже
-// опубликованный пакет откатывается: пакет без меты — вечный промах кэша,
-// который скрыл бы проблему. Возвращает путь к файлу в кэше.
+// частично записанный файл. Пара rename (пакет + мета) выполняется под
+// блокирующим flock на <PkgsDir>/.alr-cache.lock: иначе при конкурентной
+// публикации пакет и мета могли бы остаться от разных сборок. Критическая
+// секция короткая — только rename'ы и откат, копирование данных снаружи.
+// Если мету записать не удалось, уже опубликованный пакет откатывается:
+// пакет без меты — вечный промах кэша, который скрыл бы проблему.
+// Возвращает путь к файлу в кэше.
 func copyToCache(cfg Config, srcPath, filename, key string) (string, error) {
 	pkgsDir := cfg.GetPaths().PkgsDir
 
@@ -186,9 +195,20 @@ func copyToCache(cfg Config, srcPath, filename, key string) (string, error) {
 		return "", err
 	}
 
+	// Пара rename (пакет + мета) под блокирующим flock кэша: сериализуем
+	// публикацию с другими процессами (демон, параллельная сборка), чтобы
+	// пакет и мета не оказались от разных сборок. Копирование данных выше —
+	// вне критической секции.
+	cacheLock, err := fsutils.Lock(filepath.Join(pkgsDir, ".alr-cache.lock"))
+	if err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+
 	// Rename атомарно заменяет существующий файл: каталог group-writable,
 	// замена чужого файла допустима
 	if err := os.Rename(tmpPath, dstPath); err != nil {
+		cacheLock.Close()
 		os.Remove(tmpPath)
 		return "", err
 	}
@@ -199,7 +219,12 @@ func copyToCache(cfg Config, srcPath, filename, key string) (string, error) {
 		if removeErr := os.Remove(dstPath); removeErr != nil {
 			slog.Debug("Failed to roll back cached package after meta write failure", "path", dstPath, "error", removeErr)
 		}
+		cacheLock.Close()
 		return "", fmt.Errorf("не удалось записать мету кэша: %w", err)
+	}
+
+	if err := cacheLock.Close(); err != nil {
+		slog.Debug("Failed to release cache lock", "dir", pkgsDir, "error", err)
 	}
 
 	// Пакет в дереве сборки больше не артефакт кэша; файл уже в кэше,

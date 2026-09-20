@@ -21,9 +21,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"git.alr-pkg.ru/ALR/ALR/internal/config"
 )
@@ -103,6 +105,7 @@ func TestCopyToCache(t *testing.T) {
 		var meta cacheMeta
 		require.NoError(t, json.Unmarshal(data, &meta))
 		assert.Equal(t, testKey, meta.Key)
+		assert.Equal(t, 1, meta.Version, "мета должна нести версию формата")
 
 		fi, err := os.Stat(metaPath)
 		require.NoError(t, err)
@@ -198,5 +201,54 @@ func TestCopyToCache(t *testing.T) {
 		tmpFiles, err := filepath.Glob(filepath.Join(pkgsDir, "*.tmp-*"))
 		require.NoError(t, err)
 		assert.Empty(t, tmpFiles, "временных файлов быть не должно")
+	})
+
+	t.Run("waits for cache lock held by another process", func(t *testing.T) {
+		pkgsDir := t.TempDir()
+		lockPath := filepath.Join(pkgsDir, ".alr-cache.lock")
+
+		// flock через отдельный open file description — имитация блокировки
+		// кэша другим процессом (демоном или параллельной сборкой)
+		probe, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o664)
+		require.NoError(t, err)
+		require.NoError(t, unix.Flock(int(probe.Fd()), unix.LOCK_EX|unix.LOCK_NB))
+
+		srcPath := filepath.Join(t.TempDir(), "pkg-1.0-1-x86_64.pkg.tar.zst")
+		require.NoError(t, os.WriteFile(srcPath, []byte("package-data"), 0o644))
+
+		cfg := &fakeResolverConfig{
+			paths: &config.Paths{PkgsDir: pkgsDir},
+		}
+
+		done := make(chan error, 1)
+		go func() {
+			_, err := copyToCache(cfg, srcPath, "pkg-1.0-1-x86_64.pkg.tar.zst", testKey)
+			done <- err
+		}()
+
+		// Пока probe держит flock, публикация обязана ждать
+		select {
+		case err := <-done:
+			t.Fatalf("ожидалось блокирующее ожидание лока кэша, copyToCache завершилась: %v", err)
+		case <-time.After(200 * time.Millisecond):
+		}
+
+		_, statErr := os.Stat(filepath.Join(pkgsDir, "pkg-1.0-1-x86_64.pkg.tar.zst"))
+		assert.True(t, os.IsNotExist(statErr), "до снятия лока пакет не должен быть опубликован")
+
+		require.NoError(t, unix.Flock(int(probe.Fd()), unix.LOCK_UN))
+		require.NoError(t, probe.Close())
+
+		select {
+		case err := <-done:
+			require.NoError(t, err)
+		case <-time.After(5 * time.Second):
+			t.Fatal("copyToCache не получила лок кэша после его освобождения")
+		}
+
+		_, err = os.Stat(filepath.Join(pkgsDir, "pkg-1.0-1-x86_64.pkg.tar.zst"))
+		require.NoError(t, err, "после снятия лока пакет должен быть опубликован")
+		_, err = os.Stat(filepath.Join(pkgsDir, "pkg-1.0-1-x86_64.pkg.tar.zst.meta"))
+		require.NoError(t, err, "после снятия лока мета должна быть опубликована")
 	})
 }

@@ -121,7 +121,53 @@ version() {
 		assert.NotEmpty(t, key)
 		assert.Equal(t, funcsKeyOf(t, "name=\"somepkg\"\n"), key)
 	})
+
+	t.Run("changes when package_foo() body changes", func(t *testing.T) {
+		changed := strings.Replace(testSplitScript, "foo.conf", "bar.conf", 1)
+		assert.NotEqual(t, funcsKeyOf(t, testSplitScript), funcsKeyOf(t, changed))
+	})
+
+	t.Run("ignores functions outside tracked names and package_ prefix", func(t *testing.T) {
+		changed := testSplitScript
+		for _, fn := range []string{"prepare_extra", "build_extra", "helper", "version"} {
+			changed = strings.Replace(changed, fn+"() {\n\t\ttrue\n\t}", fn+"() {\n\t\tfalse\n\t}", 1)
+		}
+		assert.Equal(t, funcsKeyOf(t, testSplitScript), funcsKeyOf(t, changed))
+	})
 }
+
+// testSplitScript — скрипт с подпакетом: meta_foo объявляет его,
+// package_foo собирает. prepare_extra/build_extra/helper/version — функции,
+// которые в ключ входить не должны.
+const testSplitScript = `
+name="somepkg"
+version="1.0"
+release=1
+
+meta_foo() {
+	name="somepkg-foo"
+}
+
+package_foo() {
+	install -Dm644 foo.conf "$pkgdir/etc/foo.conf"
+}
+
+prepare_extra() {
+	true
+}
+
+build_extra() {
+	true
+}
+
+helper() {
+	true
+}
+
+version() {
+	true
+}
+`
 
 func newTestKeyPackage() *alrsh.Package {
 	pkg := &alrsh.Package{

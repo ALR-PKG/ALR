@@ -27,6 +27,7 @@ import (
 	"sync"
 	"syscall"
 	"testing"
+	"time"
 
 	"golang.org/x/sys/unix"
 
@@ -243,5 +244,97 @@ func TestTryLockRootNormalizesPermissions(t *testing.T) {
 	}
 	if stat, ok := dinfo.Sys().(*syscall.Stat_t); !ok || int(stat.Gid) != gid {
 		t.Errorf("Expected parent dir gid %d (%s), got %+v", gid, grp.Name, dinfo.Sys())
+	}
+}
+
+// holdFlockViaProbe берёт flock на path через отдельный open file
+// description (без реестра fsutils), имитируя блокировку другим процессом.
+// Возвращает функцию снятия блокировки.
+func holdFlockViaProbe(t *testing.T, path string) func() {
+	t.Helper()
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o664)
+	if err != nil {
+		t.Fatalf("Failed to open probe lock file %s: %s", path, err)
+	}
+	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+		f.Close()
+		t.Fatalf("Failed to flock probe file %s: %s", path, err)
+	}
+	return func() {
+		unix.Flock(int(f.Fd()), unix.LOCK_UN)
+		f.Close()
+	}
+}
+
+func TestLockBlocksUntilReleased(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.lock")
+	release := holdFlockViaProbe(t, path)
+
+	type result struct {
+		l   *fsutils.LockHandle
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		l, err := fsutils.Lock(path)
+		done <- result{l, err}
+	}()
+
+	// Пока probe держит flock, Lock обязан ждать
+	select {
+	case r := <-done:
+		r.l.Close()
+		t.Fatal("Expected Lock to block while probe holds the flock, but it returned")
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	release()
+
+	select {
+	case r := <-done:
+		if r.err != nil {
+			t.Fatalf("Expected no error after release, got %s", r.err)
+		}
+		r.l.Close()
+	case <-time.After(5 * time.Second):
+		t.Fatal("Expected Lock to acquire the flock after release")
+	}
+
+	if flockHeld(t, path) {
+		t.Error("Expected flock to be released after Close")
+	}
+}
+
+func TestLockReentrant(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.lock")
+	l1, err := fsutils.Lock(path)
+	if err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+
+	l2, err := fsutils.Lock(path)
+	if err != nil {
+		t.Fatalf("Expected reentrant Lock to succeed, got %s", err)
+	}
+
+	if err := l1.Close(); err != nil {
+		t.Fatalf("Failed to close first lock: %s", err)
+	}
+	if !flockHeld(t, path) {
+		t.Error("Expected flock to still be held after first Close")
+	}
+
+	if err := l2.Close(); err != nil {
+		t.Fatalf("Failed to close second lock: %s", err)
+	}
+	if flockHeld(t, path) {
+		t.Error("Expected flock to be released after last Close")
+	}
+
+	l3, err := fsutils.Lock(path)
+	if err != nil {
+		t.Errorf("Expected no error after all locks closed, got %s", err)
+	} else {
+		l3.Close()
 	}
 }
