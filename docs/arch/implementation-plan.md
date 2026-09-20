@@ -829,7 +829,8 @@ CheckFreeSpace для dlcache и рефакторинг реестра локо�
   - `dirSharedWith(gid uint32, ...)`: stat каталога → его группа ∈ gid'ам
     пользователя && setgid && group rwx.
 
-- [x] **Шаг 2: реализация** — `CacheShareGroup()` (sync.Once,
+- [x] **Шаг 2: реализация** — `CacheShareGroup()` (без sync.Once — чтобы
+  группа alr, появившаяся после старта процесса, подхватывалась;
   `lookupGroup("alr")` → "alr", иначе GetPrivilegedGroup);
   `CurrentUserGroupGIDs()` (`os/user.Current()` + `GroupIds()`);
   хелпер проверки «каталог общий для меня» (Lstat, gid, mode).
@@ -847,7 +848,7 @@ Expected: PASS
 - Modify: `internal/fsutils/dirs.go`
 - Test: `internal/fsutils/dirs_test.go` (новый)
 
-- [ ] **Шаг 1: падающий тест** — тестируемость: префикс `/var/cache/alr`
+- [x] **Шаг 1: падающий тест** — тестируемость: префикс `/var/cache/alr`
   выносится в пакетную переменную (`var systemCachePrefix = "/var/cache/alr"`,
   в тесте подменяется на temp-dir через t.Cleanup). Кейсы (все на temp-dir,
   без root):
@@ -859,17 +860,17 @@ Expected: PASS
   - чужая группа/не setgid → путь эскалации (в тесте без sudo — ошибка
     эскалации, как сейчас).
 
-- [ ] **Шаг 2: реализация** fast-path в EnsureTempDirWithRootOwner до
+- [x] **Шаг 2: реализация** fast-path в EnsureTempDirWithRootOwner до
   sudo-ветки (порядок: prefix? → CI? → root? → fast-path члена группы →
   sudo-ветка как fallback). Целевая группа для chown в sudo/root-ветках —
   `CacheShareGroup()`.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/fsutils/ -v -count=1 && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Изменено: общие каталоги кэша без sudo для членов группы`
+- [x] **Шаг 4: коммит** `Изменено: общие каталоги кэша без sudo для членов группы`
 
 ### Task 6.3: dlcache без лишнего враппера
 

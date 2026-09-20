@@ -20,14 +20,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
+
+// systemCachePrefix вынесено в переменную для подмены в тестах
+var systemCachePrefix = "/var/cache/alr"
 
 // EnsureTempDirWithRootOwner создает каталог в /var/cache/alr с правами для привилегированной группы
 // Все каталоги в /var/cache/alr принадлежат root:привилегированная_группа с правами 2775
 // Для других каталогов использует стандартные права
 func EnsureTempDirWithRootOwner(path string, mode os.FileMode) error {
-	needsElevation := strings.HasPrefix(path, "/var/cache/alr")
+	needsElevation := strings.HasPrefix(path, systemCachePrefix)
 
 	if needsElevation {
 		// В CI или если мы уже root, не нужно использовать sudo
@@ -49,7 +53,15 @@ func EnsureTempDirWithRootOwner(path string, mode os.FileMode) error {
 
 		// Для обычной работы устанавливаем права и привилегированную группу
 		permissions := "2775"
-		group := GetPrivilegedGroup()
+		group := CacheShareGroup()
+
+		if !isRoot {
+			// Fast-path: член группы-владельца с корректными правами
+			// обходится без sudo
+			if ensureSharedDirFast(path) {
+				return nil
+			}
+		}
 
 		var mkdirCmd, chmodCmd, chownCmd *exec.Cmd
 		if isRoot {
@@ -97,4 +109,66 @@ func EnsureTempDirWithRootOwner(path string, mode os.FileMode) error {
 
 	// Для остальных каталогов обычное создание
 	return os.MkdirAll(path, mode)
+}
+
+// ensureSharedDirFast пытается обеспечить общий каталог без эскалации
+// привилегий — для члена группы-владельца каталога (или его setgid-предка).
+// Возвращает true, если каталог готов; иначе false и вызывающему следует
+// перейти к sudo-ветке.
+func ensureSharedDirFast(path string) bool {
+	gids, err := CurrentUserGroupGIDs()
+	if err != nil {
+		return false
+	}
+
+	_, statErr := os.Stat(path)
+	switch {
+	case statErr == nil:
+		// Каталог существует: если он уже общий для нас, ничего делать не нужно
+		return dirSharedWith(path, gids)
+	case !os.IsNotExist(statErr):
+		return false
+	}
+
+	// Каталога нет: создаём без sudo, если ближайший существующий предок
+	// общий для нас (setgid — новые каталоги наследуют его группу)
+	ancestor := nearestExistingDir(path)
+	if ancestor == "" || !dirSharedWith(ancestor, gids) {
+		return false
+	}
+	if err := os.MkdirAll(path, 0o2775); err != nil {
+		return false
+	}
+	// MkdirAll теряет setgid и group-write из-за umask — восстанавливаем
+	// права на всех созданных каталогах от path до предка
+	for dir := path; dir != ancestor; {
+		if err := os.Chmod(dir, os.ModeSetgid|0o0775); err != nil {
+			return false
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return dirSharedWith(path, gids)
+}
+
+// nearestExistingDir возвращает ближайший существующий каталог-предок
+// path или пустую строку, если такого нет.
+func nearestExistingDir(path string) string {
+	for {
+		parent := filepath.Dir(path)
+		if parent == path {
+			return ""
+		}
+		info, err := os.Stat(parent)
+		if err == nil {
+			if info.IsDir() {
+				return parent
+			}
+			return ""
+		}
+		path = parent
+	}
 }
