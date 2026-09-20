@@ -820,7 +820,7 @@ CheckFreeSpace для dlcache и рефакторинг реестра локо�
 - Modify: `internal/fsutils/privileged_group.go`
 - Test: `internal/fsutils/privileged_group_test.go` (новый)
 
-- [ ] **Шаг 1: падающий тест**
+- [x] **Шаг 1: падающий тест**
   - `CacheShareGroup()`: возвращает "alr", если группа существует в системе,
     иначе `GetPrivilegedGroup()` (детерминировать в тесте через подмену
     lookup — вынести `var lookupGroup = user.LookupGroup` пакетного уровня);
@@ -829,17 +829,17 @@ CheckFreeSpace для dlcache и рефакторинг реестра локо�
   - `dirSharedWith(gid uint32, ...)`: stat каталога → его группа ∈ gid'ам
     пользователя && setgid && group rwx.
 
-- [ ] **Шаг 2: реализация** — `CacheShareGroup()` (sync.Once,
+- [x] **Шаг 2: реализация** — `CacheShareGroup()` (sync.Once,
   `lookupGroup("alr")` → "alr", иначе GetPrivilegedGroup);
   `CurrentUserGroupGIDs()` (`os/user.Current()` + `GroupIds()`);
   хелпер проверки «каталог общий для меня» (Lstat, gid, mode).
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/fsutils/ -v -count=1`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: группа alr и хелперы членства (fsutils)`
+- [x] **Шаг 4: коммит** `Добавлено: группа alr и хелперы членства (fsutils)`
 
 ### Task 6.2: EnsureTempDirWithRootOwner без sudo для членов группы
 

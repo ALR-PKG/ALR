@@ -18,11 +18,17 @@ package fsutils
 
 import (
 	"context"
+	"os"
 	"os/user"
+	"strconv"
 	"sync"
+	"syscall"
 
 	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 )
+
+// lookupGroup вынесено в переменную для подмены в тестах
+var lookupGroup = user.LookupGroup
 
 var (
 	privilegedGroupCache string
@@ -73,4 +79,61 @@ func detectGroupByAvailability() string {
 
 	// Если sudo не найдена, возвращаем wheel
 	return "wheel"
+}
+
+// CacheShareGroup возвращает целевую группу для новых общих каталогов
+// (/var/cache/alr/*): "alr", если такая группа существует в системе,
+// иначе привилегированную группу дистрибутива (GetPrivilegedGroup).
+// Кэширования нет: LookupGroup дешёвый, а отсутствие sync.Once упрощает
+// подмену lookupGroup в тестах.
+func CacheShareGroup() string {
+	if _, err := lookupGroup("alr"); err == nil {
+		return "alr"
+	}
+	return GetPrivilegedGroup()
+}
+
+// CurrentUserGroupGIDs возвращает множество gid текущего пользователя:
+// основную группу процесса и все дополнительные группы.
+// При ошибке возвращает nil и ошибку; вызывающему следует трактовать это
+// как пустое множество (fast-path не сработает, управление уйдёт в sudo-ветку).
+func CurrentUserGroupGIDs() (map[uint32]bool, error) {
+	cur, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+	list, err := cur.GroupIds()
+	if err != nil {
+		return nil, err
+	}
+
+	gids := make(map[uint32]bool, len(list)+1)
+	// GroupIds включает только дополнительные группы, добавляем основную
+	gids[uint32(os.Getgid())] = true
+	for _, s := range list {
+		gid, err := strconv.ParseUint(s, 10, 32)
+		if err != nil {
+			continue
+		}
+		gids[uint32(gid)] = true
+	}
+	return gids, nil
+}
+
+// dirSharedWith проверяет, что path — общий каталог, доступный текущему
+// пользователю как члену группы: группа каталога входит в gids, выставлен
+// setgid-бит (наследование группы) и у группы есть права rwx.
+func dirSharedWith(path string, gids map[uint32]bool) bool {
+	info, err := os.Lstat(path)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return false
+	}
+	mode := info.Mode()
+	return gids[stat.Gid] &&
+		mode&os.ModeSetgid != 0 &&
+		mode.Perm()&0o070 == 0o070
 }
