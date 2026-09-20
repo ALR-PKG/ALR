@@ -749,11 +749,46 @@ Expected: PASS
 
 ### Task 5.4: сквозная проверка Этапа 5
 
-- Сборка → кэш-хит; правка description в alr.sh → всё ещё кэш-хит; правка
+- [x] Сборка → кэш-хит; правка description в alr.sh → всё ещё кэш-хит; правка
   тела build() → пересборка; бамп version → новый файл (поведение как раньше)
-- Поток install/dep через checkCacheForAllSubpackages — проверить по логам
+  - Проверено на Fedora 44/rpm (бинарник из HEAD ветки): второй прогон
+    `alr build -s` — «Используется кешированный пакет», рядом с пакетом
+    `<pkg>.meta` (`{"v":1,"key":"..."}`); правка `desc` — хит, ключ не
+    изменился; правка тела `build()` — miss с debug-строкой
+    «Семантический ключ кэша не совпал» (expected/actual), пересборка, мета
+    обновлена; бамп `version` — новый conventional filename, старый пакет
+    не используется.
+- [x] Поток install/dep через checkCacheForAllSubpackages — проверить по логам
   (скрипт резолвится, мета сверяется)
-- `go build ./...`, `go test ./...`, pre-commit
+  - Проверено через локальный git-репозиторий (file://, repo `e5test`):
+    dep собран по `-s` (ключ из скрипта), затем собран пакет с транзитивной
+    зависимостью на него — «Используется кешированный пакет name=e5-dep»
+    (hit, НЕ ложный miss). Ключи из скрипта и из БД совпали
+    (3e6b35ce… в обоих направлениях: -s→проверка-из-БД и -p→проверка-из--s).
+  - Замечание (существующее поведение, не Этап 5): прямые runtime-deps при
+    `alr build -s` попадают в targetSet и исключаются из AllALRPackages
+    (dependency_tree.go:315-333) — собираются/проверяются только транзитивные.
+- [x] `go build ./...`, `go test ./...`, pre-commit
+
+**Находки 5.4:**
+
+1. **(pre-existing, не Этап 5) arch='all' → вечный cache-miss.**
+   `getBasePkgInfo` (internal/build/utils.go:390) всегда ставит
+   `Arch: cpu.Arch()`, а publish-путь `buildPkgInfo`
+   (internal/build/script_executor.go:315) при `architectures=('all')` ставит
+   `Arch = "all"` (nfpm rpm → `noarch`). Проверка кэша ищет
+   `…-1.x86_64.rpm`, опубликован `…-1.noarch.rpm` — miss до сверки меты.
+   В master тот же код (баг старше семантического ключа). Подтверждено на
+   RPC-сборке `alr-default/alr-bin`: с временным патчем
+   (`if slices.Contains(vars.Architectures, "all") { arch = "all" }` в
+   getBasePkgInfo) повторная сборка — hit, мета и ключ сверяются успешно.
+   Кандидат на отдельный фикс.
+2. **RPC-режим:** downloadUrl скриптов указывает на `git.alr-pkg.ru`, а
+   trusted-host — только site.url (`alr-pkg.ru`) → WARN «не относится к
+   доверенным хостам» и fallback на локальный git-клон репозитория. Работает,
+   но RPC-скачивание alr.sh фактически не используется.
+3. dlcache (`/var/cache/alr/dl`) требует sudo-elevation (известно, скоуп
+   Этапа 6) — для RPC smoke без sudo использован `CI=true`.
 
 ---
 
