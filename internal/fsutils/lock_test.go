@@ -201,17 +201,17 @@ func TestTryLockCreatesParentDir(t *testing.T) {
 }
 
 // TestTryLockRootNormalizesPermissions проверяет, что при запуске от root
-// лок-файл получает привилегированную группу и режим 0660, а только что
-// созданный родительский каталог — привилегированную группу. Иначе после
+// лок-файл получает целевую группу общего кэша и режим 0660, а только что
+// созданный родительский каталог — ту же группу. Иначе после
 // pull от root пользователь из группы не сможет открыть лок-файл (EACCES)
 func TestTryLockRootNormalizesPermissions(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("тест требует root: проверяется нормализация прав лок-файла")
 	}
 
-	grp, err := user.LookupGroup(fsutils.GetPrivilegedGroup())
+	grp, err := user.LookupGroup(fsutils.CacheShareGroup())
 	if err != nil {
-		t.Skipf("привилегированная группа %s не найдена: %s", fsutils.GetPrivilegedGroup(), err)
+		t.Skipf("целевая группа кэша %s не найдена: %s", fsutils.CacheShareGroup(), err)
 	}
 	gid, err := strconv.Atoi(grp.Gid)
 	if err != nil {

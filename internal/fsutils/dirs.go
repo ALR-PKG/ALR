@@ -27,8 +27,8 @@ import (
 // systemCachePrefix вынесено в переменную для подмены в тестах
 var systemCachePrefix = "/var/cache/alr"
 
-// EnsureTempDirWithRootOwner создает каталог в /var/cache/alr с правами для привилегированной группы
-// Все каталоги в /var/cache/alr принадлежат root:привилегированная_группа с правами 2775
+// EnsureTempDirWithRootOwner создает каталог в /var/cache/alr с правами для целевой группы кэша
+// Все каталоги в /var/cache/alr принадлежат root:CacheShareGroup() с правами 2775
 // Для других каталогов использует стандартные права
 func EnsureTempDirWithRootOwner(path string, mode os.FileMode) error {
 	needsElevation := strings.HasPrefix(path, systemCachePrefix)
@@ -51,7 +51,7 @@ func EnsureTempDirWithRootOwner(path string, mode os.FileMode) error {
 			return nil
 		}
 
-		// Для обычной работы устанавливаем права и привилегированную группу
+		// Для обычной работы устанавливаем права и целевую группу кэша
 		permissions := "2775"
 		group := CacheShareGroup()
 

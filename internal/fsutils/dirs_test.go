@@ -172,11 +172,11 @@ func TestEnsureTempDirCreatesIntermediateDirs(t *testing.T) {
 func TestEnsureTempDirEscalatesOnForeignDir(t *testing.T) {
 	skipIfRoot(t)
 	t.Setenv("CI", "")
-	callsFile := stubFailingSudo(t)
 	prefix := t.TempDir()
 	stubSystemCachePrefix(t, prefix)
 
 	t.Run("без setgid", func(t *testing.T) {
+		callsFile := stubFailingSudo(t)
 		dir := filepath.Join(prefix, "nosetgid")
 		makeSharedDir(t, dir, 0o0775)
 
@@ -190,6 +190,7 @@ func TestEnsureTempDirEscalatesOnForeignDir(t *testing.T) {
 	})
 
 	t.Run("предок не общий", func(t *testing.T) {
+		callsFile := stubFailingSudo(t)
 		// prefix (t.TempDir) — 0700 без setgid, fast-path не сработает
 		dir := filepath.Join(prefix, "missing", "child")
 

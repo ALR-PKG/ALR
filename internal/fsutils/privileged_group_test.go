@@ -61,6 +61,23 @@ func TestCacheShareGroupFallbackToPrivileged(t *testing.T) {
 	}
 }
 
+func TestPrivilegedGIDUsesCacheShareGroup(t *testing.T) {
+	stubLookupGroup(t, func(name string) (*user.Group, error) {
+		if name == "alr" {
+			return &user.Group{Gid: "4242", Name: "alr"}, nil
+		}
+		return nil, errors.New("группа не найдена")
+	})
+
+	gid, err := privilegedGID()
+	if err != nil {
+		t.Fatalf("privilegedGID() вернул ошибку: %s", err)
+	}
+	if gid != 4242 {
+		t.Errorf("privilegedGID() = %d, ожидался gid группы alr (4242)", gid)
+	}
+}
+
 func TestCurrentUserGroupGIDs(t *testing.T) {
 	gids, err := CurrentUserGroupGIDs()
 	if err != nil {
