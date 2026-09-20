@@ -305,6 +305,203 @@ func TestLockBlocksUntilReleased(t *testing.T) {
 	}
 }
 
+// TestLockDoesNotBlockTryLockOtherPath проверяет, что блокирующий Lock,
+// ожидающий чужой flock, не останавливает операции реестра по другим путям:
+// TryLock(pathB) обязан вернуться сразу, пока Lock(pathA) ждёт
+func TestLockDoesNotBlockTryLockOtherPath(t *testing.T) {
+	dir := t.TempDir()
+	pathA := filepath.Join(dir, "a.lock")
+	pathB := filepath.Join(dir, "b.lock")
+	release := holdFlockViaProbe(t, pathA)
+
+	type result struct {
+		l   *fsutils.LockHandle
+		err error
+	}
+	lockDone := make(chan result, 1)
+	go func() {
+		l, err := fsutils.Lock(pathA)
+		lockDone <- result{l, err}
+	}()
+
+	// Даём горутине дойти до блокирующего ожидания flock на pathA
+	time.Sleep(200 * time.Millisecond)
+
+	tryDone := make(chan result, 1)
+	go func() {
+		l, err := fsutils.TryLock(pathB)
+		tryDone <- result{l, err}
+	}()
+
+	select {
+	case r := <-tryDone:
+		if r.err != nil {
+			t.Fatalf("Expected no error from TryLock on other path, got %s", r.err)
+		}
+		r.l.Close()
+	case <-time.After(2 * time.Second):
+		// Освобождаем probe до Fatal, чтобы зависший Lock не
+		// блокировал реестр для последующих тестов
+		release()
+		<-lockDone
+		t.Fatal("TryLock on pathB blocked while Lock(pathA) was waiting: registry is stalled by blocking flock")
+	}
+
+	release()
+
+	select {
+	case r := <-lockDone:
+		if r.err != nil {
+			t.Fatalf("Expected no error from Lock after release, got %s", r.err)
+		}
+		r.l.Close()
+	case <-time.After(5 * time.Second):
+		t.Fatal("Expected Lock to acquire the flock after release")
+	}
+}
+
+// TestLockConcurrentSamePath проверяет, что конкурентные Lock одного пути
+// делят один flock: refs==2, после Close первого handle блокировка держится,
+// после Close второго — снята
+func TestLockConcurrentSamePath(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.lock")
+	release := holdFlockViaProbe(t, path)
+
+	start := make(chan struct{})
+	type result struct {
+		l   *fsutils.LockHandle
+		err error
+	}
+	results := make(chan result, 2)
+	for i := 0; i < 2; i++ {
+		go func() {
+			<-start
+			l, err := fsutils.Lock(path)
+			results <- result{l, err}
+		}()
+	}
+	close(start)
+
+	// Обе горутины должны упереться в flock probe-файла
+	time.Sleep(200 * time.Millisecond)
+	release()
+
+	r1 := <-results
+	r2 := <-results
+	for _, r := range []result{r1, r2} {
+		if r.err != nil {
+			t.Fatalf("Expected no error, got %s", r.err)
+		}
+	}
+
+	if err := r1.l.Close(); err != nil {
+		t.Fatalf("Failed to close first lock: %s", err)
+	}
+	if !flockHeld(t, path) {
+		t.Error("Expected flock to still be held after first Close (refs==2)")
+	}
+
+	if err := r2.l.Close(); err != nil {
+		t.Fatalf("Failed to close second lock: %s", err)
+	}
+	if flockHeld(t, path) {
+		t.Error("Expected flock to be released after last Close")
+	}
+}
+
+// TestTryLockDuringPendingSamePath проверяет, что TryLock по пути, который
+// процесс уже захватывает (Lock ждёт чужой flock), не возвращает ложный
+// ErrLocked: TryLock ждёт завершения захвата и присоединяется к нему
+func TestTryLockDuringPendingSamePath(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.lock")
+	release := holdFlockViaProbe(t, path)
+
+	type result struct {
+		l   *fsutils.LockHandle
+		err error
+	}
+	lockDone := make(chan result, 1)
+	go func() {
+		l, err := fsutils.Lock(path)
+		lockDone <- result{l, err}
+	}()
+
+	// Даём Lock дойти до ожидания flock (захват в статусе pending)
+	time.Sleep(200 * time.Millisecond)
+
+	tryDone := make(chan result, 1)
+	go func() {
+		l, err := fsutils.TryLock(path)
+		tryDone <- result{l, err}
+	}()
+
+	// Пока probe держит flock, TryLock обязан ждать, а не возвращать ErrLocked
+	select {
+	case r := <-tryDone:
+		if r.l != nil {
+			r.l.Close()
+		}
+		// Освобождаем probe до Fatal, чтобы зависший Lock не
+		// блокировал реестр для последующих тестов
+		release()
+		<-lockDone
+		t.Fatalf("Expected TryLock to wait for the pending acquisition, got immediate result (err=%v)", r.err)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	release()
+
+	select {
+	case r := <-tryDone:
+		if r.err != nil {
+			t.Fatalf("Expected TryLock to join the acquired lock, got %s", r.err)
+		}
+		r.l.Close()
+	case <-time.After(5 * time.Second):
+		t.Fatal("Expected TryLock to return after the pending acquisition completed")
+	}
+
+	select {
+	case r := <-lockDone:
+		if r.err != nil {
+			t.Fatalf("Expected no error from Lock, got %s", r.err)
+		}
+		r.l.Close()
+	case <-time.After(5 * time.Second):
+		t.Fatal("Expected Lock to acquire the flock after release")
+	}
+
+	if flockHeld(t, path) {
+		t.Error("Expected flock to be released after all handles closed")
+	}
+}
+
+// TestTryLockHeldByProbe проверяет маппинг ErrLocked без ожидания, когда
+// flock держит другой open file description и pending-захвата нет
+func TestTryLockHeldByProbe(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.lock")
+	release := holdFlockViaProbe(t, path)
+	defer release()
+
+	done := make(chan error, 1)
+	go func() {
+		l, err := fsutils.TryLock(path)
+		if err == nil {
+			l.Close()
+		}
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, fsutils.ErrLocked) {
+			t.Errorf("Expected ErrLocked, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Expected TryLock to return ErrLocked immediately")
+	}
+}
+
 func TestLockReentrant(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "test.lock")
 	l1, err := fsutils.Lock(path)

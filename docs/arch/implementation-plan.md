@@ -922,13 +922,13 @@ Expected: PASS
 - Modify: `internal/fsutils/lock.go`
 - Test: `internal/fsutils/lock_test.go`
 
-- [ ] **Шаг 1: падающий тест** — блокирующий `Lock` не должен останавливать
+- [x] **Шаг 1: падающий тест** — блокирующий `Lock` не должен останавливать
   `TryLock` по ДРУГОМУ пути: горутина держит ожидание `Lock(pathA)` (pathA
   залочен probe-fd), в это время `TryLock(pathB)` возвращается сразу;
   конкурентные `Lock` одного пути из двух горутин → refs==2, одна запись в
   реестре; EINTR-retry сложно триггерить — оставить кодом + комментарием.
 
-- [ ] **Шаг 2: реализация** — реестр: map[path]*lockEntry{file, refs,
+- [x] **Шаг 2: реализация** — реестр: map[path]*lockEntry{file, refs,
   pending bool, ch chan}; `Lock`/`TryLock`: под мьютексом — если pending,
   ждать на channel (вне мьютекса, цикл); если есть file — refs++; иначе
   пометить pending, отпустить мьютекс, делать open+flock (с retry на EINTR),
@@ -937,12 +937,12 @@ Expected: PASS
   НЕ ломать: реентерабельность, normalizeLockAccess, ErrLocked-маппинг
   TryLock.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/fsutils/ -v -race -count=5`
 Expected: PASS (стресс-прогон без гонок)
 
-- [ ] **Шаг 4: коммит** `Исправлено: блокирующий flock больше не останавливает реестр локов`
+- [x] **Шаг 4: коммит** `Исправлено: блокирующий flock больше не останавливает реестр локов`
 
 ### Task 6.6: установщик создаёт группу alr
 
