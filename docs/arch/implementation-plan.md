@@ -1069,14 +1069,33 @@ Expected: PASS
 
 ### Task 7.4: сквозная проверка Этапа 7 (docker, непривилегированный пользователь)
 
-- Docker (образ golang или alpine/fedora с готовым бинарником): пользователь
-  без групп wheel/sudo/alr, без sudo:
-  - `alr build -s` локального рецепта (с sources — должен уйти в per-user
-    dl; без sources — вообще без кэша скачиваний) → успех, пакет в cwd
-  - `alr install` → понятная ошибка про группу (до установки)
-  - Ничего под /var/cache/alr не создаётся этим пользователем
-- Регрессия: сборка от обычного пользователя (wheel) на хосте — работает
-- `go build ./...`, `go test ./...`, pre-commit
+- [x] Непривилегированный пользователь (uid 1001, без групп wheel/sudo/alr,
+  sudo подменён падающим логгером). Docker/podman на хосте отсутствуют —
+  проверка выполнена в bubblewrap-сэндбоксе (user namespace, host root ro,
+  подменённые /etc/passwd и /etc/group, rw только /tmp/alr-e7):
+  - [x] `alr build -s` рецепта без sources → успех, rpm в cwd, кэш
+    скачиваний не используется, под /var/cache/alr ничего не создано
+  - [x] `alr build -s` рецепта с sources (`local:///hello.txt`) → успех,
+    скачивание в `~/.cache/alr/dl/<hash>/`, /var/cache/alr не тронут
+    (контроль по mtime), sudo не вызывался (лог пуст)
+  - [x] `alr install` → ошибка «пользователь testuser не имеет необходимых
+    привилегий… необходимо… состоять в группе wheel» ДО установки,
+    exit 1, без sudo и без panic
+- [x] Регрессия: сборка того же рецепта от пользователя wheel на хосте —
+  успех, общий `/var/cache/alr/dl` (fast-path, без sudo: fake-sudo в PATH
+  не вызывался)
+- [x] `go build ./...`, `go test ./...` (без e2e) — PASS; `pre-commit run
+  --all-files` — все 5 хуков Passed
+
+**Находки 7.4 (не блокеры):**
+- go-plugin (плагин-процессы сборки) фильтрует env (`setCommonCmdEnv` в
+  `internal/build/plugins.go`) и пишет временные файлы в `/tmp` — в
+  полностью ro-окружении без writable /tmp сборка упадёт («open
+  /tmp/plugin…: read-only file system»). Для будущей песочницы Этапа 9
+  /tmp должен быть writable (tmpfs/bind).
+- Схема `local://` в источниках требует формы `local:///file` (три слэша):
+  `local://file` парсится как host=file с пустым path и падает с «is a
+  directory». Стоит задокументировать или нормализовать.
 
 ---
 
