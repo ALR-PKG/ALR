@@ -67,13 +67,15 @@ func nobodyGID() uint32 {
 
 // callerGroups возвращает supplementary groups пользователя из NSS;
 // при ошибке lookup — пустой список (лучше собрать без доп. групп,
-// чем упасть целиком).
+// чем упасть целиком). ВАЖНО: возвращается именно пустой, а не nil
+// срез — nil в Credential.Groups означал бы «не вызывать setgroups»,
+// и plugin-процесс унаследовал бы supplementary groups демона.
 func callerGroups(u *user.User) []uint32 {
 	ids, err := lookupGroupIds(u)
 	if err != nil {
 		slog.Debug("cannot resolve caller group ids, continuing without supplementary groups",
 			"username", u.Username, "error", err)
-		return nil
+		return []uint32{}
 	}
 	groups := make([]uint32, 0, len(ids))
 	for _, id := range ids {
@@ -108,7 +110,7 @@ func callerIdentity(uid uint32) callerInfo {
 			slog.Debug("no passwd entry for caller uid, falling back to nobody", "uid", uid, "error", err)
 		}
 	}
-	return callerInfo{home: systemCacheRoot, username: nobodyUsername, gid: nobodyGID()}
+	return callerInfo{home: systemCacheRoot, username: nobodyUsername, gid: nobodyGID(), groups: []uint32{}}
 }
 
 // callerEnv строит окружение plugin-процесса для сборки от имени
