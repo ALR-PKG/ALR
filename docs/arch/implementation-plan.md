@@ -1027,13 +1027,13 @@ per-user фолбэк без sudo-подсказок. `alr install` провер
 - Modify: `internal/fsutils/privileged_group.go` (хелпер членства)
 - Test: `internal/fsutils/privileged_group_test.go`, `internal/build/source_downloader_test.go`
 
-- [ ] **Шаг 1: падающий тест** — `fsutils.UserInGroups(gids, names...)`:
+- [x] **Шаг 1: падающий тест** — `fsutils.UserInGroups(gids, names...)`:
   true, если хотя бы одна именованная группа существует и её gid ∈ gids.
   В source_downloader: пользователь без членства ни в одной кандидатной
   группе → корень dlcache = per-user (`os.UserCacheDir()/alr`, dlcache сам
   добавляет `dl`), без вызова EnsureTempDirWithRootOwner (без sudo).
 
-- [ ] **Шаг 2: реализация** — хелпер выбора корня (например
+- [x] **Шаг 2: реализация** — хелпер выбора корня (например
   `resolveDlCacheRoot(cfg) (string, error)`):
   1. root (euid 0) → общий `CacheDir`;
   2. `CurrentUserGroupGIDs()` + `UserInGroups(gids, "alr",
@@ -1045,12 +1045,12 @@ per-user фолбэк без sudo-подсказок. `alr install` провер
      UserCacheDir → вернуть исходную ошибку общего пути.
   Один раз на DownloadSources (до цикла), slog.Debug о выбранном корне.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/build/ ./internal/fsutils/ -v -count=1 && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: per-user фолбэк кэша скачиваний`
+- [x] **Шаг 4: коммит** `Добавлено: per-user фолбэк кэша скачиваний`
 
 ### Task 7.3: install — проверка привилегий перед установкой
 
