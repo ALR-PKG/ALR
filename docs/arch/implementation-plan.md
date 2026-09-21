@@ -1000,13 +1000,113 @@ Expected: PASS (стресс-прогон без гонок)
 
 ---
 
-## Этапы 7-10: состав работ (детальный план — перед стартом каждого)
+## Этап 7: модель привилегий CLI
 
-### Этап 7: модель привилегий CLI
-- Убрать `CheckUserPrivileges` из `cmd/build.go:49`
-- В `cmd/install.go` проверка переносится ближе к фазе установки (после
-  сборки), текст ошибки: «установка требует членства в wheel/sudo»
-- e2e: `alr build` от непривилегированного пользователя работает
+Результат: `alr build` работает от полностью непривилегированного
+пользователя (не root, не wheel/sudo/alr): дерево сборки и кэш пакетов —
+per-user, кэш скачиваний — общий для членов группы, а для остальных —
+per-user фолбэк без sudo-подсказок. `alr install` проверяет привилегии
+перед установкой, а не при старте команды. Остальные команды
+(upgrade/remove/repo/refresh) — без изменений (мутируют систему или
+общий кэш — там проверка оправдана).
+
+### Task 7.1: убрать CheckUserPrivileges из alr build
+
+**Файлы:**
+- Modify: `cmd/build.go:49` (удалить проверку; импорт utils — если стал лишним)
+
+- [x] **Шаг 1: реализация** — удалить вызов; `go build ./...`
+- [x] **Шаг 2: ручная проверка** — сборка тестового пакета от текущего
+  пользователя (в wheel — регрессии нет); от непривилегированного — Task 7.4
+- [x] **Шаг 3: коммит** `Изменено: alr build не требует привилегий`
+
+### Task 7.2: per-user фолбэк кэша скачиваний для пользователей без групп
+
+**Файлы:**
+- Modify: `internal/build/source_downloader.go` (выбор корня dlcache)
+- Modify: `internal/fsutils/privileged_group.go` (хелпер членства)
+- Test: `internal/fsutils/privileged_group_test.go`, `internal/build/source_downloader_test.go`
+
+- [x] **Шаг 1: падающий тест** — `fsutils.UserInGroups(gids, names...)`:
+  true, если хотя бы одна именованная группа существует и её gid ∈ gids.
+  В source_downloader: пользователь без членства ни в одной кандидатной
+  группе → корень dlcache = per-user (`os.UserCacheDir()/alr`, dlcache сам
+  добавляет `dl`), без вызова EnsureTempDirWithRootOwner (без sudo).
+
+- [x] **Шаг 2: реализация** — хелпер выбора корня (например
+  `resolveDlCacheRoot(cfg) (string, error)`):
+  1. root (euid 0) → общий `CacheDir`;
+  2. `CurrentUserGroupGIDs()` + `UserInGroups(gids, "alr",
+     fsutils.GetPrivilegedGroup())` — член → общий, причём сначала
+     `EnsureTempDirWithRootOwner(CacheDir/dl, 0o2775)`; ошибка → фолбэк
+     per-user + slog.Warn;
+  3. не член → сразу per-user (sudo не дёргаем — у него нет прав);
+  4. per-user фолбэк: `os.MkdirAll(<ucd>/alr/dl, 0o755)`, ошибка
+     UserCacheDir → вернуть исходную ошибку общего пути.
+  Один раз на DownloadSources (до цикла), slog.Debug о выбранном корне.
+
+- [x] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ ./internal/fsutils/ -v -count=1 && go build ./...`
+Expected: PASS
+
+- [x] **Шаг 4: коммит** `Добавлено: per-user фолбэк кэша скачиваний`
+
+### Task 7.3: install — проверка привилегий перед установкой
+
+**Файлы:**
+- Modify: `cmd/install.go:43` → перед `builder.InstallPkgs`
+
+- [x] **Шаг 1: реализация** — перенести `utils.CheckUserPrivileges()` из
+  начала RunE к точке непосредственно перед вызовом InstallPkgs.
+  Существующий текст ошибки («…необходимо состоять в группе %s…»)
+  удовлетворяет требованию плана — не менять (единый текст для всех
+  команд; смена текста — отдельный вопрос консистентности, не этот этап).
+- [x] **Шаг 2: проверка** — `go build ./...`; `alr install` без прав
+  падает с понятной ошибкой ДО любых установок в систему (можно проверить
+  на заведомо нечлене группы в docker)
+- [x] **Шаг 3: коммит** `Изменено: проверка привилегий в install перед фазой установки`
+
+### Task 7.4: сквозная проверка Этапа 7 (docker, непривилегированный пользователь)
+
+- [x] Непривилегированный пользователь (uid 1001, без групп wheel/sudo/alr,
+  sudo подменён падающим логгером). Docker/podman на хосте отсутствуют —
+  проверка выполнена в bubblewrap-сэндбоксе (user namespace, host root ro,
+  подменённые /etc/passwd и /etc/group, rw только /tmp/alr-e7):
+  - [x] `alr build -s` рецепта без sources → успех, rpm в cwd, кэш
+    скачиваний не используется, под /var/cache/alr ничего не создано
+  - [x] `alr build -s` рецепта с sources (`local:///hello.txt`) → успех,
+    скачивание в `~/.cache/alr/dl/<hash>/`, /var/cache/alr не тронут
+    (контроль по mtime), sudo не вызывался (лог пуст)
+  - [x] `alr install` → ошибка «пользователь testuser не имеет необходимых
+    привилегий… необходимо… состоять в группе wheel» ДО установки,
+    exit 1, без sudo и без panic
+- [x] Регрессия: сборка того же рецепта от пользователя wheel на хосте —
+  успех, общий `/var/cache/alr/dl` (fast-path, без sudo: fake-sudo в PATH
+  не вызывался)
+- [x] `go build ./...`, `go test ./...` (без e2e) — PASS; `pre-commit run
+  --all-files` — все 5 хуков Passed
+
+**Находки 7.4 (не блокеры):**
+- go-plugin (плагин-процессы сборки) фильтрует env (`setCommonCmdEnv` в
+  `internal/build/plugins.go`) и пишет временные файлы в `/tmp` — в
+  полностью ro-окружении без writable /tmp сборка упадёт («open
+  /tmp/plugin…: read-only file system»). Для будущей песочницы Этапа 9
+  /tmp должен быть writable (tmpfs/bind).
+- Схема `local://` в источниках требует формы `local:///file` (три слэша):
+  `local://file` парсится как host=file с пустым path и падает с «is a
+  directory». Стоит задокументировать или нормализовать.
+- **Из финального ревью (Important, принято):** после переноса проверки
+  привилегий в `install` (7.3) непривилегированный пользователь с
+  `autoPull: true` сначала упадёт на доступе к общему кэшу
+  (`db.Init`/pull до точки проверки, `cmd/install.go:52-88`) — до
+  «понятной ошибки про группу» дойдёт не всегда. Приемлемо: сообщение об
+  ошибке всё равно указывает на права; поднимать проверку выше WithDB не
+  требуется.
+
+---
+
+## Этапы 8-10: состав работ (детальный план — перед стартом каждого)
 
 ### Этап 8: D-Bus polkit + setuid-сборка
 - Подключить `internal/dbus/policykit.go`: subject из D-Bus credentials

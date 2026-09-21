@@ -110,6 +110,70 @@ func TestCurrentUserGroupGIDs(t *testing.T) {
 	}
 }
 
+func TestUserInGroups(t *testing.T) {
+	gids := map[uint32]bool{42: true, 100: true}
+
+	t.Run("группа существует и gid в множестве", func(t *testing.T) {
+		stubLookupGroup(t, func(name string) (*user.Group, error) {
+			if name == "alr" {
+				return &user.Group{Gid: "42", Name: "alr"}, nil
+			}
+			return nil, errors.New("группа не найдена")
+		})
+		if !UserInGroups(gids, "alr") {
+			t.Error("ожидалось true: gid 42 ∈ множества")
+		}
+	})
+
+	t.Run("группа существует, но gid не в множестве", func(t *testing.T) {
+		stubLookupGroup(t, func(name string) (*user.Group, error) {
+			return &user.Group{Gid: "4242", Name: name}, nil
+		})
+		if UserInGroups(gids, "alr", "wheel") {
+			t.Error("ожидалось false: gid 4242 ∉ множества")
+		}
+	})
+
+	t.Run("несуществующая группа пропускается", func(t *testing.T) {
+		stubLookupGroup(t, func(name string) (*user.Group, error) {
+			if name == "wheel" {
+				return &user.Group{Gid: "100", Name: "wheel"}, nil
+			}
+			return nil, errors.New("группа не найдена")
+		})
+		if !UserInGroups(gids, "alr", "wheel") {
+			t.Error("ожидалось true: alr не существует, но wheel gid=100 ∈ множества")
+		}
+	})
+
+	t.Run("все группы отсутствуют", func(t *testing.T) {
+		stubLookupGroup(t, func(name string) (*user.Group, error) {
+			return nil, errors.New("группа не найдена")
+		})
+		if UserInGroups(gids, "alr", "wheel") {
+			t.Error("ожидалось false: ни одной именованной группы нет")
+		}
+	})
+
+	t.Run("некорректный gid пропускается", func(t *testing.T) {
+		stubLookupGroup(t, func(name string) (*user.Group, error) {
+			if name == "bad" {
+				return &user.Group{Gid: "not-a-number", Name: "bad"}, nil
+			}
+			return &user.Group{Gid: "42", Name: name}, nil
+		})
+		if !UserInGroups(gids, "bad", "alr") {
+			t.Error("ожидалось true: bad с битым gid пропущена, alr совпала")
+		}
+	})
+
+	t.Run("без имён", func(t *testing.T) {
+		if UserInGroups(gids) {
+			t.Error("ожидалось false для пустого списка имён")
+		}
+	})
+}
+
 func TestDirSharedWith(t *testing.T) {
 	myGID := uint32(os.Getgid())
 	myGIDs := map[uint32]bool{myGID: true}

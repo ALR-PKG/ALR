@@ -122,6 +122,26 @@ func CurrentUserGroupGIDs() (map[uint32]bool, error) {
 	return gids, nil
 }
 
+// UserInGroups возвращает true, если хотя бы одна из именованных групп
+// существует в системе и её gid входит в множество gids. Несуществующие
+// группы и группы с некорректным gid пропускаются.
+func UserInGroups(gids map[uint32]bool, names ...string) bool {
+	for _, name := range names {
+		grp, err := lookupGroup(name)
+		if err != nil {
+			continue
+		}
+		gid, err := strconv.ParseUint(grp.Gid, 10, 32)
+		if err != nil {
+			continue
+		}
+		if gids[uint32(gid)] {
+			return true
+		}
+	}
+	return false
+}
+
 // dirSharedWith проверяет, что path — общий каталог, доступный текущему
 // пользователю как члену группы: группа каталога входит в gids, выставлен
 // setgid-бит (наследование группы) и у группы есть права rwx.

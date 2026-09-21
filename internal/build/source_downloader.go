@@ -20,7 +20,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
@@ -33,6 +35,15 @@ import (
 // minBuildSpace в prepareDirs); точный размер скачиваний неизвестен заранее,
 // это страховка от ENOSPC посреди скачивания.
 const minDownloadSpace = 1 << 30
+
+// Подменяемые в тестах зависимости выбора корня кэша скачиваний
+var (
+	geteuid              = os.Geteuid
+	userCacheDir         = os.UserCacheDir
+	currentUserGroupGIDs = fsutils.CurrentUserGroupGIDs
+	userInGroups         = fsutils.UserInGroups
+	ensureSharedDir      = fsutils.EnsureTempDirWithRootOwner
+)
 
 type SourceDownloader struct {
 	cfg Config
@@ -50,13 +61,20 @@ func (s *SourceDownloader) DownloadSources(
 	basePkg string,
 	si SourcesInput,
 ) error {
-	// Проверяем место только если есть что скачивать: без скачиваний dlcache
-	// не трогает ФС (каталог dl создаётся на первое скачивание), а CacheDir
-	// может ещё не существовать.
+	// Корень кэша выбирается и место проверяется только если есть что
+	// скачивать: без скачиваний dlcache не трогает ФС (каталог dl создаётся
+	// на первое скачивание), а корень кэша может ещё не существовать.
+	cacheDir := s.cfg.GetPaths().CacheDir
 	if len(si.Sources) > 0 {
-		if err := fsutils.CheckFreeSpace(s.cfg.GetPaths().CacheDir, minDownloadSpace); err != nil {
+		dlRoot, err := resolveDlCacheRoot(s.cfg)
+		if err != nil {
 			return err
 		}
+		slog.Debug("download cache root", "path", dlRoot)
+		if err := fsutils.CheckFreeSpace(dlRoot, minDownloadSpace); err != nil {
+			return err
+		}
+		cacheDir = dlRoot
 	}
 
 	for i, src := range si.Sources {
@@ -90,9 +108,9 @@ func (s *SourceDownloader) DownloadSources(
 			}
 		}
 
-		// Используем системный кэш для загрузок
-		// dlcache.New добавит свой подкаталог "dl" внутри
-		opts.DlCache = dlcache.New(s.cfg.GetPaths().CacheDir)
+		// Кэш загрузок: общий CacheDir или per-user фолбэк для
+		// пользователей без групп; dlcache.New добавит подкаталог "dl"
+		opts.DlCache = dlcache.New(cacheDir)
 
 		err := dl.Download(ctx, opts)
 		if err != nil {
@@ -101,4 +119,57 @@ func (s *SourceDownloader) DownloadSources(
 	}
 
 	return nil
+}
+
+// resolveDlCacheRoot выбирает корень кэша скачиваний для текущего
+// пользователя (dlcache сам добавит подкаталог "dl"):
+//  1. root — общий CacheDir;
+//  2. член группы "alr" или привилегированной группы дистрибутива — общий
+//     CacheDir, предварительно гарантируется CacheDir/dl (fast-path внутри
+//     EnsureTempDirWithRootOwner обходится без sudo); ошибка — фолбэк
+//     per-user;
+//  3. остальные — сразу per-user (без sudo: прав у пользователя всё равно
+//     нет).
+func resolveDlCacheRoot(cfg Config) (string, error) {
+	shared := cfg.GetPaths().CacheDir
+
+	if geteuid() == 0 {
+		return shared, nil
+	}
+
+	gids, err := currentUserGroupGIDs()
+	if err != nil {
+		// Трактуем как отсутствие членства — уйдём в per-user без sudo
+		slog.Debug("cannot list user groups, using per-user download cache", "error", err)
+		gids = nil
+	}
+
+	if !userInGroups(gids, "alr", fsutils.GetPrivilegedGroup()) {
+		return perUserDlCacheRoot()
+	}
+
+	if err := ensureSharedDir(filepath.Join(shared, "dl"), 0o2775); err != nil {
+		slog.Warn("cannot prepare shared download cache, falling back to per-user", "path", shared, "error", err)
+		root, perr := perUserDlCacheRoot()
+		if perr != nil {
+			// Исходная ошибка общего пути информативнее
+			return "", err
+		}
+		return root, nil
+	}
+	return shared, nil
+}
+
+// perUserDlCacheRoot создаёт и возвращает per-user корень кэша скачиваний
+// (<UserCacheDir>/alr, dlcache сам добавит "dl").
+func perUserDlCacheRoot() (string, error) {
+	ucd, err := userCacheDir()
+	if err != nil {
+		return "", err
+	}
+	root := filepath.Join(ucd, "alr")
+	if err := os.MkdirAll(filepath.Join(root, "dl"), 0o755); err != nil {
+		return "", err
+	}
+	return root, nil
 }

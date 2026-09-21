@@ -16,55 +16,55 @@ msgstr ""
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 48.0\n"
 
-#: cmd/build.go:47
+#: cmd/build.go:46
 msgid "Build a local package"
 msgstr "Сборка локального пакета"
 
-#: cmd/build.go:55
+#: cmd/build.go:50
 msgid "Error getting working directory"
 msgstr "Ошибка при получении рабочего каталога"
 
-#: cmd/build.go:87
+#: cmd/build.go:82
 msgid "Cannot get absolute script path"
 msgstr "Невозможно получить абсолютный путь к скрипту"
 
-#: cmd/build.go:120 cmd/build.go:164
+#: cmd/build.go:115 cmd/build.go:159
 msgid "Error building package"
 msgstr "Ошибка при сборке пакета"
 
-#: cmd/build.go:131
+#: cmd/build.go:126
 msgid "Package not found"
 msgstr "Пакет не найден"
 
-#: cmd/build.go:168
+#: cmd/build.go:163
 msgid "Nothing to build"
 msgstr "Нечего собирать"
 
-#: cmd/build.go:174
+#: cmd/build.go:169
 msgid "Package file already removed, skipping"
 msgstr "Файл пакета уже удалён, пропускаем"
 
-#: cmd/build.go:178
+#: cmd/build.go:173
 msgid "Error copying the package"
 msgstr "Ошибка копирования пакета"
 
-#: cmd/build.go:182
+#: cmd/build.go:177
 msgid "Done"
 msgstr "Сделано"
 
-#: cmd/build.go:187
+#: cmd/build.go:182
 msgid "Path to the build script"
 msgstr "Путь к скрипту сборки"
 
-#: cmd/build.go:188
+#: cmd/build.go:183
 msgid "Specify subpackage in script (for multi package script only)"
 msgstr "Укажите подпакет в скрипте (только для многопакетного скрипта)"
 
-#: cmd/build.go:189
+#: cmd/build.go:184
 msgid "Name of the package to build and its repo (example: default/go-bin)"
 msgstr "Имя пакета для сборки и его репозиторий (пример: default/go-bin)"
 
-#: cmd/build.go:190
+#: cmd/build.go:185
 msgid ""
 "Build package from scratch even if there's an already built package available"
 msgstr "Создайте пакет с нуля, даже если уже имеется готовый пакет"
@@ -385,7 +385,7 @@ msgstr "Показывать всю информацию, не только дл
 msgid "Install a new package"
 msgstr "Установить новый пакет"
 
-#: cmd/install.go:53
+#: cmd/install.go:49
 #, fuzzy
 msgid "Command install expected at least 1 argument, got 0"
 msgstr "Для команды install ожидался хотя бы 1 аргумент, получено %d"
