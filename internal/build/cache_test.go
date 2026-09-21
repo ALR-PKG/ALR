@@ -60,7 +60,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -77,7 +77,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: t.TempDir()},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
@@ -90,7 +90,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -107,7 +107,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -125,7 +125,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -144,7 +144,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -163,7 +163,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -180,7 +180,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -198,7 +198,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -220,7 +220,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -242,7 +242,7 @@ func TestCheckForBuiltPackage(t *testing.T) {
 		cfg := &fakeResolverConfig{
 			paths: &config.Paths{BuildDir: buildDir, PkgsDir: pkgsDir},
 		}
-		cache := &Cache{cfg}
+		cache := &Cache{cfg: cfg}
 		input, vars := newTestCacheInput()
 
 		filename, err := pkgFileName(input, vars)
@@ -290,5 +290,63 @@ func TestIsTrustedOwner(t *testing.T) {
 
 	t.Run("untrusted", func(t *testing.T) {
 		assert.False(t, isTrustedOwner(424242))
+	})
+
+	t.Run("extra trusted uids", func(t *testing.T) {
+		assert.True(t, isTrustedOwner(424242, 424242))
+		assert.False(t, isTrustedOwner(424243, 424242))
+	})
+}
+
+// chownOrSkip меняет владельца файла; без прав (не root) тест пропускается.
+func chownOrSkip(t *testing.T, path string, uid int) {
+	t.Helper()
+	if err := os.Chown(path, uid, -1); err != nil {
+		t.Skipf("chown недоступен (нужен root): %v", err)
+	}
+}
+
+func TestCacheTrustedUIDs(t *testing.T) {
+	// uid, гарантированно отличный от euid тестового процесса
+	otherUID := uint32(424242)
+	if otherUID == uint32(os.Geteuid()) {
+		otherUID++
+	}
+
+	setup := func(t *testing.T) (string, *BuildInput, *alrsh.Package, string) {
+		pkgsDir := t.TempDir()
+		input, vars := newTestCacheInput()
+		filename, err := pkgFileName(input, vars)
+		require.NoError(t, err)
+		placeCachedPkg(t, pkgsDir, filename, vars, testFuncsKey)
+		chownOrSkip(t, filepath.Join(pkgsDir, filename), int(otherUID))
+		chownOrSkip(t, filepath.Join(pkgsDir, filename+".meta"), int(otherUID))
+		return pkgsDir, input, vars, filename
+	}
+
+	t.Run("hit when owner is in trustedUIDs", func(t *testing.T) {
+		pkgsDir, input, vars, _ := setup(t)
+		cache := &Cache{cfg: &fakeResolverConfig{paths: &config.Paths{PkgsDir: pkgsDir}}, trustedUIDs: []uint32{otherUID}}
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.True(t, found)
+	})
+
+	t.Run("miss when owner is not trusted", func(t *testing.T) {
+		pkgsDir, input, vars, _ := setup(t)
+		cache := &Cache{cfg: &fakeResolverConfig{paths: &config.Paths{PkgsDir: pkgsDir}}}
+
+		_, found, err := cache.CheckForBuiltPackage(context.Background(), input, vars, testFuncsKey)
+		require.NoError(t, err)
+		assert.False(t, found)
+	})
+
+	t.Run("verifyTrustedPaths honours extra uids", func(t *testing.T) {
+		pkgsDir, _, _, filename := setup(t)
+		path := filepath.Join(pkgsDir, filename)
+
+		assert.Error(t, verifyTrustedPaths([]string{path}))
+		assert.NoError(t, verifyTrustedPaths([]string{path}, otherUID))
 	})
 }

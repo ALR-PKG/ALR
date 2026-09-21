@@ -20,7 +20,7 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// ManagerInterface определяет методы для ru.alr-pkg.ALR.Manager
+// ManagerInterface определяет методы для ru.alr_pkg.ALR.Manager
 type ManagerInterface interface {
 	// SearchPackages ищет пакеты по запросу
 	// query - строка поиска
@@ -48,24 +48,27 @@ type ManagerInterface interface {
 	GetActiveJob() (dbus.ObjectPath, bool, *dbus.Error)
 
 	// UpgradeAll обновляет все пакеты
+	// sender - вызвавший (заполняется шиной, для авторизации)
 	// Возвращает object path задачи
-	UpgradeAll(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error)
+	UpgradeAll(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error)
 }
 
-// PackageInterface определяет методы для ru.alr-pkg.ALR.Package
+// PackageInterface определяет методы для ru.alr_pkg.ALR.Package
 type PackageInterface interface {
 	// GetDetails возвращает детальную информацию о пакете
 	GetDetails() (map[string]dbus.Variant, *dbus.Error)
 
 	// Install устанавливает пакет
+	// sender - вызвавший (заполняется шиной, для авторизации)
 	// options - опции установки (clean, interactive)
 	// Возвращает object path задачи
-	Install(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error)
+	Install(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error)
 
 	// Remove удаляет пакет
+	// sender - вызвавший (заполняется шиной, для авторизации)
 	// options - опции удаления
 	// Возвращает object path задачи
-	Remove(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error)
+	Remove(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error)
 
 	// Build собирает пакет
 	// options - опции сборки
@@ -80,7 +83,7 @@ type PackageInterface interface {
 	GetDependencies() ([]string, *dbus.Error)
 }
 
-// JobInterface определяет методы для ru.alr-pkg.ALR.Job
+// JobInterface определяет методы для ru.alr_pkg.ALR.Job
 type JobInterface interface {
 	// Cancel отменяет задачу
 	Cancel() *dbus.Error

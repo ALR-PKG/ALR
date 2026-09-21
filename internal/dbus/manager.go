@@ -29,7 +29,7 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
-// DBusManager реализует ru.alr-pkg.ALR.Manager интерфейс
+// DBusManager реализует ru.alr_pkg.ALR.Manager интерфейс
 type DBusManager struct {
 	service    *Service
 	properties *prop.Properties
@@ -66,7 +66,7 @@ func (m *DBusManager) SearchPackages(query string, filters map[string]dbus.Varia
 
 	deps := m.service.GetDeps()
 	if deps == nil || deps.DB == nil {
-		return nil, dbus.NewError("ru.alr-pkg.ALR.Error.NotInitialized", []interface{}{"service not initialized"})
+		return nil, dbus.NewError(ErrorNotInitialized, []interface{}{"service not initialized"})
 	}
 
 	// Создаем поисковик
@@ -107,7 +107,7 @@ func (m *DBusManager) SearchPackages(query string, filters map[string]dbus.Varia
 	packages, err := s.Search(ctx, optsBuilder.Build())
 	if err != nil {
 		slog.Error("Search failed", "err", err)
-		return nil, dbus.NewError("ru.alr-pkg.ALR.Error.SearchFailed", []interface{}{err.Error()})
+		return nil, dbus.NewError(ErrorSearchFailed, []interface{}{err.Error()})
 	}
 
 	// Конвертируем в PackageInfo
@@ -132,12 +132,12 @@ func (m *DBusManager) GetPackage(name, repository string) (dbus.ObjectPath, *dbu
 	// Ищем пакет в БД
 	deps := m.service.GetDeps()
 	if deps == nil || deps.DB == nil {
-		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotInitialized", []interface{}{"service not initialized"})
+		return "", dbus.NewError(ErrorNotInitialized, []interface{}{"service not initialized"})
 	}
 
 	dbPkg, err := deps.DB.GetPkg("name = ? AND repository = ?", name, repository)
 	if err != nil || dbPkg == nil {
-		return "", dbus.NewError("ru.alr-pkg.ALR.Error.PackageNotFound", []interface{}{fmt.Sprintf("package %s/%s not found", repository, name)})
+		return "", dbus.NewError(ErrorPackageNotFound, []interface{}{fmt.Sprintf("package %s/%s not found", repository, name)})
 	}
 
 	// Создаем и регистрируем D-Bus объект пакета
@@ -151,7 +151,7 @@ func (m *DBusManager) GetPackage(name, repository string) (dbus.ObjectPath, *dbu
 func (m *DBusManager) ListRepositories() ([]RepositoryInfo, *dbus.Error) {
 	cfg := m.service.GetConfig()
 	if cfg == nil {
-		return nil, dbus.NewError("ru.alr-pkg.ALR.Error.NotInitialized", []interface{}{"config not loaded"})
+		return nil, dbus.NewError(ErrorNotInitialized, []interface{}{"config not loaded"})
 	}
 
 	repos := cfg.Repos()
@@ -169,10 +169,17 @@ func (m *DBusManager) ListRepositories() ([]RepositoryInfo, *dbus.Error) {
 }
 
 // RefreshRepositories обновляет все репозитории
-func (m *DBusManager) RefreshRepositories() (dbus.ObjectPath, *dbus.Error) {
+func (m *DBusManager) RefreshRepositories(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error) {
+	slog.Info("RefreshRepositories called", "sender", sender)
+
+	// Проверяем авторизацию через PolicyKit по uid вызвавшего
+	if err := m.service.checkAuthorization(sender, ActionRefresh); err != nil {
+		return "", dbus.NewError(ErrorNotAuthorized, []interface{}{err.Error()})
+	}
+
 	deps := m.service.GetDeps()
 	if deps == nil || deps.Repos == nil {
-		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotInitialized", []interface{}{"service not initialized"})
+		return "", dbus.NewError(ErrorNotInitialized, []interface{}{"service not initialized"})
 	}
 
 	// Создаем задачу обновления
@@ -222,9 +229,9 @@ func (m *DBusManager) GetActiveJob() (dbus.ObjectPath, bool, *dbus.Error) {
 }
 
 // UpgradeAll обновляет все пакеты
-func (m *DBusManager) UpgradeAll(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
+func (m *DBusManager) UpgradeAll(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
 	// TODO: реализовать обновление всех пакетов
-	return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotImplemented", []interface{}{"UpgradeAll not yet implemented"})
+	return "", dbus.NewError(ErrorNotImplemented, []interface{}{"UpgradeAll not yet implemented"})
 }
 
 // convertToPackageInfo конвертирует alrsh.Package в PackageInfo

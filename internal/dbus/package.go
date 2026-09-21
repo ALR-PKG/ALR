@@ -31,7 +31,7 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
-// DBusPackage реализует ru.alr-pkg.ALR.Package интерфейс
+// DBusPackage реализует ru.alr_pkg.ALR.Package интерфейс
 type DBusPackage struct {
 	service *Service
 
@@ -168,28 +168,32 @@ func (p *DBusPackage) GetDetails() (map[string]dbus.Variant, *dbus.Error) {
 }
 
 // Install устанавливает пакет
-func (p *DBusPackage) Install(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
-	slog.Info("Install called", "package", p.name, "repository", p.repository)
+func (p *DBusPackage) Install(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
+	slog.Info("Install called", "package", p.name, "repository", p.repository, "sender", sender)
 
-	// Проверяем авторизацию через PolicyKit
-	if err := p.checkAuthorization("ru.alr-pkg.install"); err != nil {
-		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
+	// Проверяем авторизацию через PolicyKit по uid вызвавшего
+	callerUID, err := p.service.authorizeCaller(sender, ActionInstall)
+	if err != nil {
+		return "", dbus.NewError(ErrorNotAuthorized, []interface{}{err.Error()})
 	}
 
 	// Парсим опции
 	clean := false
-	interactive := true
 
 	if opt, ok := options["clean"]; ok {
 		if val, ok := opt.Value().(bool); ok {
 			clean = val
 		}
 	}
+	// Демон работает без TTY: интерактивные промпты скриптов запрещены
+	// всегда, чтобы сборка не зависла на вводе. Опция interactive
+	// игнорируется.
 	if opt, ok := options["interactive"]; ok {
-		if val, ok := opt.Value().(bool); ok {
-			interactive = val
+		if val, ok := opt.Value().(bool); ok && val {
+			slog.Warn("daemon runs non-interactively, ignoring interactive option", "package", p.name)
 		}
 	}
+	interactive := false
 
 	// Создаем задачу
 	jobID := p.service.NextJobID()
@@ -199,19 +203,25 @@ func (p *DBusPackage) Install(options map[string]dbus.Variant) (dbus.ObjectPath,
 	p.service.Notify("ALR", fmt.Sprintf("Starting installation of %s...", p.name), UrgencyNormal)
 
 	// Запускаем асинхронно
-	go p.runInstall(job, clean, interactive)
+	go p.runInstall(job, clean, interactive, callerUID)
 
 	path := p.service.RegisterJob(job)
 	return path, nil
 }
 
-// runInstall выполняет установку
-func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
+// runInstall выполняет установку. Сборочная часть (script executor)
+// запускается от callerUID вызвавшего в его XDG-кэше; установка в
+// систему — от root (демона), как раньше.
+func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool, callerUID uint32) {
 	job.SetStatus(JobStatusRunning)
 	job.SetProgress(0.0, "Initializing installation...")
 
 	ctx := p.service.Context()
 	deps := p.service.GetDeps()
+	if deps == nil || deps.Cfg == nil {
+		job.SetFailed("service not initialized")
+		return
+	}
 
 	// Получаем исполнители
 	installer, installerClose, err := build.GetSafeInstaller()
@@ -222,7 +232,15 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 	}
 	defer installerClose()
 
-	scripter, scripterClose, err := build.GetSafeScriptExecutor()
+	info := callerIdentity(callerUID)
+	env, err := callerEnv(info)
+	if err != nil {
+		job.SetFailed(fmt.Sprintf("Failed to build caller environment: %v", err))
+		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)
+		return
+	}
+
+	scripter, scripterClose, err := build.GetSafeScriptExecutorAs(callerUID, info.gid, info.groups, env)
 	if err != nil {
 		job.SetFailed(fmt.Sprintf("Failed to get scripter: %v", err))
 		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)
@@ -230,9 +248,10 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 	}
 	defer scripterClose()
 
-	// Создаем билдер
+	// Создаем билдер: конфиг задачи с кэшем вызвавшего (общий конфиг
+	// демона не мутируется), кэш доверяет файлам вызвавшего
 	builder, err := build.NewMainBuilder(
-		deps.Cfg,
+		callerJobConfig(deps.Cfg, callerUID),
 		deps.Manager,
 		deps.Repos,
 		scripter,
@@ -243,6 +262,7 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)
 		return
 	}
+	builder.SetTrustedUIDs(callerUID)
 
 	// Прогресс обратного вызова
 	progressFunc := func(percent float64, message string) {
@@ -287,21 +307,22 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 }
 
 // Remove удаляет пакет
-func (p *DBusPackage) Remove(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
-	slog.Info("Remove called", "package", p.name, "repository", p.repository)
+func (p *DBusPackage) Remove(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
+	slog.Info("Remove called", "package", p.name, "repository", p.repository, "sender", sender)
 
-	// Проверяем авторизацию
-	if err := p.checkAuthorization("ru.alr-pkg.remove"); err != nil {
-		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
+	// Проверяем авторизацию через PolicyKit по uid вызвавшего
+	if err := p.service.checkAuthorization(sender, ActionRemove); err != nil {
+		return "", dbus.NewError(ErrorNotAuthorized, []interface{}{err.Error()})
 	}
 
-	// Парсим опции
-	interactive := true
+	// Демон работает без TTY: интерактивность запрещена всегда
+	// (NoConfirm у пакетного менеджера), опция interactive игнорируется.
 	if opt, ok := options["interactive"]; ok {
-		if val, ok := opt.Value().(bool); ok {
-			interactive = val
+		if val, ok := opt.Value().(bool); ok && val {
+			slog.Warn("daemon runs non-interactively, ignoring interactive option", "package", p.name)
 		}
 	}
+	interactive := false
 
 	// Создаем задачу
 	jobID := p.service.NextJobID()
@@ -323,6 +344,10 @@ func (p *DBusPackage) runRemove(job *DBusJob, interactive bool) {
 	job.SetProgress(0.0, "Removing package...")
 
 	deps := p.service.GetDeps()
+	if deps == nil || deps.Manager == nil {
+		job.SetFailed("service not initialized")
+		return
+	}
 
 	fullName := fmt.Sprintf("alr-%s+%s", p.name, p.repository)
 
@@ -349,20 +374,20 @@ func (p *DBusPackage) runRemove(job *DBusJob, interactive bool) {
 
 // Build собирает пакет
 func (p *DBusPackage) Build(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
-	return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotImplemented", []interface{}{"Build not yet implemented via D-Bus"})
+	return "", dbus.NewError(ErrorNotImplemented, []interface{}{"Build not yet implemented via D-Bus"})
 }
 
 // CheckForUpdates проверяет наличие обновлений
 func (p *DBusPackage) CheckForUpdates() (bool, string, *dbus.Error) {
 	deps := p.service.GetDeps()
 	if deps == nil || deps.Manager == nil {
-		return false, "", dbus.NewError("ru.alr-pkg.ALR.Error.NotInitialized", []interface{}{"service not initialized"})
+		return false, "", dbus.NewError(ErrorNotInitialized, []interface{}{"service not initialized"})
 	}
 
 	fullName := fmt.Sprintf("alr-%s+%s", p.name, p.repository)
 	installedVer, err := deps.Manager.GetInstalledVersion(fullName)
 	if err != nil {
-		return false, "", dbus.NewError("ru.alr-pkg.ALR.Error.Internal", []interface{}{err.Error()})
+		return false, "", dbus.NewError(ErrorInternal, []interface{}{err.Error()})
 	}
 
 	if installedVer == "" {
@@ -383,14 +408,6 @@ func (p *DBusPackage) GetDependencies() ([]string, *dbus.Error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.depends, nil
-}
-
-// checkAuthorization проверяет авторизацию через PolicyKit
-func (p *DBusPackage) checkAuthorization(action string) error {
-	// TODO: реализовать полную интеграцию с PolicyKit
-	// Пока просто проверяем, что мы root
-	// В будущем здесь будет вызов polkit.CheckAuthorization
-	return nil
 }
 
 // IntrospectionData возвращает данные для introspection

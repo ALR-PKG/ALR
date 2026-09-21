@@ -26,7 +26,12 @@ import (
 	"github.com/godbus/dbus/v5/prop"
 )
 
-// DBusJob реализует ru.alr-pkg.ALR.Job интерфейс
+// DBusJob реализует ru.alr_pkg.ALR.Job интерфейс
+// propSetter - шов для обновления D-Bus properties (подменяется в тестах)
+type propSetter interface {
+	Set(iface, name string, value dbus.Variant) *dbus.Error
+}
+
 type DBusJob struct {
 	service *Service
 	info    JobInfo
@@ -36,7 +41,7 @@ type DBusJob struct {
 	cancel context.CancelFunc
 
 	// D-Bus properties
-	properties *prop.Properties
+	properties propSetter
 
 	// Mutex для потокобезопасности
 	mu sync.RWMutex
@@ -107,9 +112,18 @@ func NewDBusJob(service *Service, id uint32, jobType JobType, pkgName, repo stri
 		},
 	}
 
-	job.properties = prop.New(service.GetConn(), path, propsSpec)
+	if conn := service.GetConn(); conn != nil {
+		job.properties = prop.New(conn, path, propsSpec)
+	}
 
 	return job
+}
+
+// setProp обновляет D-Bus property, если properties инициализированы
+func (j *DBusJob) setProp(name string, value dbus.Variant) {
+	if j.properties != nil {
+		j.properties.Set(JobInterfaceName, name, value)
+	}
 }
 
 // Cancel отменяет задачу
@@ -118,15 +132,15 @@ func (j *DBusJob) Cancel() *dbus.Error {
 	defer j.mu.Unlock()
 
 	if j.info.Status == string(JobStatusCompleted) || j.info.Status == string(JobStatusFailed) {
-		return dbus.NewError("ru.alr-pkg.ALR.Error.JobAlreadyFinished", []interface{}{"job already finished"})
+		return dbus.NewError(ErrorJobAlreadyFinished, []interface{}{"job already finished"})
 	}
 
 	j.info.Status = string(JobStatusCancelled)
 	j.info.CompletedAt = time.Now().Unix()
 
 	// Обновляем properties
-	j.properties.Set(JobInterfaceName, "Status", dbus.MakeVariant(string(JobStatusCancelled)))
-	j.properties.Set(JobInterfaceName, "CompletedAt", dbus.MakeVariant(j.info.CompletedAt))
+	j.setProp("Status", dbus.MakeVariant(string(JobStatusCancelled)))
+	j.setProp("CompletedAt", dbus.MakeVariant(j.info.CompletedAt))
 
 	// Отправляем сигналы
 	j.emitSignal(JobSignalStatusChanged, string(JobStatusCancelled))
@@ -183,7 +197,7 @@ func (j *DBusJob) SetStatus(status JobStatus) {
 	defer j.mu.Unlock()
 
 	j.info.Status = string(status)
-	j.properties.Set(JobInterfaceName, "Status", dbus.MakeVariant(string(status)))
+	j.setProp("Status", dbus.MakeVariant(string(status)))
 	j.emitSignal(JobSignalStatusChanged, string(status))
 }
 
@@ -195,8 +209,8 @@ func (j *DBusJob) SetProgress(progress float64, message string) {
 	j.info.Progress = progress
 	j.info.Message = message
 
-	j.properties.Set(JobInterfaceName, "Progress", dbus.MakeVariant(progress))
-	j.properties.Set(JobInterfaceName, "Message", dbus.MakeVariant(message))
+	j.setProp("Progress", dbus.MakeVariant(progress))
+	j.setProp("Message", dbus.MakeVariant(message))
 
 	j.emitSignal(JobSignalProgressChanged, progress, message)
 }
@@ -210,9 +224,9 @@ func (j *DBusJob) SetCompleted() {
 	j.info.Progress = 1.0
 	j.info.CompletedAt = time.Now().Unix()
 
-	j.properties.Set(JobInterfaceName, "Status", dbus.MakeVariant(string(JobStatusCompleted)))
-	j.properties.Set(JobInterfaceName, "Progress", dbus.MakeVariant(1.0))
-	j.properties.Set(JobInterfaceName, "CompletedAt", dbus.MakeVariant(j.info.CompletedAt))
+	j.setProp("Status", dbus.MakeVariant(string(JobStatusCompleted)))
+	j.setProp("Progress", dbus.MakeVariant(1.0))
+	j.setProp("CompletedAt", dbus.MakeVariant(j.info.CompletedAt))
 
 	j.emitSignal(JobSignalStatusChanged, string(JobStatusCompleted))
 	j.emitSignal(JobSignalCompleted, true, "")
@@ -233,9 +247,9 @@ func (j *DBusJob) SetFailed(errorMessage string) {
 	j.info.ErrorMessage = errorMessage
 	j.info.CompletedAt = time.Now().Unix()
 
-	j.properties.Set(JobInterfaceName, "Status", dbus.MakeVariant(string(JobStatusFailed)))
-	j.properties.Set(JobInterfaceName, "ErrorMessage", dbus.MakeVariant(errorMessage))
-	j.properties.Set(JobInterfaceName, "CompletedAt", dbus.MakeVariant(j.info.CompletedAt))
+	j.setProp("Status", dbus.MakeVariant(string(JobStatusFailed)))
+	j.setProp("ErrorMessage", dbus.MakeVariant(errorMessage))
+	j.setProp("CompletedAt", dbus.MakeVariant(j.info.CompletedAt))
 
 	j.emitSignal(JobSignalStatusChanged, string(JobStatusFailed))
 	j.emitSignal(JobSignalCompleted, false, errorMessage)

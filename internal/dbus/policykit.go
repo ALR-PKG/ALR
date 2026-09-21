@@ -19,7 +19,6 @@ package dbus
 import (
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -50,8 +49,27 @@ func NewPolicyKitAuthorizer(conn *dbus.Conn) *PolicyKitAuthorizer {
 	return &PolicyKitAuthorizer{conn: conn}
 }
 
-// CheckAuthorization проверяет авторизацию через PolicyKit
-func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, details map[string]string, allowUserInteraction bool) (bool, error) {
+// polkitSubject - subject вызова polkit CheckAuthorization: ОДНА структура
+// (kind, details) — на шине маршалится как (sa{sv})
+type polkitSubject struct {
+	Kind    string
+	Details map[string]dbus.Variant
+}
+
+// newPolkitSubject строит subject kind "unix-user" для указанного uid
+func newPolkitSubject(uid uint32) polkitSubject {
+	return polkitSubject{
+		Kind: "unix-user",
+		Details: map[string]dbus.Variant{
+			"uid": dbus.MakeVariant(uid),
+		},
+	}
+}
+
+// CheckAuthorization проверяет авторизацию через PolicyKit для указанного
+// uid (uid ВЫЗЫВАВШЕГО, а не демона). При недоступном или ошибочном polkit —
+// fail-closed: разрешено только uid 0.
+func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, uid uint32, details map[string]string, allowUserInteraction bool) (bool, error) {
 	if p.conn == nil {
 		return false, fmt.Errorf("no D-Bus connection")
 	}
@@ -59,17 +77,7 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, details map[st
 	// Проверяем доступность PolicyKit
 	if !p.isPolicyKitAvailable() {
 		slog.Debug("PolicyKit not available, falling back to root check")
-		return p.fallbackCheck(), nil
-	}
-
-	// Создаем subject для текущего процесса
-	pid := os.Getpid()
-	uid := os.Getuid()
-
-	subject := map[string]dbus.Variant{
-		"pid":        dbus.MakeVariant(uint32(pid)),
-		"start-time": dbus.MakeVariant(uint64(1)), // Упрощенно
-		"uid":        dbus.MakeVariant(uint32(uid)),
+		return p.fallbackCheck(uid), nil
 	}
 
 	// Детали авторизации
@@ -84,10 +92,12 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, details map[st
 		flags = 1 // CheckAuthorizationFlagsAllowUserInteraction
 	}
 
-	// Вызываем PolicyKit
+	// Вызываем PolicyKit:
+	// CheckAuthorization((sa{sv}) subject, s action_id, a{ss} details,
+	// u flags, s cancellation_id) -> ((bba{ss}) result)
 	obj := p.conn.Object(PolicyKitInterface, dbus.ObjectPath(PolicyKitPath))
 	call := obj.Call(PolicyKitInterface+".Authority.CheckAuthorization", 0,
-		subject,
+		newPolkitSubject(uid),
 		actionID,
 		actionDetails,
 		flags,
@@ -95,8 +105,8 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, details map[st
 	)
 
 	if call.Err != nil {
-		slog.Error("PolicyKit check failed", "action", actionID, "err", call.Err)
-		return p.fallbackCheck(), nil
+		slog.Error("PolicyKit check failed", "action", actionID, "uid", uid, "err", call.Err)
+		return p.fallbackCheck(uid), nil
 	}
 
 	// Результат: (is_authorized, is_challenge, details)
@@ -108,7 +118,7 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, details map[st
 
 	if err := call.Store(&result.IsAuthorized, &result.IsChallenge, &result.Details); err != nil {
 		slog.Error("Failed to parse PolicyKit response", "err", err)
-		return p.fallbackCheck(), nil
+		return p.fallbackCheck(uid), nil
 	}
 
 	return result.IsAuthorized, nil
@@ -134,39 +144,14 @@ func (p *PolicyKitAuthorizer) isPolicyKitAvailable() bool {
 	return false
 }
 
-// fallbackCheck - fallback проверка (root)
-func (p *PolicyKitAuthorizer) fallbackCheck() bool {
-	return os.Getuid() == 0
-}
-
-// CheckInstall проверяет авторизацию для установки
-func (p *PolicyKitAuthorizer) CheckInstall() (bool, error) {
-	return p.CheckAuthorization(ActionInstall, nil, true)
-}
-
-// CheckRemove проверяет авторизацию для удаления
-func (p *PolicyKitAuthorizer) CheckRemove() (bool, error) {
-	return p.CheckAuthorization(ActionRemove, nil, true)
-}
-
-// CheckBuild проверяет авторизацию для сборки
-func (p *PolicyKitAuthorizer) CheckBuild() (bool, error) {
-	return p.CheckAuthorization(ActionBuild, nil, true)
-}
-
-// CheckRefresh проверяет авторизацию для обновления репозиториев
-func (p *PolicyKitAuthorizer) CheckRefresh() (bool, error) {
-	return p.CheckAuthorization(ActionRefresh, nil, true)
-}
-
-// CheckUpgrade проверяет авторизацию для обновления пакетов
-func (p *PolicyKitAuthorizer) CheckUpgrade() (bool, error) {
-	return p.CheckAuthorization(ActionUpgrade, nil, true)
+// fallbackCheck - fallback проверка: без polkit разрешено только root (uid 0)
+func (p *PolicyKitAuthorizer) fallbackCheck(uid uint32) bool {
+	return uid == 0
 }
 
 // Authorizer интерфейс для авторизации
 type Authorizer interface {
-	CheckAuthorization(actionID string, details map[string]string, allowUserInteraction bool) (bool, error)
+	CheckAuthorization(actionID string, uid uint32, details map[string]string, allowUserInteraction bool) (bool, error)
 }
 
 // DefaultAuthorizer возвращает авторизатор по умолчанию
