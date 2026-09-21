@@ -9,55 +9,55 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: cmd/build.go:47
+#: cmd/build.go:46
 msgid "Build a local package"
 msgstr ""
 
-#: cmd/build.go:55
+#: cmd/build.go:50
 msgid "Error getting working directory"
 msgstr ""
 
-#: cmd/build.go:87
+#: cmd/build.go:82
 msgid "Cannot get absolute script path"
 msgstr ""
 
-#: cmd/build.go:120 cmd/build.go:164
+#: cmd/build.go:115 cmd/build.go:159
 msgid "Error building package"
 msgstr ""
 
-#: cmd/build.go:131
+#: cmd/build.go:126
 msgid "Package not found"
 msgstr ""
 
-#: cmd/build.go:168
+#: cmd/build.go:163
 msgid "Nothing to build"
 msgstr ""
 
-#: cmd/build.go:174
+#: cmd/build.go:169
 msgid "Package file already removed, skipping"
 msgstr ""
 
-#: cmd/build.go:178
+#: cmd/build.go:173
 msgid "Error copying the package"
 msgstr ""
 
-#: cmd/build.go:182
+#: cmd/build.go:177
 msgid "Done"
 msgstr ""
 
-#: cmd/build.go:187
+#: cmd/build.go:182
 msgid "Path to the build script"
 msgstr ""
 
-#: cmd/build.go:188
+#: cmd/build.go:183
 msgid "Specify subpackage in script (for multi package script only)"
 msgstr ""
 
-#: cmd/build.go:189
+#: cmd/build.go:184
 msgid "Name of the package to build and its repo (example: default/go-bin)"
 msgstr ""
 
-#: cmd/build.go:190
+#: cmd/build.go:185
 msgid ""
 "Build package from scratch even if there's an already built package available"
 msgstr ""
@@ -359,7 +359,7 @@ msgstr ""
 msgid "Install a new package"
 msgstr ""
 
-#: cmd/install.go:53
+#: cmd/install.go:49
 msgid "Command install expected at least 1 argument, got 0"
 msgstr ""
 
