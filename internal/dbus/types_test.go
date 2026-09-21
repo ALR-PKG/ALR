@@ -19,6 +19,8 @@ package dbus
 import (
 	"strings"
 	"testing"
+
+	"github.com/godbus/dbus/v5"
 )
 
 // validDBusInterfaceName проверяет имя интерфейса по спецификации D-Bus:
@@ -101,5 +103,24 @@ func TestGetJobObjectPathUsesDecimalDigits(t *testing.T) {
 	}
 	if !strings.HasSuffix(string(path), "/jobs/12345") {
 		t.Errorf("GetJobObjectPath(12345) = %q, want suffix /jobs/12345", path)
+	}
+}
+
+func TestJobObjectPathToID(t *testing.T) {
+	for _, tc := range []struct {
+		path string
+		want uint32
+	}{
+		{"/ru/alr_pkg/ALR/jobs/123", 123},
+		{"/ru/alr_pkg/ALR/jobs/1", 1},
+		{string(GetJobObjectPath(424242)), 424242},
+		{"/ru/alr_pkg/ALR/jobs/", 0},
+		{"/ru/alr_pkg/ALR/jobs/abc", 0},
+		{"", 0},
+		{"/jobs", 0},
+	} {
+		if got := JobObjectPathToID(dbus.ObjectPath(tc.path)); got != tc.want {
+			t.Errorf("JobObjectPathToID(%q) = %d, want %d", tc.path, got, tc.want)
+		}
 	}
 }

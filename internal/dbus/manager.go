@@ -229,7 +229,7 @@ func (m *DBusManager) GetActiveJob() (dbus.ObjectPath, bool, *dbus.Error) {
 }
 
 // UpgradeAll обновляет все пакеты
-func (m *DBusManager) UpgradeAll(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
+func (m *DBusManager) UpgradeAll(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
 	// TODO: реализовать обновление всех пакетов
 	return "", dbus.NewError(ErrorNotImplemented, []interface{}{"UpgradeAll not yet implemented"})
 }

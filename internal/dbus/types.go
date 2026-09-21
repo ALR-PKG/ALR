@@ -223,8 +223,16 @@ func GetJobObjectPath(id uint32) dbus.ObjectPath {
 }
 
 // JobObjectPathToID извлекает ID из object path
+// /ru/alr_pkg/ALR/jobs/123 -> 123; при невалидном пути возвращает 0
 func JobObjectPathToID(path dbus.ObjectPath) uint32 {
-	// Простая реализация - извлечь число из пути
-	// /ru/alr_pkg/ALR/jobs/123 -> 123
-	return 0 // TODO: implement
+	s := string(path)
+	idx := strings.LastIndex(s, "/")
+	if idx < 0 || idx == len(s)-1 {
+		return 0
+	}
+	id, err := strconv.ParseUint(s[idx+1:], 10, 32)
+	if err != nil {
+		return 0
+	}
+	return uint32(id)
 }
