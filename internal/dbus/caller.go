@@ -23,7 +23,9 @@ import (
 )
 
 // getConnectionUnixUser - шов для подмены в тестах; возвращает uid владельца
-// D-Bus соединения по его unique name (sender)
+// D-Bus соединения по его unique name (sender).
+// ВНИМАНИЕ: тесты, подменяющие эту переменную, НЕ должны использовать
+// t.Parallel() — подмена глобальна для процесса.
 var getConnectionUnixUser = func(conn *dbus.Conn, sender dbus.Sender) (uint32, error) {
 	if conn == nil {
 		return 0, fmt.Errorf("no D-Bus connection")

@@ -114,6 +114,12 @@ func (s *Service) Run(sessionBus bool) error {
 
 	slog.Info("Connected to D-Bus", "session", sessionBus)
 
+	// Авторизатор по умолчанию инициализируется один раз до начала
+	// обработки вызовов (в тестах authorizer подменяется заранее)
+	if s.authorizer == nil {
+		s.authorizer = NewPolicyKitAuthorizer(s.conn)
+	}
+
 	// Инициализация ALR
 	if err := s.Init(); err != nil {
 		return err
@@ -181,10 +187,12 @@ func (s *Service) Stop() {
 
 // getAuthorizer возвращает авторизатор (ленивая инициализация PolicyKit)
 func (s *Service) getAuthorizer() Authorizer {
-	if s.authorizer == nil {
-		s.authorizer = NewPolicyKitAuthorizer(s.conn)
+	if s.authorizer != nil {
+		return s.authorizer
 	}
-	return s.authorizer
+	// Без явной инициализации (Run не вызывался) — fail-closed:
+	// PolicyKitAuthorizer с nil-соединением всегда отказывает
+	return NewPolicyKitAuthorizer(s.conn)
 }
 
 // checkAuthorization резолвит uid вызвавшего и проверяет авторизацию

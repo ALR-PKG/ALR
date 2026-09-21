@@ -27,6 +27,11 @@ import (
 )
 
 // DBusJob реализует ru.alr-pkg.ALR.Job интерфейс
+// propSetter - шов для обновления D-Bus properties (подменяется в тестах)
+type propSetter interface {
+	Set(iface, name string, value dbus.Variant) *dbus.Error
+}
+
 type DBusJob struct {
 	service *Service
 	info    JobInfo
@@ -36,7 +41,7 @@ type DBusJob struct {
 	cancel context.CancelFunc
 
 	// D-Bus properties
-	properties *prop.Properties
+	properties propSetter
 
 	// Mutex для потокобезопасности
 	mu sync.RWMutex
@@ -117,7 +122,7 @@ func NewDBusJob(service *Service, id uint32, jobType JobType, pkgName, repo stri
 // setProp обновляет D-Bus property, если properties инициализированы
 func (j *DBusJob) setProp(name string, value dbus.Variant) {
 	if j.properties != nil {
-		j.setProp(name, value)
+		j.properties.Set(JobInterfaceName, name, value)
 	}
 }
 

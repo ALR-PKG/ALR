@@ -49,6 +49,23 @@ func NewPolicyKitAuthorizer(conn *dbus.Conn) *PolicyKitAuthorizer {
 	return &PolicyKitAuthorizer{conn: conn}
 }
 
+// polkitSubject - subject вызова polkit CheckAuthorization: ОДНА структура
+// (kind, details) — на шине маршалится как (sa{sv})
+type polkitSubject struct {
+	Kind    string
+	Details map[string]dbus.Variant
+}
+
+// newPolkitSubject строит subject kind "unix-user" для указанного uid
+func newPolkitSubject(uid uint32) polkitSubject {
+	return polkitSubject{
+		Kind: "unix-user",
+		Details: map[string]dbus.Variant{
+			"uid": dbus.MakeVariant(uid),
+		},
+	}
+}
+
 // CheckAuthorization проверяет авторизацию через PolicyKit для указанного
 // uid (uid ВЫЗЫВАВШЕГО, а не демона). При недоступном или ошибочном polkit —
 // fail-closed: разрешено только uid 0.
@@ -61,11 +78,6 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, uid uint32, de
 	if !p.isPolicyKitAvailable() {
 		slog.Debug("PolicyKit not available, falling back to root check")
 		return p.fallbackCheck(uid), nil
-	}
-
-	// Subject вызвавшего: kind "unix-user", детали — uid
-	subject := map[string]dbus.Variant{
-		"uid": dbus.MakeVariant(uid),
 	}
 
 	// Детали авторизации
@@ -81,12 +93,11 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, uid uint32, de
 	}
 
 	// Вызываем PolicyKit:
-	// CheckAuthorization((s a{sv}) subject, s action_id, a{ss} details,
+	// CheckAuthorization((sa{sv}) subject, s action_id, a{ss} details,
 	// u flags, s cancellation_id) -> ((bba{ss}) result)
 	obj := p.conn.Object(PolicyKitInterface, dbus.ObjectPath(PolicyKitPath))
 	call := obj.Call(PolicyKitInterface+".Authority.CheckAuthorization", 0,
-		"unix-user",
-		subject,
+		newPolkitSubject(uid),
 		actionID,
 		actionDetails,
 		flags,
