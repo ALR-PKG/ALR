@@ -185,7 +185,8 @@ func (s *Service) Stop() {
 	s.cancel()
 }
 
-// getAuthorizer возвращает авторизатор (ленивая инициализация PolicyKit)
+// getAuthorizer возвращает авторизатор.
+// Без явной инициализации (Run не вызывался) — fail-closed:
 func (s *Service) getAuthorizer() Authorizer {
 	if s.authorizer != nil {
 		return s.authorizer
