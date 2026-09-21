@@ -1106,15 +1106,158 @@ Expected: PASS
 
 ---
 
-## Этапы 8-10: состав работ (детальный план — перед стартом каждого)
+## Этап 8: D-Bus polkit + setuid-сборка
 
-### Этап 8: D-Bus polkit + setuid-сборка
-- Подключить `internal/dbus/policykit.go`: subject из D-Bus credentials
-  вызывающего (`GetConnectionCredentials`), CheckAuthorization по action
-- Сборка в демоне: форк с setuid в uid вызывающего, сборка в его XDG-кэш;
-  фолбэк `nobody` + `/var/cache/alr/build`
-- Запрет интерактивных промптов скриптов в демон-режиме (нет TTY)
-- Тесты: mock polkit, неавторизованный вызов Install → отказ
+Результат: мутирующие методы демона (Install/Remove/RefreshRepositories)
+авторизуются через polkit по uid ВЫЗЫВАВШЕГО (не демона); при недоступном
+polkit — fail-closed (только uid 0). Сборочная часть install в демоне
+выполняется от uid вызвавшего (plugin-процесс с SysProcAttr.Credential +
+HOME вызвавшего) в его XDG-кэше; кэш-доверие демона параметризовано uid
+задачи. Интерактивные промпты в демон-режиме выключены (нет TTY).
+
+Ключевые факты текущего кода (для задач):
+- `DBusPackage.checkAuthorization` (package.go:389) — заглушка, всегда nil.
+- `PolicyKitAuthorizer.CheckAuthorization` (policykit.go) — subject из
+  PID/UID ДЕМОНА + упрощённый start-time; первый аргумент polkit-метода
+  (subject kind) не передаётся — вызов невалиден, нужен реворк.
+- godbus v5.2.2 поддерживает `dbus.Sender` первым параметром метода
+  (в introspection не попадает — интерфейс не меняется).
+- Скрипты выполняются в plugin-процессе `_internal-safe-script-executor`
+  (internal/build/plugins.go:getSafeExecutor); в нём же prepareDirs и
+  copyToCache — setuid в этой точке покрывает всё недоверенное исполнение.
+- Демон строит пути из СВОЕГО конфига (root) — для job нужен конфиг с
+  XDG-путями вызвавшего (HOME из `user.LookupId(uid).HomeDir`).
+- Доверие кэша (Этап 4): isTrustedOwner пропускает только euid/0/65534 —
+  в демоне (root) файлы вызвавшего не пройдут; нужен job-scope trusted uid.
+
+### Task 8.1: uid вызвавшего + polkit-авторизация
+
+**Файлы:**
+- Create: `internal/dbus/caller.go` (резолвер uid по sender)
+- Modify: `internal/dbus/policykit.go` (subject kind "unix-user", per-caller)
+- Modify: `internal/dbus/package.go` (Install/Remove: sender + auth),
+  `internal/dbus/manager.go` (RefreshRepositories: sender + auth)
+- Modify: `internal/dbus/service.go` (поле Authorizer + резолвер, инъекция)
+- Test: `internal/dbus/auth_test.go` (новый)
+
+- [ ] **Шаг 1: падающий тест** — Install с фейковым Authorizer
+  (возвращает false) → ошибка NotAuthorized, job НЕ создаётся; с
+  возвращающим true → проходит; резолвер подменяется, Authorizer получает
+  uid 1000 и action "ru.alr-pkg.install".
+
+- [ ] **Шаг 2: реализация**
+  - `caller.go`: `resolveCallerUID(conn, sender) (uint32, error)` через
+    `org.freedesktop.DBus.GetConnectionUnixUser`; за переменной-швом
+    (`var getConnectionUnixUser = ...`) для тестов.
+  - `policykit.go`: `CheckAuthorization(actionID string, uid uint32,
+    details, allowUserInteraction)` — subject kind `"unix-user"`,
+    details `{"uid": uid}`; корректная сигнатура polkit-метода
+    (kind, subject, actionID, details, flags, cancellationID);
+    polkit недоступен/ошибка → fallback: разрешено только uid==0.
+  - `Service`: поля `authorizer Authorizer` (default — PolicyKitAuthorizer)
+    и возможность подмены в тестах.
+  - `Install(sender dbus.Sender, options)`, `Remove(sender, options)`,
+    `RefreshRepositories(sender)` — sender первым параметром; auth до
+    создания job; ошибка → `ru.alr-pkg.ALR.Error.NotAuthorized`.
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/dbus/ -v -count=1 && go build ./...`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: polkit-авторизация по uid вызвавшего в демоне`
+
+### Task 8.2: job-конфиг вызвавшего (пути + доверие кэша)
+
+**Файлы:**
+- Create: `internal/dbus/caller_env.go` (HOME/USER по uid, конфиг job)
+- Modify: `internal/build/cache.go` (параметризация доверенных uid)
+- Modify: `internal/build/build.go` (проброс trusted uid в
+  verifyTrustedPaths)
+- Test: `internal/dbus/caller_env_test.go`, `internal/build/cache_test.go`
+
+- [ ] **Шаг 1: падающий тест**
+  - `callerEnv(uid)`: HOME/USER/LOGNAME из `user.LookupId` (шов подмены);
+    uid 65534 без passwd-записи → фолбэк HOME=/var/cache/alr (nobody).
+  - `Cache` с `trustedUIDs [1000]`: файл владельца 1000 → hit
+    (без — miss); то же для verifyTrustedPaths.
+
+- [ ] **Шаг 2: реализация**
+  - `internal/dbus/caller_env.go`: `callerEnv(uid uint32) ([]string,
+    error)` (env для plugin-процесса: HOME, USER, LOGNAME, PATH — как
+    setCommonCmdEnv, но для вызвавшего; nobody → /var/cache/alr) и
+    `callerCachePaths(uid) (buildDir, pkgsDir string)` —
+    `<home>/.cache/alr/build|pkgs` (nobody → /var/cache/alr/build|pkgs).
+  - `internal/build/cache.go`: `Cache` + поле trustedUIDs (по умолчанию
+    как сейчас); `isTrustedOwner` → метод/вариант с учётом списка;
+    `verifyTrustedPaths` получает тот же список (подумай о сигнатуре —
+    минимальное инвазивное изменение; существующие вызовы CLI не ломать).
+  - Конструирование job-Builder'а — Task 8.3.
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/dbus/ ./internal/build/ -v -count=1 && go build ./...`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: job-окружение вызвавшего и доверие кэша по uid`
+
+### Task 8.3: setuid-запуск script executor в демоне
+
+**Файлы:**
+- Modify: `internal/build/plugins.go` (вариант запуска с Credential+env)
+- Modify: `internal/dbus/package.go` (runInstall: job-Builder с
+  caller-исполнителем и caller-путями)
+- Test: `internal/build/plugins_test.go` (конфиг команды)
+
+- [ ] **Шаг 1: падающий тест** — `getSafeExecutorAs` строит cmd с
+  `SysProcAttr.Credential{Uid,Gid}` и env вызвавшего (проверка через шов —
+  вынести построение cmd в функцию, возвращающую *exec.Cmd для
+  инспекции до запуска).
+
+- [ ] **Шаг 2: реализация**
+  - `internal/build/plugins.go`: `GetSafeScriptExecutorAs(uid, gid uint32,
+    env []string)` (или options-структура) — cmd + `syscall.SysProcAttr{
+    Credential: &syscall.Credential{Uid: uid, Gid: gid}}`, env = callerEnv
+    (HOME/USER/LOGNAME/PATH), TMPDIR — оставить /tmp (plugin пишет в
+    os.TempDir; /tmp доступен всем).
+  - `internal/dbus/package.go` runInstall: uid из auth-контекста;
+    job-Builder: cfg с подменёнными BuildDir/PkgsDir (callerCachePaths),
+    Cache с trustedUIDs[uid], scripter = GetSafeScriptExecutorAs(uid,...);
+    installer — как раньше (root).
+  - Не ломать CLI-путь: GetSafeScriptExecutor без uid работает как раньше.
+
+- [ ] **Шаг 3: тесты проходят**
+
+Run: `go test ./internal/build/ ./internal/dbus/ -v -count=1 && go build ./...`
+Expected: PASS
+
+- [ ] **Шаг 4: коммит** `Добавлено: сборка в демоне от uid вызвавшего`
+
+### Task 8.4: запрет интерактивности в демон-режиме
+
+**Файлы:**
+- Modify: `internal/dbus/package.go` (runInstall/runRemove)
+
+- [ ] **Шаг 1: реализация** — BuildOpts.Interactive принудительно false
+  (опция `interactive` из options игнорируется с slog.Warn; NoConfirm для
+  Remove = true), чтобы скрипты не могли зависнуть на промпте без TTY.
+- [ ] **Шаг 2: тесты/проверка** — `go build ./...`, `go test ./internal/dbus/`
+- [ ] **Шаг 3: коммит** `Изменено: демон всегда работает неинтерактивно`
+
+### Task 8.5: сквозная проверка Этапа 8
+
+- Сессионная шина (dbus start) на хосте: `alr dbus install` маленького
+  пакета — polkit на хосте есть? (Fedora — да): интерактивный запрос
+  или отказ по политике; без polkit — fail-closed (uid != 0 → отказ)
+- Неавторизованный вызов: отказ NotAuthorized
+- Сборка в демоне: файлы дерева и кэша принадлежат вызвавшему uid
+  (ls -l ~/.cache/alr), установка в систему — от root (rpm -qa)
+- Регрессия CLI: `alr build`/`alr install` от пользователя — как раньше
+- `go build ./...`, `go test ./...`, pre-commit
+
+---
+
+## Этапы 9-10: состав работ (детальный план — перед стартом каждого)
 
 ### Этап 9: встроенная песочница
 - `internal/sandbox/`: re-exec с `CLONE_NEWUSER|CLONE_NEWNS|CLONE_NEWPID`,
