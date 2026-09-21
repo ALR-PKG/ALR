@@ -46,7 +46,10 @@ type Mount struct {
 
 // Layout — макет ФС песочницы, передаётся init'у JSON'ом через fd 3.
 type Layout struct {
-	Mounts    []Mount  `json:"mounts"`
+	Mounts []Mount `json:"mounts"`
+	// Covers — пути, накрываемые пустой read-only tmpfs (содержимое хоста
+	// скрыто, запись даёт EROFS). Используется для $HOME.
+	Covers    []string `json:"covers"`
 	DevNodes  []string `json:"dev_nodes"`
 	ProcFresh bool     `json:"proc_fresh"`
 }
@@ -56,6 +59,7 @@ type Layout struct {
 // Дедупликация: вложенный путь, уже покрытый mount'ом с не меньшими
 // правами, опускается («наиболее общий покрывающий путь, rw сильнее»);
 // запись rw внутри ro-родителя сохраняется и идёт после него.
+// $HOME, не покрытый ни одним mount'ом, накрывается пустой ro tmpfs.
 func LayoutFromPaths(buildDir, pkgsDir, scriptDir string) *Layout {
 	rw := []string{buildDir, pkgsDir, "/tmp"}
 	ro := []string{scriptDir, "/usr", "/lib", "/lib64", "/bin", "/sbin", "/etc"}
@@ -76,8 +80,24 @@ func LayoutFromPaths(buildDir, pkgsDir, scriptDir string) *Layout {
 		return mounts[i].Target < mounts[j].Target
 	})
 
+	var covers []string
+	if home, err := os.UserHomeDir(); err == nil && home != "" && home != "/" {
+		home = filepath.Clean(home)
+		covered := false
+		for _, m := range mounts {
+			if pathCovers(m.Target, home) {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			covers = []string{home}
+		}
+	}
+
 	return &Layout{
 		Mounts:    mounts,
+		Covers:    covers,
 		DevNodes:  []string{"/dev/null", "/dev/zero", "/dev/random", "/dev/urandom"},
 		ProcFresh: true,
 	}

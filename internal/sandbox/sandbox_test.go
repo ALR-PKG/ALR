@@ -141,3 +141,17 @@ func TestLayoutMountsParentsFirst(t *testing.T) {
 		t.Error("родительский mount должен идти раньше вложенного")
 	}
 }
+
+func TestLayoutCoversHome(t *testing.T) {
+	t.Setenv("HOME", "/home/testuser")
+	l := LayoutFromPaths("/cache/build", "/cache/pkgs", "/proj")
+	if len(l.Covers) != 1 || l.Covers[0] != "/home/testuser" {
+		t.Errorf("HOME вне mount'ов должен накрываться cover'ом, Covers = %v", l.Covers)
+	}
+
+	// HOME уже покрыт ro-mount'ом (ScriptDir) — cover не нужен
+	l = LayoutFromPaths("/cache/build", "/cache/pkgs", "/home")
+	if len(l.Covers) != 0 {
+		t.Errorf("покрытый mount'ом HOME не должен давать cover, Covers = %v", l.Covers)
+	}
+}

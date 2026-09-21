@@ -70,6 +70,7 @@ func NewRootCmd() *cobra.Command {
 		newDBusCmd(),
 		newConfigCmd(),
 		newInternalBuildCmd(),
+		newInternalSandboxCmd(),
 		newInternalInstallCmd(),
 		newInternalReposCmd(),
 		newInternalDBusServiceCmd(),
