@@ -173,6 +173,14 @@ func setupRoot(layout *Layout) error {
 		return fmt.Errorf("umount put_old: %w", err)
 	}
 	os.Remove("/.put_old")
+	// Каталог-точка монтирования newroot остался на хостовом /tmp;
+	// рекурсивный bind /tmp скопировал сам mount newroot в песочницу —
+	// отцепим эту копию и удалим каталог (best-effort).
+	if base := filepath.Base(newroot); strings.HasPrefix(base, "alr-sandbox-") {
+		p := filepath.Join("/tmp", base)
+		unix.Unmount(p, unix.MNT_DETACH)
+		os.Remove(p)
+	}
 
 	if cwd != "" && cwd != "/" {
 		if err := os.Chdir(cwd); err != nil {
