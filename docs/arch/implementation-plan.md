@@ -1209,12 +1209,12 @@ Expected: PASS
   caller-исполнителем и caller-путями)
 - Test: `internal/build/plugins_test.go` (конфиг команды)
 
-- [ ] **Шаг 1: падающий тест** — `getSafeExecutorAs` строит cmd с
+- [x] **Шаг 1: падающий тест** — `getSafeExecutorAs` строит cmd с
   `SysProcAttr.Credential{Uid,Gid}` и env вызвавшего (проверка через шов —
   вынести построение cmd в функцию, возвращающую *exec.Cmd для
   инспекции до запуска).
 
-- [ ] **Шаг 2: реализация**
+- [x] **Шаг 2: реализация**
   - `internal/build/plugins.go`: `GetSafeScriptExecutorAs(uid, gid uint32,
     env []string)` (или options-структура) — cmd + `syscall.SysProcAttr{
     Credential: &syscall.Credential{Uid: uid, Gid: gid}}`, env = callerEnv
@@ -1226,12 +1226,12 @@ Expected: PASS
     installer — как раньше (root).
   - Не ломать CLI-путь: GetSafeScriptExecutor без uid работает как раньше.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/build/ ./internal/dbus/ -v -count=1 && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: сборка в демоне от uid вызвавшего`
+- [x] **Шаг 4: коммит** `Добавлено: сборка в демоне от uid вызвавшего`
 
 ### Task 8.4: запрет интерактивности в демон-режиме
 

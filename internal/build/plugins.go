@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
@@ -80,21 +81,54 @@ func GetSafeScriptExecutor() (ScriptExecutor, func(), error) {
 	return getSafeExecutor[ScriptExecutor]("_internal-safe-script-executor", "script-executor")
 }
 
+// GetSafeScriptExecutorAs запускает script executor от указанных uid/gid
+// (демон выполняет сборку от uid вызвавшего) с заданным окружением
+// (HOME/USER/LOGNAME вызвавшего — см. callerEnv в internal/dbus).
+func GetSafeScriptExecutorAs(uid, gid uint32, env []string) (ScriptExecutor, func(), error) {
+	cmd, err := getExecutorCmd("_internal-safe-script-executor", env,
+		&syscall.Credential{Uid: uid, Gid: gid})
+	if err != nil {
+		return nil, nil, err
+	}
+	return dispenseExecutor[ScriptExecutor](cmd, "script-executor")
+}
+
+// getExecutorCmd строит команду запуска plugin-процесса. При cred != nil
+// процесс запускается от указанных uid/gid; при env != nil окружение
+// берётся как есть (без дополнения окружением текущего процесса).
+func getExecutorCmd(subCommand string, env []string, cred *syscall.Credential) (*exec.Cmd, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.Command(executable, subCommand)
+	if env != nil {
+		cmd.Env = env
+	} else {
+		setCommonCmdEnv(cmd)
+	}
+	if cred != nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{Credential: cred}
+	}
+	return cmd, nil
+}
+
 func GetSafeReposExecutor() (ReposExecutor, func(), error) {
 	return getSafeExecutor[ReposExecutor]("_internal-repos", "repos")
 }
 
 func getSafeExecutor[T any](subCommand, pluginName string) (T, func(), error) {
-	var err error
-
-	executable, err := os.Executable()
+	cmd, err := getExecutorCmd(subCommand, nil, nil)
 	if err != nil {
 		var zero T
 		return zero, nil, err
 	}
+	return dispenseExecutor[T](cmd, pluginName)
+}
 
-	cmd := exec.Command(executable, subCommand)
-	setCommonCmdEnv(cmd)
+func dispenseExecutor[T any](cmd *exec.Cmd, pluginName string) (T, func(), error) {
+	var err error
 
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig:  HandshakeConfig,

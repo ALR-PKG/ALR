@@ -34,24 +34,32 @@ const (
 // lookupUser вынесено в переменную для подмены в тестах
 var lookupUser = user.LookupId
 
-// callerIdentity возвращает home и username вызвавшего по uid. nobody
-// (и любой uid без passwd-записи) отображается на системный кэш:
-// у nobody нет домашнего каталога, а его uid уже доверен в общем кэше.
-func callerIdentity(uid uint32) (home, username string) {
+// callerIdentity возвращает home, username и основную группу вызвавшего
+// по uid. nobody (и любой uid без passwd-записи либо с пустым домашним
+// каталогом) отображается на системный кэш: у nobody нет домашнего
+// каталога, а его uid уже доверен в общем кэше.
+func callerIdentity(uid uint32) (home, username string, gid uint32) {
 	if uid != nobodyUID {
 		u, err := lookupUser(strconv.Itoa(int(uid)))
-		if err == nil {
-			return u.HomeDir, u.Username
+		if err == nil && u.HomeDir != "" {
+			g, err := strconv.ParseUint(u.Gid, 10, 32)
+			if err == nil {
+				return u.HomeDir, u.Username, uint32(g)
+			}
+			slog.Debug("cannot parse caller gid, falling back to nobody", "uid", uid, "gid", u.Gid)
+		} else if err == nil {
+			slog.Debug("empty home dir for caller uid, falling back to nobody", "uid", uid)
+		} else {
+			slog.Debug("no passwd entry for caller uid, falling back to nobody", "uid", uid, "error", err)
 		}
-		slog.Debug("no passwd entry for caller uid, falling back to nobody", "uid", uid, "error", err)
 	}
-	return systemCacheRoot, nobodyUsername
+	return systemCacheRoot, nobodyUsername, nobodyUID
 }
 
 // callerEnv строит окружение plugin-процесса для сборки от имени
 // вызвавшего (аналог setCommonCmdEnv, но не от текущего процесса).
 func callerEnv(uid uint32) ([]string, error) {
-	home, username := callerIdentity(uid)
+	home, username, _ := callerIdentity(uid)
 
 	env := []string{
 		"HOME=" + home,
@@ -73,7 +81,7 @@ func callerEnv(uid uint32) ([]string, error) {
 // callerCachePaths возвращает каталоги кэша сборки вызвавшего:
 // <home>/.cache/alr/build|pkgs; для nobody — системный кэш.
 func callerCachePaths(uid uint32) (buildDir, pkgsDir string) {
-	home, _ := callerIdentity(uid)
+	home, _, _ := callerIdentity(uid)
 	if home == systemCacheRoot {
 		return filepath.Join(systemCacheRoot, "build"), filepath.Join(systemCacheRoot, "pkgs")
 	}

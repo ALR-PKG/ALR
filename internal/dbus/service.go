@@ -199,23 +199,30 @@ func (s *Service) getAuthorizer() Authorizer {
 // checkAuthorization резолвит uid вызвавшего и проверяет авторизацию
 // действия через polkit. Возвращает ошибку при отказе.
 func (s *Service) checkAuthorization(sender dbus.Sender, actionID string) error {
+	_, err := s.authorizeCaller(sender, actionID)
+	return err
+}
+
+// authorizeCaller — то же, что checkAuthorization, но возвращает uid
+// вызвавшего для дальнейшего использования (сборка от его uid).
+func (s *Service) authorizeCaller(sender dbus.Sender, actionID string) (uint32, error) {
 	uid, err := resolveCallerUID(s.conn, sender)
 	if err != nil {
 		slog.Warn("Failed to resolve caller uid", "sender", sender, "action", actionID, "err", err)
-		return fmt.Errorf("failed to resolve caller: %w", err)
+		return 0, fmt.Errorf("failed to resolve caller: %w", err)
 	}
 
 	authorized, err := s.getAuthorizer().CheckAuthorization(actionID, uid, nil, true)
 	if err != nil {
 		slog.Error("Authorization check failed", "action", actionID, "uid", uid, "err", err)
-		return fmt.Errorf("authorization check failed: %w", err)
+		return 0, fmt.Errorf("authorization check failed: %w", err)
 	}
 	if !authorized {
 		slog.Warn("Authorization denied", "action", actionID, "uid", uid)
-		return fmt.Errorf("not authorized for action %s", actionID)
+		return 0, fmt.Errorf("not authorized for action %s", actionID)
 	}
 
-	return nil
+	return uid, nil
 }
 
 // GetDeps возвращает ALR зависимости

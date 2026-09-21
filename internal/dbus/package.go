@@ -172,7 +172,8 @@ func (p *DBusPackage) Install(sender dbus.Sender, options map[string]dbus.Varian
 	slog.Info("Install called", "package", p.name, "repository", p.repository, "sender", sender)
 
 	// Проверяем авторизацию через PolicyKit по uid вызвавшего
-	if err := p.service.checkAuthorization(sender, ActionInstall); err != nil {
+	callerUID, err := p.service.authorizeCaller(sender, ActionInstall)
+	if err != nil {
 		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
 	}
 
@@ -199,14 +200,16 @@ func (p *DBusPackage) Install(sender dbus.Sender, options map[string]dbus.Varian
 	p.service.Notify("ALR", fmt.Sprintf("Starting installation of %s...", p.name), UrgencyNormal)
 
 	// Запускаем асинхронно
-	go p.runInstall(job, clean, interactive)
+	go p.runInstall(job, clean, interactive, callerUID)
 
 	path := p.service.RegisterJob(job)
 	return path, nil
 }
 
-// runInstall выполняет установку
-func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
+// runInstall выполняет установку. Сборочная часть (script executor)
+// запускается от callerUID вызвавшего в его XDG-кэше; установка в
+// систему — от root (демона), как раньше.
+func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool, callerUID uint32) {
 	job.SetStatus(JobStatusRunning)
 	job.SetProgress(0.0, "Initializing installation...")
 
@@ -226,7 +229,15 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 	}
 	defer installerClose()
 
-	scripter, scripterClose, err := build.GetSafeScriptExecutor()
+	_, _, callerGID := callerIdentity(callerUID)
+	env, err := callerEnv(callerUID)
+	if err != nil {
+		job.SetFailed(fmt.Sprintf("Failed to build caller environment: %v", err))
+		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)
+		return
+	}
+
+	scripter, scripterClose, err := build.GetSafeScriptExecutorAs(callerUID, callerGID, env)
 	if err != nil {
 		job.SetFailed(fmt.Sprintf("Failed to get scripter: %v", err))
 		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)
@@ -234,9 +245,10 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 	}
 	defer scripterClose()
 
-	// Создаем билдер
+	// Создаем билдер: конфиг задачи с кэшем вызвавшего (общий конфиг
+	// демона не мутируется), кэш доверяет файлам вызвавшего
 	builder, err := build.NewMainBuilder(
-		deps.Cfg,
+		callerJobConfig(deps.Cfg, callerUID),
 		deps.Manager,
 		deps.Repos,
 		scripter,
@@ -247,6 +259,7 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)
 		return
 	}
+	builder.SetTrustedUIDs(callerUID)
 
 	// Прогресс обратного вызова
 	progressFunc := func(percent float64, message string) {

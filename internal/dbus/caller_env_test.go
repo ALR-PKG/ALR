@@ -35,7 +35,7 @@ func stubLookupUser(t *testing.T, fn func(uid string) (*user.User, error)) {
 
 func lookupAlice(uid string) (*user.User, error) {
 	if uid == "1000" {
-		return &user.User{Uid: "1000", Username: "alice", HomeDir: "/home/alice"}, nil
+		return &user.User{Uid: "1000", Gid: "1000", Username: "alice", HomeDir: "/home/alice"}, nil
 	}
 	return nil, errors.New("no such user")
 }

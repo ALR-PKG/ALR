@@ -254,6 +254,9 @@ type Builder struct {
 
 // SetTrustedUIDs задаёт дополнительные доверенные uid владельцев кэша
 // (uid вызвавшего при сборке от демона) и пробрасывает их в Cache.
+// Контракт: вызывать сразу после создания Builder, до любого его
+// использования; синхронизация отсутствует — метод не потокобезопасен
+// относительно параллельных вызовов Builder.
 func (b *Builder) SetTrustedUIDs(uids ...uint32) {
 	b.trustedUIDs = uids
 	if c, ok := b.cacheExecutor.(*Cache); ok {
