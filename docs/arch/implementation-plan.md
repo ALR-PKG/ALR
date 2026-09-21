@@ -1365,15 +1365,15 @@ Expected: PASS
 - Create: `internal/sandbox/sandbox.go` (Options, Layout, вычисление из cfg)
 - Test: `internal/sandbox/sandbox_test.go`
 
-- [ ] **Шаг 1: падающий тест** — `LayoutFromPaths(buildDir, pkgsDir,
+- [x] **Шаг 1: падающий тест** — `LayoutFromPaths(buildDir, pkgsDir,
   scriptDir)` → корректный набор mount-записей (rw/ro, дедупликация
   вложенных путей: BuildDir внутри PkgsDir и наоборот не дублируется;
   scriptDir совпадает с rw-путём → rw побеждает), JSON-маршалинг туда-обратно.
-- [ ] **Шаг 2: реализация** — типы `Mount{Source, Target, RW bool}`,
+- [x] **Шаг 2: реализация** — типы `Mount{Source, Target, RW bool}`,
   `Layout{Mounts []Mount, DevNodes []string, ProcFresh bool}`; дедупликация
   по принципу «наиболее специфичный путь, rw сильнее».
-- [ ] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ -v`
-- [ ] **Шаг 4: коммит** `Добавлено: пакет sandbox (макет ФС)`
+- [x] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ -v`
+- [x] **Шаг 4: коммит** `Добавлено: пакет sandbox (макет ФС)`
 
 ### Task 9.2: init-команда и Wrap (namespaces)
 
@@ -1383,11 +1383,11 @@ Expected: PASS
 - Modify: регистрация скрытой команды (cmd/)
 - Test: `internal/sandbox/integration_test.go`
 
-- [ ] **Шаг 1: падающий интеграционный тест** (skip, если userns
+- [x] **Шаг 1: падающий интеграционный тест** (skip, если userns
   недоступен): в песочнице запустить `/bin/sh -c`: запись в layout-rw —
   OK; в $HOME — EACCES; чтение /etc/os-release — OK; `ls /proc | wc -l`
   маленький (fresh proc, pid 1 — сам init).
-- [ ] **Шаг 2: реализация**
+- [x] **Шаг 2: реализация**
   - `Wrap(cmd, layout, uid, gid)`: cmd.Path → os.Executable, args →
     `_internal-sandbox-init -- <original args>`, SysProcAttr:
     `Cloneflags = CLONE_NEWUSER|CLONE_NEWNS|CLONE_NEWPID`,
@@ -1401,8 +1401,8 @@ Expected: PASS
     MS_BIND|MS_REMOUNT|MS_RDONLY); /dev ноды (bind ro); mount fresh /proc;
     pivot_root(newroot, put_old) + umount2(MNT_DETACH); chdir в дерево
     или /; syscall.Exec(target, args, env).
-- [ ] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ -v -count=1`
-- [ ] **Шаг 4: коммит** `Добавлено: песочница на namespaces (re-exec init)`
+- [x] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ -v -count=1`
+- [x] **Шаг 4: коммит** `Добавлено: песочница на namespaces (re-exec init)`
 
 ### Task 9.3: landlock-фолбэк и интеграция в script executor
 
