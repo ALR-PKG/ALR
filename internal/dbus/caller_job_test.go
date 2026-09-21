@@ -28,40 +28,114 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
-// Тесты подменяют lookupUser и не параллельны: подмена глобальна для процесса.
+// Тесты подменяют lookupUser/lookupGroup/lookupGroupIds и не параллельны:
+// подмена глобальна для процесса.
+
+func stubLookupGroup(t *testing.T, fn func(name string) (*user.Group, error)) {
+	t.Helper()
+	orig := lookupGroup
+	lookupGroup = fn
+	t.Cleanup(func() { lookupGroup = orig })
+}
+
+func stubLookupGroupIds(t *testing.T, fn func(u *user.User) ([]string, error)) {
+	t.Helper()
+	orig := lookupGroupIds
+	lookupGroupIds = fn
+	t.Cleanup(func() { lookupGroupIds = orig })
+}
+
+func stubNobodyGroup(t *testing.T) {
+	t.Helper()
+	stubLookupGroup(t, func(name string) (*user.Group, error) {
+		if name == "nobody" {
+			return &user.Group{Gid: "65534", Name: "nobody"}, nil
+		}
+		return nil, errors.New("no such group")
+	})
+}
 
 func TestCallerIdentity(t *testing.T) {
-	t.Run("gid from passwd entry", func(t *testing.T) {
+	t.Run("gid and groups from passwd entry", func(t *testing.T) {
 		stubLookupUser(t, func(uid string) (*user.User, error) {
 			return &user.User{Uid: "1000", Gid: "1001", Username: "alice", HomeDir: "/home/alice"}, nil
 		})
+		stubLookupGroupIds(t, func(u *user.User) ([]string, error) {
+			return []string{"1001", "27"}, nil
+		})
 
-		home, username, gid := callerIdentity(1000)
-		assert.Equal(t, "/home/alice", home)
-		assert.Equal(t, "alice", username)
-		assert.Equal(t, uint32(1001), gid)
+		info := callerIdentity(1000)
+		assert.Equal(t, "/home/alice", info.home)
+		assert.Equal(t, "alice", info.username)
+		assert.Equal(t, uint32(1001), info.gid)
+		assert.Equal(t, []uint32{1001, 27}, info.groups)
+	})
+
+	t.Run("group ids lookup error keeps identity without groups", func(t *testing.T) {
+		stubLookupUser(t, func(uid string) (*user.User, error) {
+			return &user.User{Uid: "1000", Gid: "1000", Username: "alice", HomeDir: "/home/alice"}, nil
+		})
+		stubLookupGroupIds(t, func(u *user.User) ([]string, error) {
+			return nil, errors.New("nss unavailable")
+		})
+
+		info := callerIdentity(1000)
+		assert.Equal(t, uint32(1000), info.gid)
+		assert.Empty(t, info.groups)
 	})
 
 	t.Run("lookup error falls back to nobody", func(t *testing.T) {
 		stubLookupUser(t, func(uid string) (*user.User, error) {
 			return nil, errors.New("no such user")
 		})
+		stubNobodyGroup(t)
 
-		home, username, gid := callerIdentity(1000)
-		assert.Equal(t, systemCacheRoot, home)
-		assert.Equal(t, nobodyUsername, username)
-		assert.Equal(t, uint32(nobodyUID), gid)
+		info := callerIdentity(1000)
+		assert.Equal(t, systemCacheRoot, info.home)
+		assert.Equal(t, nobodyUsername, info.username)
+		assert.Equal(t, uint32(65534), info.gid)
+		assert.Empty(t, info.groups)
 	})
 
 	t.Run("empty home dir falls back to nobody", func(t *testing.T) {
 		stubLookupUser(t, func(uid string) (*user.User, error) {
 			return &user.User{Uid: "1000", Gid: "1000", Username: "ghost", HomeDir: ""}, nil
 		})
+		stubNobodyGroup(t)
 
-		home, username, gid := callerIdentity(1000)
-		assert.Equal(t, systemCacheRoot, home)
-		assert.Equal(t, nobodyUsername, username)
-		assert.Equal(t, uint32(nobodyUID), gid)
+		info := callerIdentity(1000)
+		assert.Equal(t, systemCacheRoot, info.home)
+		assert.Equal(t, nobodyUsername, info.username)
+		assert.Equal(t, uint32(65534), info.gid)
+	})
+}
+
+func TestNobodyGID(t *testing.T) {
+	t.Run("resolved via nobody group", func(t *testing.T) {
+		stubLookupGroup(t, func(name string) (*user.Group, error) {
+			if name == "nobody" {
+				return &user.Group{Gid: "99", Name: "nobody"}, nil
+			}
+			return nil, errors.New("no such group")
+		})
+		assert.Equal(t, uint32(99), nobodyGID())
+	})
+
+	t.Run("nogroup fallback", func(t *testing.T) {
+		stubLookupGroup(t, func(name string) (*user.Group, error) {
+			if name == "nogroup" {
+				return &user.Group{Gid: "65533", Name: "nogroup"}, nil
+			}
+			return nil, errors.New("no such group")
+		})
+		assert.Equal(t, uint32(65533), nobodyGID())
+	})
+
+	t.Run("hardcoded fallback", func(t *testing.T) {
+		stubLookupGroup(t, func(name string) (*user.Group, error) {
+			return nil, errors.New("no such group")
+		})
+		assert.Equal(t, uint32(65534), nobodyGID())
 	})
 }
 

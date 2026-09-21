@@ -84,9 +84,13 @@ func GetSafeScriptExecutor() (ScriptExecutor, func(), error) {
 // GetSafeScriptExecutorAs запускает script executor от указанных uid/gid
 // (демон выполняет сборку от uid вызвавшего) с заданным окружением
 // (HOME/USER/LOGNAME вызвавшего — см. callerEnv в internal/dbus).
-func GetSafeScriptExecutorAs(uid, gid uint32, env []string) (ScriptExecutor, func(), error) {
+// groups — supplementary groups вызвавшего: Credential.Groups заменяет
+// ВСЕ supplementary groups процесса, поэтому без них plugin теряет
+// членство в группах (например alr для общего dl-кэша). Сюда передаются
+// все группы из NSS, включая основную — ядро дедуплицирует её с Gid.
+func GetSafeScriptExecutorAs(uid, gid uint32, groups []uint32, env []string) (ScriptExecutor, func(), error) {
 	cmd, err := getExecutorCmd("_internal-safe-script-executor", env,
-		&syscall.Credential{Uid: uid, Gid: gid})
+		&syscall.Credential{Uid: uid, Gid: gid, Groups: groups})
 	if err != nil {
 		return nil, nil, err
 	}

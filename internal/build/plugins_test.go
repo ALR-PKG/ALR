@@ -43,7 +43,7 @@ func TestGetExecutorCmd(t *testing.T) {
 			"LOGNAME=alice",
 			"PATH=/usr/bin:/bin",
 		}
-		cred := &syscall.Credential{Uid: 1000, Gid: 1000}
+		cred := &syscall.Credential{Uid: 1000, Gid: 1000, Groups: []uint32{1000, 27}}
 
 		cmd, err := getExecutorCmd("_internal-safe-script-executor", env, cred)
 		require.NoError(t, err)
@@ -53,6 +53,7 @@ func TestGetExecutorCmd(t *testing.T) {
 		require.NotNil(t, cmd.SysProcAttr.Credential)
 		assert.Equal(t, uint32(1000), cmd.SysProcAttr.Credential.Uid)
 		assert.Equal(t, uint32(1000), cmd.SysProcAttr.Credential.Gid)
+		assert.Equal(t, []uint32{1000, 27}, cmd.SysProcAttr.Credential.Groups)
 
 		home, ok := envVal(cmd.Env, "HOME")
 		require.True(t, ok)

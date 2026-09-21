@@ -229,15 +229,15 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool, callerUI
 	}
 	defer installerClose()
 
-	_, _, callerGID := callerIdentity(callerUID)
-	env, err := callerEnv(callerUID)
+	info := callerIdentity(callerUID)
+	env, err := callerEnv(info)
 	if err != nil {
 		job.SetFailed(fmt.Sprintf("Failed to build caller environment: %v", err))
 		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)
 		return
 	}
 
-	scripter, scripterClose, err := build.GetSafeScriptExecutorAs(callerUID, callerGID, env)
+	scripter, scripterClose, err := build.GetSafeScriptExecutorAs(callerUID, info.gid, info.groups, env)
 	if err != nil {
 		job.SetFailed(fmt.Sprintf("Failed to get scripter: %v", err))
 		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)

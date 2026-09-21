@@ -54,7 +54,7 @@ func TestCallerEnv(t *testing.T) {
 	t.Run("env from passwd entry", func(t *testing.T) {
 		stubLookupUser(t, lookupAlice)
 
-		env, err := callerEnv(1000)
+		env, err := callerEnv(callerIdentity(1000))
 		require.NoError(t, err)
 
 		home, ok := envValue(env, "HOME")
@@ -77,7 +77,7 @@ func TestCallerEnv(t *testing.T) {
 	t.Run("lookup error falls back to nobody", func(t *testing.T) {
 		stubLookupUser(t, lookupAlice)
 
-		env, err := callerEnv(65534)
+		env, err := callerEnv(callerIdentity(65534))
 		require.NoError(t, err)
 
 		home, ok := envValue(env, "HOME")
@@ -98,7 +98,7 @@ func TestCallerEnv(t *testing.T) {
 			return &user.User{Uid: uid, Username: "someone", HomeDir: "/nonexistent"}, nil
 		})
 
-		env, err := callerEnv(65534)
+		env, err := callerEnv(callerIdentity(65534))
 		require.NoError(t, err)
 
 		home, _ := envValue(env, "HOME")
