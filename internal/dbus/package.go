@@ -179,18 +179,21 @@ func (p *DBusPackage) Install(sender dbus.Sender, options map[string]dbus.Varian
 
 	// Парсим опции
 	clean := false
-	interactive := true
 
 	if opt, ok := options["clean"]; ok {
 		if val, ok := opt.Value().(bool); ok {
 			clean = val
 		}
 	}
+	// Демон работает без TTY: интерактивные промпты скриптов запрещены
+	// всегда, чтобы сборка не зависла на вводе. Опция interactive
+	// игнорируется.
 	if opt, ok := options["interactive"]; ok {
-		if val, ok := opt.Value().(bool); ok {
-			interactive = val
+		if val, ok := opt.Value().(bool); ok && val {
+			slog.Warn("daemon runs non-interactively, ignoring interactive option", "package", p.name)
 		}
 	}
+	interactive := false
 
 	// Создаем задачу
 	jobID := p.service.NextJobID()
@@ -312,13 +315,14 @@ func (p *DBusPackage) Remove(sender dbus.Sender, options map[string]dbus.Variant
 		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
 	}
 
-	// Парсим опции
-	interactive := true
+	// Демон работает без TTY: интерактивность запрещена всегда
+	// (NoConfirm у пакетного менеджера), опция interactive игнорируется.
 	if opt, ok := options["interactive"]; ok {
-		if val, ok := opt.Value().(bool); ok {
-			interactive = val
+		if val, ok := opt.Value().(bool); ok && val {
+			slog.Warn("daemon runs non-interactively, ignoring interactive option", "package", p.name)
 		}
 	}
+	interactive := false
 
 	// Создаем задачу
 	jobID := p.service.NextJobID()

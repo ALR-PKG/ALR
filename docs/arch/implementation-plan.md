@@ -1238,11 +1238,11 @@ Expected: PASS
 **Файлы:**
 - Modify: `internal/dbus/package.go` (runInstall/runRemove)
 
-- [ ] **Шаг 1: реализация** — BuildOpts.Interactive принудительно false
+- [x] **Шаг 1: реализация** — BuildOpts.Interactive принудительно false
   (опция `interactive` из options игнорируется с slog.Warn; NoConfirm для
   Remove = true), чтобы скрипты не могли зависнуть на промпте без TTY.
-- [ ] **Шаг 2: тесты/проверка** — `go build ./...`, `go test ./internal/dbus/`
-- [ ] **Шаг 3: коммит** `Изменено: демон всегда работает неинтерактивно`
+- [x] **Шаг 2: тесты/проверка** — `go build ./...`, `go test ./internal/dbus/`
+- [x] **Шаг 3: коммит** `Изменено: демон всегда работает неинтерактивно`
 
 ### Task 8.5: сквозная проверка Этапа 8
 
