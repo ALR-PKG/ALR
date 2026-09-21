@@ -1325,14 +1325,140 @@ Expected: PASS
 
 ---
 
-## Этапы 9-10: состав работ (детальный план — перед стартом каждого)
+## Этап 10: состав работ (детальный план — перед стартом)
 
-### Этап 9: встроенная песочница
-- `internal/sandbox/`: re-exec с `CLONE_NEWUSER|CLONE_NEWNS|CLONE_NEWPID`,
-  uid-map, bind дерева сборки rw + `/usr`,`/lib`,`/etc` ro, pivot_root
-- Фолбэк landlock (ядро 5.13+), затем none + warning
-- Интеграция в `script_executor` (подпроцесс-плагин стартует в песочнице)
-- Тесты: скрипт, пишущий в `$HOME` → ошибка; пишущий в дерево сборки → OK
+## Этап 9: встроенная песочница
+
+Результат: код alr.sh (prepare/build/package и всё, что они запускают)
+выполняется в песочнице: rw только дерево сборки, кэш пакетов и /tmp;
+система ro; $HOME недоступен; свежий /proc. Без внешних зависимостей
+(только ядро). Каскад деградации: user+mount+pid namespaces → landlock
+(5.13+) → без песочницы + warning. Ручка отключения: `ALR_SANDBOX=off`.
+
+Ключевые факты текущего кода:
+- Недоверенное исполнение — в plugin-процессе `_internal-safe-script-executor`
+  (internal/build/plugins.go:getExecutorCmd). Именно его и песочним.
+- Уже есть зависимость `git.alr-pkg.ru/ALR/fakeroot` (v0.0.4): CLONE_NEWUSER
+  + uid-map 0→euid на каждую команду скрипта (handlers/fakeroot.go) —
+  показывает, что userns на целевых системах доступен; внутри нашей
+  песочницы (uid 0 в ns) fakeroot.Apply завершается no-op по uid==0.
+- На хосте разработки проверено: `unshare -U -m -p -f` работает, ядро 6.12.
+- Из находки 7.4: go-plugin пишет temp в /tmp — /tmp обязан быть rw.
+- `golang.org/x/sys/unix` v0.33 содержит landlock API
+  (LandlockCreateRuleset/AddRule/RestrictSelf).
+
+Макет ФС в песочнице (вычисляется из путей конфига):
+- rw: `BuildDir` (дерево сборки), `PkgsDir` (кэш пакетов — copyToCache и
+  `.alr-cache.lock` внутри plugin'а), `/tmp` (go-plugin socket, os.TempDir)
+- ro: `ScriptDir` (alr.sh), `/usr`, `/lib`, `/lib64`, `/bin`, `/sbin`,
+  `/etc` (resolv.conf и т.п. — сеть сохраняется, CLONE_NEWNET нет)
+- /dev: только null/zero/random/urandom (ro bind), /proc — свежий
+- dl-кэш и $HOME вне BuildDir/PkgsDir — не монтируются (скачивание
+  sources — в родителе; plugin видит только готовый srcdir в дереве)
+- gid-mapping: только основная группа (0→gid); групповые rw-каталоги
+  хоста в песочницу не монтируются — задокументированное ограничение
+
+Протокол: родитель передаёт макет init'у JSON'ом через fd 3
+(`exec.Cmd.ExtraFiles`) — без временных файлов.
+
+### Task 9.1: internal/sandbox — макет и опции
+
+**Файлы:**
+- Create: `internal/sandbox/sandbox.go` (Options, Layout, вычисление из cfg)
+- Test: `internal/sandbox/sandbox_test.go`
+
+- [ ] **Шаг 1: падающий тест** — `LayoutFromPaths(buildDir, pkgsDir,
+  scriptDir)` → корректный набор mount-записей (rw/ro, дедупликация
+  вложенных путей: BuildDir внутри PkgsDir и наоборот не дублируется;
+  scriptDir совпадает с rw-путём → rw побеждает), JSON-маршалинг туда-обратно.
+- [ ] **Шаг 2: реализация** — типы `Mount{Source, Target, RW bool}`,
+  `Layout{Mounts []Mount, DevNodes []string, ProcFresh bool}`; дедупликация
+  по принципу «наиболее специфичный путь, rw сильнее».
+- [ ] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ -v`
+- [ ] **Шаг 4: коммит** `Добавлено: пакет sandbox (макет ФС)`
+
+### Task 9.2: init-команда и Wrap (namespaces)
+
+**Файлы:**
+- Create: `internal/sandbox/init.go` (точка входа `_internal-sandbox-init`)
+- Modify: `internal/sandbox/sandbox.go` (`Wrap(cmd, layout)` — SysProcAttr)
+- Modify: регистрация скрытой команды (cmd/)
+- Test: `internal/sandbox/integration_test.go`
+
+- [ ] **Шаг 1: падающий интеграционный тест** (skip, если userns
+  недоступен): в песочнице запустить `/bin/sh -c`: запись в layout-rw —
+  OK; в $HOME — EACCES; чтение /etc/os-release — OK; `ls /proc | wc -l`
+  маленький (fresh proc, pid 1 — сам init).
+- [ ] **Шаг 2: реализация**
+  - `Wrap(cmd, layout, uid, gid)`: cmd.Path → os.Executable, args →
+    `_internal-sandbox-init -- <original args>`, SysProcAttr:
+    `Cloneflags = CLONE_NEWUSER|CLONE_NEWNS|CLONE_NEWPID`,
+    `UidMappings/GidMappings [{0, uid, 1}]`, ExtraFiles + JSON layout на fd 3.
+    Возвращает ошибку «userns недоступен» для каскада (детект — на запуске,
+    пробный exec? решай: фактический запуск init сообщает код выхода;
+    для каскада в 9.3 нужен способ отличить «песочница не завелась» от
+    «команда внутри упала» — exit code init'а зарезервировать, напр. 70).
+  - `_internal-sandbox-init`: читает layout с fd 3; создаёт newroot
+    (tmpfs в /tmp/alr-sandbox-<pid>); bind-mounts по макету (ro через
+    MS_BIND|MS_REMOUNT|MS_RDONLY); /dev ноды (bind ro); mount fresh /proc;
+    pivot_root(newroot, put_old) + umount2(MNT_DETACH); chdir в дерево
+    или /; syscall.Exec(target, args, env).
+- [ ] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ -v -count=1`
+- [ ] **Шаг 4: коммит** `Добавлено: песочница на namespaces (re-exec init)`
+
+### Task 9.3: landlock-фолбэк и интеграция в script executor
+
+**Файлы:**
+- Create: `internal/sandbox/landlock.go`
+- Modify: `internal/build/plugins.go` (script executor — в песочнице)
+- Test: `internal/sandbox/landlock_test.go`, обновить plugins_test.go
+
+- [ ] **Шаг 1: падающий тест** — `ApplyLandlock(layout)`: после вызова
+  запись вне rw-путей → EACCES, чтение системы — OK (тест на живом ядре,
+  skip < 5.13).
+- [ ] **Шаг 2: реализация** — landlock ABI v1: ruleset с
+  handled_access_fs = все FS_* (что доступно в x/sys v0.33), правила
+  path_beneath для rw-путей (write) и ro-путей+системы (read);
+  RestrictSelf(NoNewPrivs). В plugins.go: script executor →
+  `sandbox.Wrap`; при ошибке запуска (exit 70 / отказ ядра) → повтор с
+  landlock-режимом (init применяет landlock к себе перед exec — отдельный
+  режим `_internal-sandbox-ll`? или флаг init'а «если ns не удалось» — решай
+  простое: родитель при недоступности userns запускает target напрямую,
+  а landlock применяет обёртка-init без ns) → при недоступности и этого
+  → прямой запуск + slog.Warn. `ALR_SANDBOX=off` — прямой запуск.
+- [ ] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ ./internal/build/ -v`
+- [ ] **Шаг 4: коммит** `Добавлено: landlock-фолбэк песочницы, script executor в песочнице`
+
+### Task 9.4: демон-путь (caller-mapping вместо Credential)
+
+**Файлы:**
+- Modify: `internal/dbus/package.go` + `internal/build/plugins.go`
+  (GetSafeScriptExecutorAs — через sandbox с uid/gid вызвавшего)
+
+- [ ] **Шаг 1: реализация** — в демоне plugin стартует через sandbox.Wrap
+  с uid/gid вызвавшего (map 0→callerUID) вместо/поверх Credential
+  (совместимость Credential+NEWUSER: выбери — либо sandbox-mapped root
+  заменяет Credential, либо Credential внутри ns; протестируй выбранное;
+  supplementary groups mapping — ограничение задокументируй).
+  Layout демона: callerCachePaths(uid) rw.
+- [ ] **Шаг 2: тесты** — unit на конфиг Wrap для демон-пути; прогон всех
+  `go test ./internal/dbus/ ./internal/build/ ./internal/sandbox/`
+- [ ] **Шаг 3: коммит** `Изменено: демон собирает в песочнице с uid-маппингом вызвавшего`
+
+### Task 9.5: сквозная проверка Этапа 9
+
+- CLI `alr build -s`: рецепт, пишущий в $HOME (`touch $HOME/escape`) →
+  ошибка сборки; пишущий в дерево/пакет — OK; кэш-хиты работают
+  (мета/пакеты пишутся внутри песочницы)
+- Рецепт, читающий /etc и качающий из сети (если есть) — OK
+- ALR_SANDBOX=off — старое поведение
+- Регрессия: `go build ./...`, `go test ./...`, pre-commit
+- Демон (сессионная шина, как в 8.5): install маленького пакета — сборка
+  в песочнице от uid вызвавшего (проверить по логам/владельцам)
+
+---
+
+## Этап 10: состав работ (детальный план — перед стартом)
 
 ### Этап 10: alr fix без чужих данных
 - fix чистит per-user каталоги текущего пользователя; системный кэш — только
