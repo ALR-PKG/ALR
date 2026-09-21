@@ -39,3 +39,19 @@ func newInternalSandboxCmd() *cobra.Command {
 		},
 	}
 }
+
+func newInternalSandboxLLCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:    "_internal-sandbox-ll",
+		Hidden: true,
+		// Все аргументы после имени команды (включая "--") принадлежат
+		// целевой команде, а не cobra.
+		DisableFlagParsing: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// При успехе RunLandlockInit завершается exec'ом целевой
+			// команды; возвращаемый код — только сбой настройки.
+			os.Exit(sandbox.RunLandlockInit(args))
+			return nil
+		},
+	}
+}

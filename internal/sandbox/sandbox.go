@@ -145,6 +145,25 @@ func dedupMounts(mounts []Mount) []Mount {
 // запуска (clone EPERM) либо exit code ExitSetupFailure — это сигнал
 // каскаду деградации.
 func Wrap(cmd *exec.Cmd, layout *Layout, uid, gid int) error {
+	if err := wrapReexec(cmd, layout, "_internal-sandbox-init"); err != nil {
+		return err
+	}
+
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	cmd.SysProcAttr.Cloneflags |= unix.CLONE_NEWUSER | unix.CLONE_NEWNS | unix.CLONE_NEWPID
+	cmd.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: uid, Size: 1}}
+	cmd.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: gid, Size: 1}}
+
+	return nil
+}
+
+// wrapReexec заменяет cmd на перевыполнение собственного бинарника с
+// подкомандой sub (`sub -- <исходные args>`) и передаёт JSON-макет через
+// fd 3 (первый элемент ExtraFiles). Макет мал и целиком помещается в буфер
+// pipe — писать можно до Start.
+func wrapReexec(cmd *exec.Cmd, layout *Layout, sub string) error {
 	self, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("sandbox: путь к собственному бинарнику: %w", err)
@@ -159,7 +178,6 @@ func Wrap(cmd *exec.Cmd, layout *Layout, uid, gid int) error {
 	if err != nil {
 		return fmt.Errorf("sandbox: pipe для макета: %w", err)
 	}
-	// Макет мал и целиком помещается в буфер pipe — писать можно до Start.
 	if _, err := w.Write(data); err != nil {
 		r.Close()
 		w.Close()
@@ -167,17 +185,10 @@ func Wrap(cmd *exec.Cmd, layout *Layout, uid, gid int) error {
 	}
 	w.Close()
 
-	args := append([]string{self, "_internal-sandbox-init", "--"}, cmd.Args...)
+	args := append([]string{self, sub, "--"}, cmd.Args...)
 	cmd.Path = self
 	cmd.Args = args
 	cmd.ExtraFiles = append(cmd.ExtraFiles, r)
-
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
-	}
-	cmd.SysProcAttr.Cloneflags |= unix.CLONE_NEWUSER | unix.CLONE_NEWNS | unix.CLONE_NEWPID
-	cmd.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: uid, Size: 1}}
-	cmd.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: gid, Size: 1}}
 
 	return nil
 }

@@ -32,6 +32,9 @@ func TestMain(m *testing.M) {
 	if len(os.Args) >= 2 && os.Args[1] == "_internal-sandbox-init" {
 		os.Exit(RunInit(os.Args[2:]))
 	}
+	if len(os.Args) >= 2 && os.Args[1] == "_internal-sandbox-ll" {
+		os.Exit(RunLandlockInit(os.Args[2:]))
+	}
 	os.Exit(m.Run())
 }
 

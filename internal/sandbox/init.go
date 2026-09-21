@@ -58,21 +58,7 @@ func RunInit(args []string) int {
 		return ExitSetupFailure
 	}
 
-	target := args[0]
-	if !filepath.IsAbs(target) {
-		resolved, err := lookPath(target)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "sandbox-init: %v\n", err)
-			return ExitSetupFailure
-		}
-		target = resolved
-	}
-
-	if err := syscall.Exec(target, args, os.Environ()); err != nil {
-		fmt.Fprintf(os.Stderr, "sandbox-init: exec %s: %v\n", target, err)
-		return ExitSetupFailure
-	}
-	return ExitSetupFailure // недостижимо
+	return execTarget(args)
 }
 
 // lookPath ищет бинарник по PATH уже внутри песочницы.

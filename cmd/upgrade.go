@@ -63,18 +63,6 @@ func newUpgradeCmd() *cobra.Command {
 				return err
 			}
 
-			installer, installerClose, err := build.GetSafeInstaller()
-			if err != nil {
-				return err
-			}
-			defer installerClose()
-
-			scripter, scripterClose, err := build.GetSafeScriptExecutor()
-			if err != nil {
-				return err
-			}
-			defer scripterClose()
-
 			ctx := cmd.Context()
 
 			deps, err := appbuilder.
@@ -89,6 +77,18 @@ func newUpgradeCmd() *cobra.Command {
 				return err
 			}
 			defer deps.Defer()
+
+			installer, installerClose, err := build.GetSafeInstaller()
+			if err != nil {
+				return err
+			}
+			defer installerClose()
+
+			scripter, scripterClose, err := build.GetSafeScriptExecutor(deps.Cfg, "")
+			if err != nil {
+				return err
+			}
+			defer scripterClose()
 
 			if deps.Cfg.UpdateSystemOnUpgrade() {
 				slog.Info(gotext.Get("Updating system packages..."))

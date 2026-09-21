@@ -1411,10 +1411,10 @@ Expected: PASS
 - Modify: `internal/build/plugins.go` (script executor — в песочнице)
 - Test: `internal/sandbox/landlock_test.go`, обновить plugins_test.go
 
-- [ ] **Шаг 1: падающий тест** — `ApplyLandlock(layout)`: после вызова
+- [x] **Шаг 1: падающий тест** — `ApplyLandlock(layout)`: после вызова
   запись вне rw-путей → EACCES, чтение системы — OK (тест на живом ядре,
   skip < 5.13).
-- [ ] **Шаг 2: реализация** — landlock ABI v1: ruleset с
+- [x] **Шаг 2: реализация** — landlock ABI v1: ruleset с
   handled_access_fs = все FS_* (что доступно в x/sys v0.33), правила
   path_beneath для rw-путей (write) и ro-путей+системы (read);
   RestrictSelf(NoNewPrivs). В plugins.go: script executor →
@@ -1424,8 +1424,8 @@ Expected: PASS
   простое: родитель при недоступности userns запускает target напрямую,
   а landlock применяет обёртка-init без ns) → при недоступности и этого
   → прямой запуск + slog.Warn. `ALR_SANDBOX=off` — прямой запуск.
-- [ ] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ ./internal/build/ -v`
-- [ ] **Шаг 4: коммит** `Добавлено: landlock-фолбэк песочницы, script executor в песочнице`
+- [x] **Шаг 3: тесты проходят** — `go test ./internal/sandbox/ ./internal/build/ -v`
+- [x] **Шаг 4: коммит** `Добавлено: landlock-фолбэк песочницы, script executor в песочнице`
 
 ### Task 9.4: демон-путь (caller-mapping вместо Credential)
 

@@ -49,18 +49,6 @@ func newInstallCmd() *cobra.Command {
 				return fmt.Errorf("%s", gotext.Get("Command install expected at least 1 argument, got 0"))
 			}
 
-			installer, installerClose, err := build.GetSafeInstaller()
-			if err != nil {
-				return err
-			}
-			defer installerClose()
-
-			scripter, scripterClose, err := build.GetSafeScriptExecutor()
-			if err != nil {
-				return err
-			}
-			defer scripterClose()
-
 			ctx := cmd.Context()
 
 			deps, err := appbuilder.
@@ -75,6 +63,18 @@ func newInstallCmd() *cobra.Command {
 				return err
 			}
 			defer deps.Defer()
+
+			installer, installerClose, err := build.GetSafeInstaller()
+			if err != nil {
+				return err
+			}
+			defer installerClose()
+
+			scripter, scripterClose, err := build.GetSafeScriptExecutor(deps.Cfg, "")
+			if err != nil {
+				return err
+			}
+			defer scripterClose()
 
 			builder, err := build.NewMainBuilder(
 				deps.Cfg,

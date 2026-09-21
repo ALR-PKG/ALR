@@ -240,7 +240,11 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool, callerUI
 		return
 	}
 
-	scripter, scripterClose, err := build.GetSafeScriptExecutorAs(callerUID, info.gid, info.groups, env)
+	// Конфиг задачи с кэшем вызвавшего (общий конфиг демона не мутируется);
+	// из него же строится макет песочницы script executor'а
+	jobCfg := callerJobConfig(deps.Cfg, callerUID)
+
+	scripter, scripterClose, err := build.GetSafeScriptExecutorAs(callerUID, info.gid, info.groups, env, jobCfg, "")
 	if err != nil {
 		job.SetFailed(fmt.Sprintf("Failed to get scripter: %v", err))
 		p.service.Notify("ALR Error", fmt.Sprintf("Failed to install %s", p.name), UrgencyCritical)
@@ -248,10 +252,9 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool, callerUI
 	}
 	defer scripterClose()
 
-	// Создаем билдер: конфиг задачи с кэшем вызвавшего (общий конфиг
-	// демона не мутируется), кэш доверяет файлам вызвавшего
+	// Создаем билдер: кэш доверяет файлам вызвавшего
 	builder, err := build.NewMainBuilder(
-		callerJobConfig(deps.Cfg, callerUID),
+		jobCfg,
 		deps.Manager,
 		deps.Repos,
 		scripter,
