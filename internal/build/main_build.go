@@ -30,7 +30,7 @@ func NewMainBuilder(
 	builder := &Builder{
 		scriptExecutor: scriptExecutor,
 		cacheExecutor: &Cache{
-			cfg,
+			cfg: cfg,
 		},
 		scriptResolver: &ScriptResolver{
 			cfg,

@@ -1176,13 +1176,13 @@ Expected: PASS
   verifyTrustedPaths)
 - Test: `internal/dbus/caller_env_test.go`, `internal/build/cache_test.go`
 
-- [ ] **Шаг 1: падающий тест**
+- [x] **Шаг 1: падающий тест**
   - `callerEnv(uid)`: HOME/USER/LOGNAME из `user.LookupId` (шов подмены);
     uid 65534 без passwd-записи → фолбэк HOME=/var/cache/alr (nobody).
   - `Cache` с `trustedUIDs [1000]`: файл владельца 1000 → hit
     (без — miss); то же для verifyTrustedPaths.
 
-- [ ] **Шаг 2: реализация**
+- [x] **Шаг 2: реализация**
   - `internal/dbus/caller_env.go`: `callerEnv(uid uint32) ([]string,
     error)` (env для plugin-процесса: HOME, USER, LOGNAME, PATH — как
     setCommonCmdEnv, но для вызвавшего; nobody → /var/cache/alr) и
@@ -1194,12 +1194,12 @@ Expected: PASS
     минимальное инвазивное изменение; существующие вызовы CLI не ломать).
   - Конструирование job-Builder'а — Task 8.3.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/dbus/ ./internal/build/ -v -count=1 && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: job-окружение вызвавшего и доверие кэша по uid`
+- [x] **Шаг 4: коммит** `Добавлено: job-окружение вызвавшего и доверие кэша по uid`
 
 ### Task 8.3: setuid-запуск script executor в демоне
 

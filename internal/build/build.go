@@ -249,6 +249,16 @@ type Builder struct {
 	repos                PackageFinder
 	mgr                  manager.Manager
 	cfg                  Config
+	trustedUIDs          []uint32
+}
+
+// SetTrustedUIDs задаёт дополнительные доверенные uid владельцев кэша
+// (uid вызвавшего при сборке от демона) и пробрасывает их в Cache.
+func (b *Builder) SetTrustedUIDs(uids ...uint32) {
+	b.trustedUIDs = uids
+	if c, ok := b.cacheExecutor.(*Cache); ok {
+		c.trustedUIDs = uids
+	}
 }
 
 type BuildArgs struct {
@@ -1294,7 +1304,7 @@ func (i *Builder) InstallPkgs(
 
 		// Перепроверяем владельца кэшированных пакетов: между попаданием
 		// в кэш и установкой файл в общем кэше мог быть подменён
-		if err := verifyTrustedPaths(GetBuiltPaths(targetDeps)); err != nil {
+		if err := verifyTrustedPaths(GetBuiltPaths(targetDeps), i.trustedUIDs...); err != nil {
 			return nil, err
 		}
 

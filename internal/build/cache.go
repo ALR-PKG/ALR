@@ -33,6 +33,9 @@ import (
 
 type Cache struct {
 	cfg Config
+	// trustedUIDs — дополнительные доверенные uid владельцев файлов кэша
+	// (uid вызвавшего при сборке от демона); по умолчанию пусто
+	trustedUIDs []uint32
 }
 
 // CheckForBuiltPackage ищет готовый пакет в кэше и засчитывает попадание,
@@ -49,12 +52,12 @@ func (c *Cache) CheckForBuiltPackage(
 		return "", false, err
 	}
 
-	path, found := findTrustedCachedPkg(c.cfg, filename)
+	path, found := findTrustedCachedPkg(c.cfg, filename, c.trustedUIDs...)
 	if !found {
 		return "", false, nil
 	}
 
-	if !checkCacheMeta(path, SemanticCacheKey(vars, funcsKey)) {
+	if !checkCacheMeta(path, SemanticCacheKey(vars, funcsKey), c.trustedUIDs...) {
 		return "", false, nil
 	}
 
@@ -65,10 +68,10 @@ func (c *Cache) CheckForBuiltPackage(
 // Мета проверяется так же, как сам пакет: регулярный файл с доверенным
 // владельцем. Отсутствие, битый JSON, неизвестная версия формата или
 // несовпадение ключа — промах.
-func checkCacheMeta(pkgPath, expectedKey string) bool {
+func checkCacheMeta(pkgPath, expectedKey string, trustedUIDs ...uint32) bool {
 	metaPath := pkgPath + ".meta"
 
-	if !isTrustedRegularFile(metaPath) {
+	if !isTrustedRegularFile(metaPath, trustedUIDs...) {
 		return false
 	}
 
@@ -99,9 +102,9 @@ func checkCacheMeta(pkgPath, expectedKey string) bool {
 
 // findTrustedCachedPkg ищет готовый пакет в плоском кэше PkgsDir и
 // возвращает его, только если это регулярный файл с доверенным владельцем.
-func findTrustedCachedPkg(cfg Config, filename string) (string, bool) {
+func findTrustedCachedPkg(cfg Config, filename string, trustedUIDs ...uint32) (string, bool) {
 	pkgPath := filepath.Join(cfg.GetPaths().PkgsDir, filename)
-	if !isTrustedRegularFile(pkgPath) {
+	if !isTrustedRegularFile(pkgPath, trustedUIDs...) {
 		return "", false
 	}
 	return pkgPath, true
@@ -109,7 +112,7 @@ func findTrustedCachedPkg(cfg Config, filename string) (string, bool) {
 
 // isTrustedRegularFile проверяет, что path — регулярный файл (не симлинк)
 // с доверенным владельцем.
-func isTrustedRegularFile(path string) bool {
+func isTrustedRegularFile(path string, trustedUIDs ...uint32) bool {
 	stat, err := os.Lstat(path)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -131,7 +134,7 @@ func isTrustedRegularFile(path string) bool {
 		return false
 	}
 
-	if !isTrustedOwner(sys.Uid) {
+	if !isTrustedOwner(sys.Uid, trustedUIDs...) {
 		slog.Debug("Файл кэша принадлежит недоверенному владельцу, пересборка", "path", path, "uid", sys.Uid)
 		return false
 	}
@@ -141,7 +144,7 @@ func isTrustedRegularFile(path string) bool {
 
 // verifyTrustedPaths перепроверяет владельца путей непосредственно перед
 // установкой, закрывая TOCTOU-окно между попаданием в кэш и InstallLocal.
-func verifyTrustedPaths(paths []string) error {
+func verifyTrustedPaths(paths []string, trustedUIDs ...uint32) error {
 	for _, path := range paths {
 		stat, err := os.Lstat(path)
 		if err != nil {
@@ -149,7 +152,7 @@ func verifyTrustedPaths(paths []string) error {
 		}
 
 		sys, ok := stat.Sys().(*syscall.Stat_t)
-		if !ok || !stat.Mode().IsRegular() || !isTrustedOwner(sys.Uid) {
+		if !ok || !stat.Mode().IsRegular() || !isTrustedOwner(sys.Uid, trustedUIDs...) {
 			slog.Debug("Отказ в установке пакета из кэша", "path", path)
 			return fmt.Errorf("%s: %s", gotext.Get("Cached package owner changed, refusing to install"), path)
 		}
@@ -158,9 +161,18 @@ func verifyTrustedPaths(paths []string) error {
 }
 
 // isTrustedOwner возвращает true, если uid — сам пользователь, root (фолбэк
-// демона) или nobody (тоже фолбэк демона в общем кэше).
-func isTrustedOwner(uid uint32) bool {
-	return uid == uint32(os.Geteuid()) || uid == 0 || uid == 65534
+// демона), nobody (тоже фолбэк демона в общем кэше) или входит в список
+// дополнительных доверенных uid (uid вызвавшего при сборке от демона).
+func isTrustedOwner(uid uint32, trustedUIDs ...uint32) bool {
+	if uid == uint32(os.Geteuid()) || uid == 0 || uid == 65534 {
+		return true
+	}
+	for _, trusted := range trustedUIDs {
+		if uid == trusted {
+			return true
+		}
+	}
+	return false
 }
 
 func pkgFileName(
