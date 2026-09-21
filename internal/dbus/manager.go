@@ -169,7 +169,14 @@ func (m *DBusManager) ListRepositories() ([]RepositoryInfo, *dbus.Error) {
 }
 
 // RefreshRepositories обновляет все репозитории
-func (m *DBusManager) RefreshRepositories() (dbus.ObjectPath, *dbus.Error) {
+func (m *DBusManager) RefreshRepositories(sender dbus.Sender) (dbus.ObjectPath, *dbus.Error) {
+	slog.Info("RefreshRepositories called", "sender", sender)
+
+	// Проверяем авторизацию через PolicyKit по uid вызвавшего
+	if err := m.service.checkAuthorization(sender, ActionRefresh); err != nil {
+		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
+	}
+
 	deps := m.service.GetDeps()
 	if deps == nil || deps.Repos == nil {
 		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotInitialized", []interface{}{"service not initialized"})

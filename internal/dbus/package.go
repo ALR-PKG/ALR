@@ -168,11 +168,11 @@ func (p *DBusPackage) GetDetails() (map[string]dbus.Variant, *dbus.Error) {
 }
 
 // Install устанавливает пакет
-func (p *DBusPackage) Install(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
-	slog.Info("Install called", "package", p.name, "repository", p.repository)
+func (p *DBusPackage) Install(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
+	slog.Info("Install called", "package", p.name, "repository", p.repository, "sender", sender)
 
-	// Проверяем авторизацию через PolicyKit
-	if err := p.checkAuthorization("ru.alr-pkg.install"); err != nil {
+	// Проверяем авторизацию через PolicyKit по uid вызвавшего
+	if err := p.service.checkAuthorization(sender, ActionInstall); err != nil {
 		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
 	}
 
@@ -212,6 +212,10 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 
 	ctx := p.service.Context()
 	deps := p.service.GetDeps()
+	if deps == nil || deps.Cfg == nil {
+		job.SetFailed("service not initialized")
+		return
+	}
 
 	// Получаем исполнители
 	installer, installerClose, err := build.GetSafeInstaller()
@@ -287,11 +291,11 @@ func (p *DBusPackage) runInstall(job *DBusJob, clean, interactive bool) {
 }
 
 // Remove удаляет пакет
-func (p *DBusPackage) Remove(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
-	slog.Info("Remove called", "package", p.name, "repository", p.repository)
+func (p *DBusPackage) Remove(sender dbus.Sender, options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
+	slog.Info("Remove called", "package", p.name, "repository", p.repository, "sender", sender)
 
-	// Проверяем авторизацию
-	if err := p.checkAuthorization("ru.alr-pkg.remove"); err != nil {
+	// Проверяем авторизацию через PolicyKit по uid вызвавшего
+	if err := p.service.checkAuthorization(sender, ActionRemove); err != nil {
 		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
 	}
 
@@ -323,6 +327,10 @@ func (p *DBusPackage) runRemove(job *DBusJob, interactive bool) {
 	job.SetProgress(0.0, "Removing package...")
 
 	deps := p.service.GetDeps()
+	if deps == nil || deps.Manager == nil {
+		job.SetFailed("service not initialized")
+		return
+	}
 
 	fullName := fmt.Sprintf("alr-%s+%s", p.name, p.repository)
 
@@ -383,14 +391,6 @@ func (p *DBusPackage) GetDependencies() ([]string, *dbus.Error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.depends, nil
-}
-
-// checkAuthorization проверяет авторизацию через PolicyKit
-func (p *DBusPackage) checkAuthorization(action string) error {
-	// TODO: реализовать полную интеграцию с PolicyKit
-	// Пока просто проверяем, что мы root
-	// В будущем здесь будет вызов polkit.CheckAuthorization
-	return nil
 }
 
 // IntrospectionData возвращает данные для introspection

@@ -1140,12 +1140,12 @@ HOME вызвавшего) в его XDG-кэше; кэш-доверие дем�
 - Modify: `internal/dbus/service.go` (поле Authorizer + резолвер, инъекция)
 - Test: `internal/dbus/auth_test.go` (новый)
 
-- [ ] **Шаг 1: падающий тест** — Install с фейковым Authorizer
+- [x] **Шаг 1: падающий тест** — Install с фейковым Authorizer
   (возвращает false) → ошибка NotAuthorized, job НЕ создаётся; с
   возвращающим true → проходит; резолвер подменяется, Authorizer получает
   uid 1000 и action "ru.alr-pkg.install".
 
-- [ ] **Шаг 2: реализация**
+- [x] **Шаг 2: реализация**
   - `caller.go`: `resolveCallerUID(conn, sender) (uint32, error)` через
     `org.freedesktop.DBus.GetConnectionUnixUser`; за переменной-швом
     (`var getConnectionUnixUser = ...`) для тестов.
@@ -1160,12 +1160,12 @@ HOME вызвавшего) в его XDG-кэше; кэш-доверие дем�
     `RefreshRepositories(sender)` — sender первым параметром; auth до
     создания job; ошибка → `ru.alr-pkg.ALR.Error.NotAuthorized`.
 
-- [ ] **Шаг 3: тесты проходят**
+- [x] **Шаг 3: тесты проходят**
 
 Run: `go test ./internal/dbus/ -v -count=1 && go build ./...`
 Expected: PASS
 
-- [ ] **Шаг 4: коммит** `Добавлено: polkit-авторизация по uid вызвавшего в демоне`
+- [x] **Шаг 4: коммит** `Добавлено: polkit-авторизация по uid вызвавшего в демоне`
 
 ### Task 8.2: job-конфиг вызвавшего (пути + доверие кэша)
 

@@ -53,6 +53,10 @@ type Service struct {
 
 	// Notification клиент
 	notifier *Notifier
+
+	// Авторизатор мутирующих вызовов (по умолчанию PolicyKit);
+	// подменяется в тестах
+	authorizer Authorizer
 }
 
 // NewService создает новый D-Bus сервис
@@ -175,6 +179,36 @@ func (s *Service) Stop() {
 	s.cancel()
 }
 
+// getAuthorizer возвращает авторизатор (ленивая инициализация PolicyKit)
+func (s *Service) getAuthorizer() Authorizer {
+	if s.authorizer == nil {
+		s.authorizer = NewPolicyKitAuthorizer(s.conn)
+	}
+	return s.authorizer
+}
+
+// checkAuthorization резолвит uid вызвавшего и проверяет авторизацию
+// действия через polkit. Возвращает ошибку при отказе.
+func (s *Service) checkAuthorization(sender dbus.Sender, actionID string) error {
+	uid, err := resolveCallerUID(s.conn, sender)
+	if err != nil {
+		slog.Warn("Failed to resolve caller uid", "sender", sender, "action", actionID, "err", err)
+		return fmt.Errorf("failed to resolve caller: %w", err)
+	}
+
+	authorized, err := s.getAuthorizer().CheckAuthorization(actionID, uid, nil, true)
+	if err != nil {
+		slog.Error("Authorization check failed", "action", actionID, "uid", uid, "err", err)
+		return fmt.Errorf("authorization check failed: %w", err)
+	}
+	if !authorized {
+		slog.Warn("Authorization denied", "action", actionID, "uid", uid)
+		return fmt.Errorf("not authorized for action %s", actionID)
+	}
+
+	return nil
+}
+
 // GetDeps возвращает ALR зависимости
 func (s *Service) GetDeps() *appbuilder.AppDeps {
 	return s.deps
@@ -211,6 +245,9 @@ func (s *Service) RegisterJob(job *DBusJob) dbus.ObjectPath {
 
 // exportJob экспортирует задачу на шину
 func (s *Service) exportJob(job *DBusJob, path dbus.ObjectPath) {
+	if s.conn == nil {
+		return
+	}
 	if err := s.conn.Export(job, path, JobInterfaceName); err != nil {
 		slog.Error("Failed to export job", "path", path, "err", err)
 		return
@@ -235,7 +272,9 @@ func (s *Service) UnregisterJob(path dbus.ObjectPath) {
 	delete(s.jobs, path)
 
 	// Удалить экспорт
-	s.conn.Export(nil, path, JobInterfaceName)
+	if s.conn != nil {
+		s.conn.Export(nil, path, JobInterfaceName)
+	}
 }
 
 // GetJob возвращает задачу по пути
@@ -263,6 +302,9 @@ func (s *Service) RegisterPackage(pkg *DBusPackage) dbus.ObjectPath {
 
 // exportPackage экспортирует пакет на шину
 func (s *Service) exportPackage(pkg *DBusPackage, path dbus.ObjectPath) {
+	if s.conn == nil {
+		return
+	}
 	if err := s.conn.Export(pkg, path, PackageInterfaceName); err != nil {
 		slog.Error("Failed to export package", "path", path, "err", err)
 		return
