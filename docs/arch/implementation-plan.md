@@ -1246,14 +1246,61 @@ Expected: PASS
 
 ### Task 8.5: сквозная проверка Этапа 8
 
-- Сессионная шина (dbus start) на хосте: `alr dbus install` маленького
-  пакета — polkit на хосте есть? (Fedora — да): интерактивный запрос
-  или отказ по политике; без polkit — fail-closed (uid != 0 → отказ)
-- Неавторизованный вызов: отказ NotAuthorized
-- Сборка в демоне: файлы дерева и кэша принадлежат вызвавшему uid
-  (ls -l ~/.cache/alr), установка в систему — от root (rpm -qa)
-- Регрессия CLI: `alr build`/`alr install` от пользователя — как раньше
-- `go build ./...`, `go test ./...`, pre-commit
+- [x] Сессионная шина: демон (`_internal-dbus-service --session`) стартует,
+  владеет `ru.alr-pkg.ALR`, `alr dbus status` → running
+- [x] polkit на хосте есть (polkitd + KDE-агент), но policy-файл
+  `configs/polkit/ru.alr-pkg.policy` НЕ установлен в систему (нет root):
+  `alr dbus install alr-repo/flake8` → отказ `not authorized for action
+  ru.alr-pkg.install` (ошибка CheckAuthorization по неизвестному action →
+  fallbackCheck, uid 1000 ≠ 0 → deny). Грант-ветка polkit живьём не
+  проверена — требуется установка .policy в /usr/share/polkit-1/actions
+- [x] fail-closed без polkit: демон под
+  `bwrap --dev-bind / / --tmpfs /run/dbus` (системная шина недоступна) →
+  `dbus install` → NotAuthorized, в журнале демона
+  `Authorization denied action=ru.alr-pkg.install uid=1000`;
+  `Manager.RefreshRepositories` → `ru.alr-pkg.ALR.Error.NotAuthorized`
+- [x] Неавторизованный вызов: NotAuthorized на живой шине (оба сценария
+  выше) + моки в `internal/dbus/auth_test.go`
+- [ ] Сборка в демоне + владельцы файлов: НЕ проверено живьём — до
+  runInstall не добраться без гранта polkit (см. выше); сессионный демон
+  и так имеет uid вызвавшего (setuid неотличим). Root-режим демона
+  (системная шина + setuid на uid вызвавшего) не проверен — нет sudo;
+  bwrap-userns не даёт CAP_SETUID для смены на произвольный хост-uid.
+  Покрыто юнитами (`caller_job_test.go`, Credential/trustedUIDs)
+- [x] Регрессия CLI: `alr build -s` тестового рецепта (alr-e8-test) —
+  сборка и кэш-хит OK, пакет в `~/.cache/alr/pkgs` принадлежит
+  пользователю (xpamych:xpamych); `alr info` — как раньше
+- [x] `go build ./...`, `go test ./...` (без e2e), pre-commit
+
+**Найдено при проверке (Task 8.5) — блокеры живой работы D-Bus, предшествуют
+ветке (из eee3f35), исправлены локально для проверки и откачены; нужен
+отдельный фикс:**
+
+1. **Невалидные имена интерфейсов и ошибок D-Bus.** `ru.alr-pkg.ALR.Manager`,
+   `.Package`, `.Job`, `ru.alr-pkg.ALR.Error.*` содержат дефис — по спеке
+   D-Bus дефисы запрещены в именах интерфейсов/ошибок (в bus names — можно).
+   godbus отвергает такие сообщения на отправке (`dbus: invalid message:
+   invalid interface name`), gdbus падает по assert. Итог: НИ ОДИН вызов
+   клиент→демон на живой шине не работает (`dbus status` всегда
+   "not running", install/search падают). Фикс: `alr-pkg` → `alr_pkg` в
+   константах интерфейсов/ошибок (`internal/dbus/types.go` и по коду);
+   well-known name `ru.alr-pkg.ALR` менять не нужно.
+2. **Невалидные object path.** `GetPackageObjectPath` подставляет repo/name
+   как есть — `alr-repo`/`alr-default` содержат дефис (запрещён в элементах
+   пути) → `invalid object path` в ответе демона. `GetJobObjectPath`
+   кодирует id как `string(rune(id))` (control-символ) — тоже невалидный
+   путь. Фикс: санитайз элементов пути (замена недопустимых символов на
+   `_`) и `strconv.FormatUint` для id (`internal/dbus/types.go:178-185`).
+3. Сопутствующее: fuzzy-перевод "Failed to get package" →
+   «Не удалось создать пакет» (`internal/translations/po/ru/default.po`) —
+   вводит в заблуждение при диагностике, поправить перевод.
+4. При запуске демона с БД старой версии (6 vs 8) демон молча сбрасывает
+   настройки пользователя («Несоответствие версий базы данных; сброс
+   настроек») — для мутирующего сервиса стоит логировать louder/требовать
+   `alr fix`, а не сбрасывать в фоне.
+5. `alr dbus start` запускает `alr` из PATH (системный, старой версии),
+   а не текущий бинарник — при смешении версий на шине оказывается чужой
+   демон. Стоит использовать `os.Executable()`.
 
 ---
 
