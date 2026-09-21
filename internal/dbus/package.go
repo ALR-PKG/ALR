@@ -31,7 +31,7 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/pkg/types"
 )
 
-// DBusPackage реализует ru.alr-pkg.ALR.Package интерфейс
+// DBusPackage реализует ru.alr_pkg.ALR.Package интерфейс
 type DBusPackage struct {
 	service *Service
 
@@ -174,7 +174,7 @@ func (p *DBusPackage) Install(sender dbus.Sender, options map[string]dbus.Varian
 	// Проверяем авторизацию через PolicyKit по uid вызвавшего
 	callerUID, err := p.service.authorizeCaller(sender, ActionInstall)
 	if err != nil {
-		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
+		return "", dbus.NewError(ErrorNotAuthorized, []interface{}{err.Error()})
 	}
 
 	// Парсим опции
@@ -312,7 +312,7 @@ func (p *DBusPackage) Remove(sender dbus.Sender, options map[string]dbus.Variant
 
 	// Проверяем авторизацию через PolicyKit по uid вызвавшего
 	if err := p.service.checkAuthorization(sender, ActionRemove); err != nil {
-		return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotAuthorized", []interface{}{err.Error()})
+		return "", dbus.NewError(ErrorNotAuthorized, []interface{}{err.Error()})
 	}
 
 	// Демон работает без TTY: интерактивность запрещена всегда
@@ -374,20 +374,20 @@ func (p *DBusPackage) runRemove(job *DBusJob, interactive bool) {
 
 // Build собирает пакет
 func (p *DBusPackage) Build(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error) {
-	return "", dbus.NewError("ru.alr-pkg.ALR.Error.NotImplemented", []interface{}{"Build not yet implemented via D-Bus"})
+	return "", dbus.NewError(ErrorNotImplemented, []interface{}{"Build not yet implemented via D-Bus"})
 }
 
 // CheckForUpdates проверяет наличие обновлений
 func (p *DBusPackage) CheckForUpdates() (bool, string, *dbus.Error) {
 	deps := p.service.GetDeps()
 	if deps == nil || deps.Manager == nil {
-		return false, "", dbus.NewError("ru.alr-pkg.ALR.Error.NotInitialized", []interface{}{"service not initialized"})
+		return false, "", dbus.NewError(ErrorNotInitialized, []interface{}{"service not initialized"})
 	}
 
 	fullName := fmt.Sprintf("alr-%s+%s", p.name, p.repository)
 	installedVer, err := deps.Manager.GetInstalledVersion(fullName)
 	if err != nil {
-		return false, "", dbus.NewError("ru.alr-pkg.ALR.Error.Internal", []interface{}{err.Error()})
+		return false, "", dbus.NewError(ErrorInternal, []interface{}{err.Error()})
 	}
 
 	if installedVer == "" {

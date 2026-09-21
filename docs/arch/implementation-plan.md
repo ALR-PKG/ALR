@@ -1310,18 +1310,18 @@ Expected: PASS
 - Modify: `internal/translations/po/ru/default.po` (fuzzy-перевод)
 - Test: `internal/dbus/types_test.go` (новый или существующий)
 
-- [ ] **Шаг 1: падающий тест** — имена интерфейсов валидны по спеке D-Bus
+- [x] **Шаг 1: падающий тест** — имена интерфейсов валидны по спеке D-Bus
   (без дефиса: `ru.alr_pkg.ALR.*`); `GetPackageObjectPath("alr-repo", "x")`
   — валидный путь (санитайз дефиса); `GetJobObjectPath(1)` — цифры, не
   control-символы.
-- [ ] **Шаг 2: реализация** — `alr-pkg` → `alr_pkg` в именах
+- [x] **Шаг 2: реализация** — `alr-pkg` → `alr_pkg` в именах
   интерфейсов/ошибок (well-known name `ru.alr-pkg.ALR` НЕ менять);
   санитайз элементов object path (недопустимые символы → `_`);
   `GetJobObjectPath` — `strconv.FormatUint`; `cmd/dbus.go` start —
   `os.Executable()`; fuzzy-перевод «Failed to get package».
-- [ ] **Шаг 3: проверка на живой шине** — `alr dbus status`, `search`
+- [x] **Шаг 3: проверка на живой шине** — `alr dbus status`, `search`
   работают без танцев; `go test ./internal/dbus/ ./cmd/ -count=1`
-- [ ] **Шаг 4: коммит** `Исправлено: валидность имён и путей D-Bus`
+- [x] **Шаг 4: коммит** `Исправлено: валидность имён и путей D-Bus`
 
 ---
 

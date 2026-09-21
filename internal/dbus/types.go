@@ -17,6 +17,8 @@
 package dbus
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -29,16 +31,29 @@ const (
 	// DBusObjectPath - базовый object path
 	DBusObjectPath = "/ru/alr_pkg/ALR"
 
-	// Интерфейсы ALR
-	ManagerInterfaceName = "ru.alr-pkg.ALR.Manager"
-	PackageInterfaceName = "ru.alr-pkg.ALR.Package"
-	JobInterfaceName     = "ru.alr-pkg.ALR.Job"
+	// Интерфейсы ALR. Элементы имён интерфейсов по спецификации D-Bus
+	// не могут содержать дефис, поэтому используется alr_pkg
+	// (well-known name выше дефис содержать может и не меняется).
+	ManagerInterfaceName = "ru.alr_pkg.ALR.Manager"
+	PackageInterfaceName = "ru.alr_pkg.ALR.Package"
+	JobInterfaceName     = "ru.alr_pkg.ALR.Job"
 
 	// PropertiesInterface - стандартный D-Bus Properties interface
 	PropertiesInterface = "org.freedesktop.DBus.Properties"
 
 	// ObjectManagerInterface - стандартный D-Bus ObjectManager interface
 	ObjectManagerInterface = "org.freedesktop.DBus.ObjectManager"
+)
+
+// Имена ошибок D-Bus (подчиняются тем же правилам, что и имена интерфейсов)
+const (
+	ErrorNotAuthorized      = "ru.alr_pkg.ALR.Error.NotAuthorized"
+	ErrorNotImplemented     = "ru.alr_pkg.ALR.Error.NotImplemented"
+	ErrorNotInitialized     = "ru.alr_pkg.ALR.Error.NotInitialized"
+	ErrorInternal           = "ru.alr_pkg.ALR.Error.Internal"
+	ErrorSearchFailed       = "ru.alr_pkg.ALR.Error.SearchFailed"
+	ErrorPackageNotFound    = "ru.alr_pkg.ALR.Error.PackageNotFound"
+	ErrorJobAlreadyFinished = "ru.alr_pkg.ALR.Error.JobAlreadyFinished"
 )
 
 // JobType тип задачи
@@ -174,14 +189,37 @@ func NewJobInfo(id uint32, jobType JobType, pkgName, repo string) JobInfo {
 	}
 }
 
+// sanitizePathElement заменяет символы, недопустимые в элементах object path
+// (всё кроме [A-Za-z0-9_]), на '_'. Пустой элемент заменяется на "_",
+// т.к. по спецификации D-Bus элементы пути не могут быть пустыми.
+func sanitizePathElement(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if r == '_' ||
+			(r >= 'a' && r <= 'z') ||
+			(r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		} else {
+			b.WriteByte('_')
+		}
+	}
+	if b.Len() == 0 {
+		return "_"
+	}
+	return b.String()
+}
+
 // GetPackageObjectPath возвращает object path для пакета
 func GetPackageObjectPath(repo, name string) dbus.ObjectPath {
-	return dbus.ObjectPath(DBusObjectPath + "/packages/" + repo + "/" + name)
+	return dbus.ObjectPath(DBusObjectPath + "/packages/" +
+		sanitizePathElement(repo) + "/" + sanitizePathElement(name))
 }
 
 // GetJobObjectPath возвращает object path для задачи
 func GetJobObjectPath(id uint32) dbus.ObjectPath {
-	return dbus.ObjectPath(DBusObjectPath + "/jobs/" + string(rune(id)))
+	return dbus.ObjectPath(DBusObjectPath + "/jobs/" + strconv.FormatUint(uint64(id), 10))
 }
 
 // JobObjectPathToID извлекает ID из object path

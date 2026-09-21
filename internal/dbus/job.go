@@ -26,7 +26,7 @@ import (
 	"github.com/godbus/dbus/v5/prop"
 )
 
-// DBusJob реализует ru.alr-pkg.ALR.Job интерфейс
+// DBusJob реализует ru.alr_pkg.ALR.Job интерфейс
 // propSetter - шов для обновления D-Bus properties (подменяется в тестах)
 type propSetter interface {
 	Set(iface, name string, value dbus.Variant) *dbus.Error
@@ -132,7 +132,7 @@ func (j *DBusJob) Cancel() *dbus.Error {
 	defer j.mu.Unlock()
 
 	if j.info.Status == string(JobStatusCompleted) || j.info.Status == string(JobStatusFailed) {
-		return dbus.NewError("ru.alr-pkg.ALR.Error.JobAlreadyFinished", []interface{}{"job already finished"})
+		return dbus.NewError(ErrorJobAlreadyFinished, []interface{}{"job already finished"})
 	}
 
 	j.info.Status = string(JobStatusCancelled)

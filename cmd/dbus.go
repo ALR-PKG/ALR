@@ -19,6 +19,7 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -82,7 +83,12 @@ func newDBusStartCmd() *cobra.Command {
 		Use:   "start",
 		Short: gotext.Get("Start D-Bus service"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c := exec.Command("alr", "_internal-dbus-service")
+			executable, err := os.Executable()
+			if err != nil {
+				return fmt.Errorf("%s: %w", gotext.Get("Failed to start D-Bus service"), err)
+			}
+
+			c := exec.Command(executable, "_internal-dbus-service")
 			if session {
 				c.Args = append(c.Args, "--session")
 			}

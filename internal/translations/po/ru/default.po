@@ -212,9 +212,8 @@ msgid "Package name required"
 msgstr "Пакет не найден"
 
 #: cmd/dbus.go:233 cmd/dbus.go:301
-#, fuzzy
 msgid "Failed to get package"
-msgstr "Не удалось создать пакет"
+msgstr "Не удалось получить пакет"
 
 #: cmd/dbus.go:244
 msgid "Failed to start installation"

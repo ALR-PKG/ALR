@@ -20,7 +20,7 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// ManagerInterface определяет методы для ru.alr-pkg.ALR.Manager
+// ManagerInterface определяет методы для ru.alr_pkg.ALR.Manager
 type ManagerInterface interface {
 	// SearchPackages ищет пакеты по запросу
 	// query - строка поиска
@@ -52,7 +52,7 @@ type ManagerInterface interface {
 	UpgradeAll(options map[string]dbus.Variant) (dbus.ObjectPath, *dbus.Error)
 }
 
-// PackageInterface определяет методы для ru.alr-pkg.ALR.Package
+// PackageInterface определяет методы для ru.alr_pkg.ALR.Package
 type PackageInterface interface {
 	// GetDetails возвращает детальную информацию о пакете
 	GetDetails() (map[string]dbus.Variant, *dbus.Error)
@@ -80,7 +80,7 @@ type PackageInterface interface {
 	GetDependencies() ([]string, *dbus.Error)
 }
 
-// JobInterface определяет методы для ru.alr-pkg.ALR.Job
+// JobInterface определяет методы для ru.alr_pkg.ALR.Job
 type JobInterface interface {
 	// Cancel отменяет задачу
 	Cancel() *dbus.Error

@@ -74,7 +74,7 @@ func TestInstallNotAuthorized(t *testing.T) {
 	if derr == nil {
 		t.Fatal("expected NotAuthorized error, got nil")
 	}
-	if derr.Name != "ru.alr-pkg.ALR.Error.NotAuthorized" {
+	if derr.Name != ErrorNotAuthorized {
 		t.Errorf("unexpected error name: %s", derr.Name)
 	}
 	if path != "" {
@@ -126,7 +126,7 @@ func TestInstallSenderResolveFailure(t *testing.T) {
 	if derr == nil {
 		t.Fatal("expected NotAuthorized error, got nil")
 	}
-	if derr.Name != "ru.alr-pkg.ALR.Error.NotAuthorized" {
+	if derr.Name != ErrorNotAuthorized {
 		t.Errorf("unexpected error name: %s", derr.Name)
 	}
 	if auth.calls != 0 {
@@ -146,7 +146,7 @@ func TestRemoveNotAuthorized(t *testing.T) {
 	if derr == nil {
 		t.Fatal("expected NotAuthorized error, got nil")
 	}
-	if derr.Name != "ru.alr-pkg.ALR.Error.NotAuthorized" {
+	if derr.Name != ErrorNotAuthorized {
 		t.Errorf("unexpected error name: %s", derr.Name)
 	}
 	if auth.gotActionID != ActionRemove {
@@ -166,7 +166,7 @@ func TestRefreshRepositoriesNotAuthorized(t *testing.T) {
 	if derr == nil {
 		t.Fatal("expected NotAuthorized error, got nil")
 	}
-	if derr.Name != "ru.alr-pkg.ALR.Error.NotAuthorized" {
+	if derr.Name != ErrorNotAuthorized {
 		t.Errorf("unexpected error name: %s", derr.Name)
 	}
 	if auth.gotActionID != ActionRefresh {
@@ -188,7 +188,7 @@ func TestRefreshRepositoriesAuthorized(t *testing.T) {
 	path, derr := mgr.RefreshRepositories("1.23")
 	// Сервис без deps: после успешной авторизации ожидаем NotInitialized,
 	// но не NotAuthorized
-	if derr != nil && derr.Name == "ru.alr-pkg.ALR.Error.NotAuthorized" {
+	if derr != nil && derr.Name == ErrorNotAuthorized {
 		t.Fatalf("expected auth to pass, got: %v", derr)
 	}
 	if derr == nil && path == "" {
