@@ -285,7 +285,7 @@ msgstr "Пересборка базы данных пропущена: %s"
 
 #: cmd/fix.go:166
 msgid "Cache directory does not exist, will create it"
-msgstr ""
+msgstr "Каталог кэша не существует, будет создан"
 
 #: cmd/fix.go:169
 msgid "Unable to open cache directory"
@@ -296,7 +296,6 @@ msgid "Unable to read cache directory contents"
 msgstr "Невозможно прочитать содержимое каталога кэша"
 
 #: cmd/fix.go:187
-#, fuzzy
 msgid "Unable to remove cache item (%s) as current user, trying with sudo"
 msgstr ""
 "Невозможно удалить элемент кэша (%s) от текущего пользователя, попытка через "
