@@ -235,56 +235,52 @@ msgstr ""
 msgid "Operation failed"
 msgstr ""
 
-#: cmd/fix.go:48
+#: cmd/fix.go:98
 msgid "Attempt to fix problems with ALR"
 msgstr ""
 
-#: cmd/fix.go:64
+#: cmd/fix.go:115
 msgid "Clearing cache and temporary directories"
 msgstr ""
 
-#: cmd/fix.go:69
-msgid "Cache directory does not exist, will create it"
+#: cmd/fix.go:122
+msgid "Unable to create new cache directory"
 msgstr ""
 
-#: cmd/fix.go:71
-msgid "Unable to open cache directory"
+#: cmd/fix.go:130
+msgid "Unable to reset directory %s"
 msgstr ""
 
-#: cmd/fix.go:78
-msgid "Unable to read cache directory contents"
+#: cmd/fix.go:134
+msgid "Unable to clean directory %s"
 msgstr ""
 
-#: cmd/fix.go:90
-msgid "Unable to remove cache item (%s) as current user, trying with sudo"
-msgstr ""
-
-#: cmd/fix.go:93
-msgid "Unable to remove cache item (%s)"
-msgstr ""
-
-#: cmd/fix.go:100
-msgid "Clearing build directory"
-msgstr ""
-
-#: cmd/fix.go:104
-msgid "Unable to remove build directory"
-msgstr ""
-
-#: cmd/fix.go:108
-msgid "Unable to create build directory"
-msgstr ""
-
-#: cmd/fix.go:112
+#: cmd/fix.go:139
 msgid "Rebuilding cache"
 msgstr ""
 
-#: cmd/fix.go:113
-msgid "Creating cache directory"
+#: cmd/fix.go:151
+msgid "Database rebuild skipped: %s"
 msgstr ""
 
-#: cmd/fix.go:116
-msgid "Unable to create new cache directory"
+#: cmd/fix.go:166
+msgid "Cache directory does not exist, will create it"
+msgstr ""
+
+#: cmd/fix.go:169
+msgid "Unable to open cache directory"
+msgstr ""
+
+#: cmd/fix.go:175
+msgid "Unable to read cache directory contents"
+msgstr ""
+
+#: cmd/fix.go:187
+msgid "Unable to remove cache item (%s) as current user, trying with sudo"
+msgstr ""
+
+#: cmd/fix.go:190 cmd/fix.go:243
+msgid "Unable to remove cache item (%s)"
 msgstr ""
 
 #: cmd/gen.go:31

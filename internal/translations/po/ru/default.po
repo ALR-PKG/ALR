@@ -255,60 +255,56 @@ msgstr "Пакет успешно создан"
 msgid "Operation failed"
 msgstr ""
 
-#: cmd/fix.go:48
+#: cmd/fix.go:98
 msgid "Attempt to fix problems with ALR"
 msgstr "Попытка устранить проблемы с ALR"
 
-#: cmd/fix.go:64
+#: cmd/fix.go:115
 msgid "Clearing cache and temporary directories"
 msgstr "Очистка кэша и временных директорий"
 
-#: cmd/fix.go:69
+#: cmd/fix.go:122
+msgid "Unable to create new cache directory"
+msgstr "Не удалось создать новый каталог кэша"
+
+#: cmd/fix.go:130
+msgid "Unable to reset directory %s"
+msgstr "Не удалось пересоздать каталог %s"
+
+#: cmd/fix.go:134
+msgid "Unable to clean directory %s"
+msgstr "Не удалось очистить каталог %s"
+
+#: cmd/fix.go:139
+msgid "Rebuilding cache"
+msgstr "Восстановление кэша"
+
+#: cmd/fix.go:151
+msgid "Database rebuild skipped: %s"
+msgstr "Пересборка базы данных пропущена: %s"
+
+#: cmd/fix.go:166
 msgid "Cache directory does not exist, will create it"
 msgstr ""
 
-#: cmd/fix.go:71
+#: cmd/fix.go:169
 msgid "Unable to open cache directory"
 msgstr "Невозможно открыть каталог кэша"
 
-#: cmd/fix.go:78
+#: cmd/fix.go:175
 msgid "Unable to read cache directory contents"
 msgstr "Невозможно прочитать содержимое каталога кэша"
 
-#: cmd/fix.go:90
+#: cmd/fix.go:187
 #, fuzzy
 msgid "Unable to remove cache item (%s) as current user, trying with sudo"
 msgstr ""
 "Невозможно удалить элемент кэша (%s) от текущего пользователя, попытка через "
 "sudo"
 
-#: cmd/fix.go:93
+#: cmd/fix.go:190 cmd/fix.go:243
 msgid "Unable to remove cache item (%s)"
 msgstr "Невозможно удалить элемент кэша (%s)"
-
-#: cmd/fix.go:100
-msgid "Clearing build directory"
-msgstr "Очистка каталога сборки"
-
-#: cmd/fix.go:104
-msgid "Unable to remove build directory"
-msgstr "Не удалось удалить каталог сборки"
-
-#: cmd/fix.go:108
-msgid "Unable to create build directory"
-msgstr "Не удалось создать каталог сборки"
-
-#: cmd/fix.go:112
-msgid "Rebuilding cache"
-msgstr "Восстановление кэша"
-
-#: cmd/fix.go:113
-msgid "Creating cache directory"
-msgstr "Создание директории кэша"
-
-#: cmd/fix.go:116
-msgid "Unable to create new cache directory"
-msgstr "Не удалось создать новый каталог кэша"
 
 #: cmd/gen.go:31
 msgid "Generate a ALR script from a template"
@@ -1013,6 +1009,12 @@ msgstr "%s: выполнено!\n"
 #: pkg/dl/progress_tui.go:106
 msgid "%s %s downloading at %s/s\n"
 msgstr "%s %s загружается — %s/с\n"
+
+#~ msgid "Clearing build directory"
+#~ msgstr "Очистка каталога сборки"
+
+#~ msgid "Creating cache directory"
+#~ msgstr "Создание директории кэша"
 
 #~ msgid "Clearing temporary directory"
 #~ msgstr "Очистка временной директории"
