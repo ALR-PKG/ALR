@@ -152,3 +152,19 @@ msgstr "Cached package owner changed, refusing to install"
 
 msgid "Unable to stat cached package"
 msgstr "Unable to stat cached package"
+
+msgid "Unable to reset directory %s"
+msgstr "Unable to reset directory %s"
+
+msgid "Unable to clean directory %s"
+msgstr "Unable to clean directory %s"
+
+msgid "Database rebuild skipped: %s"
+msgstr "Database rebuild skipped: %s"
+
+#: cmd/fix.go
+msgid "Skipping %s: locked by another process"
+msgstr "Skipping %s: locked by another process"
+
+msgid "Cache directory does not exist, will create it"
+msgstr "Cache directory does not exist, will create it"
