@@ -281,3 +281,82 @@ func TestPathLocked(t *testing.T) {
 		t.Errorf("expected %s locked=false, got %v (err=%v)", freePath, ok, err)
 	}
 }
+
+func TestClearCacheDirRespectsNestedLocks(t *testing.T) {
+	cacheDir := t.TempDir()
+	repoDir := filepath.Join(cacheDir, "repo")
+	if err := os.MkdirAll(repoDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repoDir, "metadata"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Лок pull'а лежит на уровень 2 от CacheDir: repo/x.lock
+	release := holdFlockViaProbe(t, filepath.Join(repoDir, "x.lock"))
+	defer release()
+
+	if err := os.WriteFile(filepath.Join(cacheDir, "alr.db"), []byte("db"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := clearCacheDir(cacheDir); err != nil {
+		t.Fatal(err)
+	}
+
+	// Каталог с активным вложенным локом сохраняется целиком
+	if _, err := os.Stat(filepath.Join(repoDir, "metadata")); err != nil {
+		t.Errorf("expected repo to be kept (active nested lock): %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(repoDir, "x.lock")); err != nil {
+		t.Errorf("expected repo/x.lock to be kept: %v", err)
+	}
+	// Свободный sibling удалён
+	if _, err := os.Stat(filepath.Join(cacheDir, "alr.db")); !os.IsNotExist(err) {
+		t.Errorf("expected alr.db to be removed")
+	}
+}
+
+func TestResetDirRespectsNestedLocks(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "data"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	release := holdFlockViaProbe(t, filepath.Join(sub, "inner.lock"))
+	defer release()
+
+	freeSub := filepath.Join(dir, "free")
+	if err := os.MkdirAll(freeSub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := resetDir(dir); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(sub, "data")); err != nil {
+		t.Errorf("expected sub to be kept (active nested lock): %v", err)
+	}
+	if _, err := os.Stat(freeSub); !os.IsNotExist(err) {
+		t.Errorf("expected %s to be removed", freeSub)
+	}
+}
+
+func TestPathLockedDoesNotCreateFile(t *testing.T) {
+	dir := t.TempDir()
+	missing := filepath.Join(dir, ".alr-cache.lock")
+
+	ok, err := pathLocked(missing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Error("expected missing lock file to be reported free")
+	}
+	if _, err := os.Stat(missing); !os.IsNotExist(err) {
+		t.Errorf("pathLocked must not create %s", missing)
+	}
+}

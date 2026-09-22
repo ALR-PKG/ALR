@@ -200,6 +200,15 @@ func clearCacheDir(cacheDir string) error {
 		}
 		fullPath := filepath.Join(cacheDir, entry)
 
+		if info, statErr := os.Stat(fullPath); statErr == nil && info.IsDir() {
+			if has, lockErr := hasActiveLockInside(fullPath); lockErr != nil {
+				slog.Debug("Failed to check nested locks", "path", fullPath, "error", lockErr)
+			} else if has {
+				slog.Warn(gotext.Get("Skipping %s: locked by another process", entry))
+				continue
+			}
+		}
+
 		if err := makeWritableRecursive(fullPath); err != nil {
 			slog.Debug("Failed to make path writable", "path", fullPath, "error", err)
 		}
@@ -241,6 +250,15 @@ func resetDir(dirPath string) error {
 			slog.Warn(gotext.Get("Skipping %s: locked by another process", name))
 			continue
 		}
+		if entry.IsDir() {
+			fullPath := filepath.Join(dirPath, name)
+			if has, lockErr := hasActiveLockInside(fullPath); lockErr != nil {
+				slog.Debug("Failed to check nested locks", "path", fullPath, "error", lockErr)
+			} else if has {
+				slog.Warn(gotext.Get("Skipping %s: locked by another process", name))
+				continue
+			}
+		}
 		if err := os.RemoveAll(filepath.Join(dirPath, name)); err != nil {
 			return err
 		}
@@ -272,8 +290,12 @@ func lockedPaths(dir string) (map[string]bool, error) {
 }
 
 // pathLocked сообщает, держит ли другой процесс flock на path. Свободный
-// лок захватывается и тут же отпускается.
+// лок захватывается и тут же отпускается. Отсутствующий файл считается
+// свободным и НЕ создаётся (TryLock иначе оставил бы файл-призрак).
 func pathLocked(path string) (bool, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false, nil
+	}
 	h, err := fsutils.TryLock(path)
 	if err == nil {
 		h.Close()
@@ -283,6 +305,18 @@ func pathLocked(path string) (bool, error) {
 		return true, nil
 	}
 	return false, err
+}
+
+// hasActiveLockInside сообщает, есть ли внутри каталога dir (уровень 1)
+// .lock-файл, который держит другой процесс. Используется для entry-
+// директорий: локи могут лежать уровнем глубже чистимого каталога
+// (например, CacheDir/repo/<repo>.lock).
+func hasActiveLockInside(dir string) (bool, error) {
+	locked, err := lockedPaths(dir)
+	if err != nil {
+		return false, err
+	}
+	return len(locked) > 0, nil
 }
 
 // ownerUID returns the uid of the file owner.
@@ -321,6 +355,14 @@ func pruneOwnEntries(dir string, uid uint32, uidOf func(string) (uint32, error))
 			continue
 		}
 		fullPath := filepath.Join(dir, name)
+		if entry.IsDir() {
+			if has, lockErr := hasActiveLockInside(fullPath); lockErr != nil {
+				slog.Debug("Failed to check nested locks", "path", fullPath, "error", lockErr)
+			} else if has {
+				slog.Warn(gotext.Get("Skipping %s: locked by another process", name))
+				continue
+			}
+		}
 		entryUID, err := uidOf(fullPath)
 		if err != nil {
 			slog.Debug("Failed to determine entry owner", "path", fullPath, "error", err)
