@@ -99,7 +99,7 @@ func newBuildCmd() *cobra.Command {
 				}
 				defer installerClose()
 
-				scripter, scripterClose, err := build.GetSafeScriptExecutor()
+				scripter, scripterClose, err := build.GetSafeScriptExecutor(deps.Cfg, filepath.Dir(scriptPath))
 				if err != nil {
 					return err
 				}
@@ -143,7 +143,7 @@ func newBuildCmd() *cobra.Command {
 				}
 				defer installerClose()
 
-				scripter, scripterClose, err := build.GetSafeScriptExecutor()
+				scripter, scripterClose, err := build.GetSafeScriptExecutor(deps.Cfg, "")
 				if err != nil {
 					return err
 				}

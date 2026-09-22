@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 
 	"git.alr-pkg.ru/ALR/ALR/internal/logger"
+	"git.alr-pkg.ru/ALR/ALR/internal/sandbox"
 )
 
 var pluginMap = map[string]plugin.Plugin{
@@ -77,8 +78,26 @@ func GetSafeInstaller() (InstallerExecutor, func(), error) {
 	return getSafeExecutor[InstallerExecutor]("_internal-installer", "installer")
 }
 
-func GetSafeScriptExecutor() (ScriptExecutor, func(), error) {
-	return getSafeExecutor[ScriptExecutor]("_internal-safe-script-executor", "script-executor")
+// ScriptSandboxLayout вычисляет макет песочницы для script executor'а:
+// rw — дерево сборки, кэш пакетов и /tmp; ro — каталог скрипта и системные
+// каталоги. Если scriptDir пуст (пакет из репозитория, точный путь скрипта
+// ещё не известен на момент запуска plugin'а), ro-покрытием служит весь
+// RepoDir — чтение репо-кэша безопасно.
+func ScriptSandboxLayout(cfg Config, scriptDir string) *sandbox.Layout {
+	paths := cfg.GetPaths()
+	if scriptDir == "" {
+		scriptDir = paths.RepoDir
+	}
+	return sandbox.LayoutFromPaths(paths.BuildDir, paths.PkgsDir, scriptDir)
+}
+
+// GetSafeScriptExecutor запускает script executor в песочнице. Каскад
+// деградации: user+mount+pid namespaces → landlock → прямой запуск с
+// предупреждением. ALR_SANDBOX=off отключает песочницу полностью.
+// scriptDir — каталог скрипта сборки (ro в песочнице); "" — для пакетов
+// из репозитория (покрывается весь RepoDir).
+func GetSafeScriptExecutor(cfg Config, scriptDir string) (ScriptExecutor, func(), error) {
+	return getSandboxedScriptExecutor(cfg, scriptDir, nil, nil)
 }
 
 // GetSafeScriptExecutorAs запускает script executor от указанных uid/gid
@@ -88,9 +107,94 @@ func GetSafeScriptExecutor() (ScriptExecutor, func(), error) {
 // ВСЕ supplementary groups процесса, поэтому без них plugin теряет
 // членство в группах (например alr для общего dl-кэша). Сюда передаются
 // все группы из NSS, включая основную — ядро дедуплицирует её с Gid.
-func GetSafeScriptExecutorAs(uid, gid uint32, groups []uint32, env []string) (ScriptExecutor, func(), error) {
-	cmd, err := getExecutorCmd("_internal-safe-script-executor", env,
-		&syscall.Credential{Uid: uid, Gid: gid, Groups: groups})
+//
+// Режимы каскада для демон-пути:
+//   - namespaces: хостовый Credential сбрасывается, вместо него действует
+//     маппинг uid 0→callerUID и gid 0→callerGID — plugin внутри ns root,
+//     маппленный на вызвавшего. Supplementary groups при этом ТЕРЯЮТСЯ
+//     (маппинг ровно одного uid/gid, setgroups в userns недоступен) —
+//     известное ограничение ns-режима. Оно безопасно для сборки: скачивание
+//     исходников (доступ к общему dl-кэшу root:alr) выполняет родитель
+//     (демон, root), а не plugin, поэтому групповые rw-каталоги хоста
+//     в песочнице не нужны.
+//   - landlock и прямой режим: Credential{Uid,Gid,Groups} сохраняется,
+//     supplementary groups работают.
+//
+// cfg — конфиг с путями ВЫЗВАВШЕГО (callerJobConfig), из него строится
+// макет песочницы.
+func GetSafeScriptExecutorAs(uid, gid uint32, groups []uint32, env []string, cfg Config, scriptDir string) (ScriptExecutor, func(), error) {
+	cred := &syscall.Credential{Uid: uid, Gid: gid, Groups: groups}
+	return getSandboxedScriptExecutor(cfg, scriptDir, env, cred)
+}
+
+// sandboxAttempt — одна ступень каскада песочницы: обёртка команды
+// запуска plugin'а и её имя для логов.
+type sandboxAttempt struct {
+	name string
+	wrap func(cmd *exec.Cmd) error
+}
+
+// scriptSandboxAttempts — каскад обёрток script executor'а:
+// namespaces (sandbox.Wrap) → landlock (sandbox.WrapLandlock).
+// Последняя ступень — прямой запуск — обёртки не требует и в список
+// не входит.
+func scriptSandboxAttempts(layout *sandbox.Layout, uid, gid int) []sandboxAttempt {
+	return []sandboxAttempt{
+		{"namespaces", func(cmd *exec.Cmd) error {
+			// В userns действует маппинг uid 0→вызывающий: Credential с
+			// хостовым uid внутри namespace невалиден и заменяется маппингом.
+			if cmd.SysProcAttr != nil {
+				cmd.SysProcAttr.Credential = nil
+			}
+			return sandbox.Wrap(cmd, layout, uid, gid)
+		}},
+		{"landlock", func(cmd *exec.Cmd) error {
+			return sandbox.WrapLandlock(cmd, layout)
+		}},
+	}
+}
+
+// getSandboxedScriptExecutor реализует каскад запуска script executor'а:
+// namespaces → landlock → прямой запуск. Каждая попытка строит команду
+// заново — обёртки мутируют cmd. Ошибка handshake plugin'а (в т.ч. exit
+// code sandbox.ExitSetupFailure от init'а) считается недоступностью режима
+// и переводит каскад на ступень ниже. ALR_SANDBOX=off — сразу прямой запуск.
+func getSandboxedScriptExecutor(cfg Config, scriptDir string, env []string, cred *syscall.Credential) (ScriptExecutor, func(), error) {
+	layout := ScriptSandboxLayout(cfg, scriptDir)
+
+	uid, gid := os.Getuid(), os.Getgid()
+	if cred != nil {
+		uid, gid = int(cred.Uid), int(cred.Gid)
+	}
+
+	buildCmd := func() (*exec.Cmd, error) {
+		return getExecutorCmd("_internal-safe-script-executor", env, cred)
+	}
+
+	if os.Getenv("ALR_SANDBOX") != "off" {
+		attempts := scriptSandboxAttempts(layout, uid, gid)
+		for i, attempt := range attempts {
+			cmd, err := buildCmd()
+			if err != nil {
+				return nil, nil, err
+			}
+			if err := attempt.wrap(cmd); err != nil {
+				slog.Warn("песочница: не удалось применить режим, фолбэк", "mode", attempt.name, "error", err)
+				continue
+			}
+			executor, cleanup, err := dispenseExecutor[ScriptExecutor](cmd, "script-executor")
+			if err == nil {
+				return executor, cleanup, nil
+			}
+			next := "прямой запуск"
+			if i+1 < len(attempts) {
+				next = attempts[i+1].name
+			}
+			slog.Warn("песочница: режим недоступен, фолбэк", "mode", attempt.name, "next", next, "error", err)
+		}
+	}
+
+	cmd, err := buildCmd()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -145,9 +249,20 @@ func dispenseExecutor[T any](cmd *exec.Cmd, pluginName string) (T, func(), error
 	})
 	rpcClient, err := client.Client()
 	if err != nil {
+		// Если процесс успел запуститься, но handshake не удался,
+		// не оставляем его осиротевшим
+		client.Kill()
 		var zero T
 		return zero, nil, err
 	}
+
+	// Родительские копии ExtraFiles (например fd макета песочницы)
+	// процесс уже получил при старте — закрываем, чтобы не копить fd
+	// в долгоживущем демоне.
+	for _, f := range cmd.ExtraFiles {
+		f.Close()
+	}
+	cmd.ExtraFiles = nil
 
 	var cleanupOnce sync.Once
 	cleanup := func() {

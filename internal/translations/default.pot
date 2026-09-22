@@ -119,119 +119,119 @@ msgstr ""
 msgid "Shows a list of commands or help for one command"
 msgstr ""
 
-#: cmd/dbus.go:35
+#: cmd/dbus.go:36
 msgid "Manage D-Bus service"
 msgstr ""
 
-#: cmd/dbus.go:54
+#: cmd/dbus.go:55
 msgid "Show D-Bus service status"
 msgstr ""
 
-#: cmd/dbus.go:58 cmd/dbus.go:135 cmd/dbus.go:224 cmd/dbus.go:292
+#: cmd/dbus.go:59 cmd/dbus.go:141 cmd/dbus.go:230 cmd/dbus.go:298
 msgid "Failed to connect to D-Bus"
 msgstr ""
 
-#: cmd/dbus.go:66
+#: cmd/dbus.go:67
 msgid "D-Bus service: not running"
 msgstr ""
 
-#: cmd/dbus.go:70
+#: cmd/dbus.go:71
 msgid "D-Bus service: running"
 msgstr ""
 
-#: cmd/dbus.go:83
+#: cmd/dbus.go:84
 msgid "Start D-Bus service"
 msgstr ""
 
-#: cmd/dbus.go:91
+#: cmd/dbus.go:88 cmd/dbus.go:97
 msgid "Failed to start D-Bus service"
 msgstr ""
 
-#: cmd/dbus.go:94
+#: cmd/dbus.go:100
 msgid "D-Bus service started"
 msgstr ""
 
-#: cmd/dbus.go:108
+#: cmd/dbus.go:114
 msgid "Stop D-Bus service"
 msgstr ""
 
-#: cmd/dbus.go:112
+#: cmd/dbus.go:118
 msgid "Failed to stop D-Bus service"
 msgstr ""
 
-#: cmd/dbus.go:115
+#: cmd/dbus.go:121
 msgid "D-Bus service stopped"
 msgstr ""
 
-#: cmd/dbus.go:130
+#: cmd/dbus.go:136
 msgid "Search packages via D-Bus"
 msgstr ""
 
-#: cmd/dbus.go:163
+#: cmd/dbus.go:169
 msgid "Search failed"
 msgstr ""
 
-#: cmd/dbus.go:167
+#: cmd/dbus.go:173
 msgid "No packages found"
 msgstr ""
 
-#: cmd/dbus.go:187
+#: cmd/dbus.go:193
 msgid "Search by name"
 msgstr ""
 
-#: cmd/dbus.go:188
+#: cmd/dbus.go:194
 msgid "Search by description"
 msgstr ""
 
-#: cmd/dbus.go:189
+#: cmd/dbus.go:195
 msgid "Search by repository"
 msgstr ""
 
-#: cmd/dbus.go:203
+#: cmd/dbus.go:209
 msgid "Install package via D-Bus"
 msgstr ""
 
-#: cmd/dbus.go:207 cmd/dbus.go:275
+#: cmd/dbus.go:213 cmd/dbus.go:281
 msgid "Package name required"
 msgstr ""
 
-#: cmd/dbus.go:233 cmd/dbus.go:301
+#: cmd/dbus.go:239 cmd/dbus.go:307
 msgid "Failed to get package"
 msgstr ""
 
-#: cmd/dbus.go:244
+#: cmd/dbus.go:250
 msgid "Failed to start installation"
 msgstr ""
 
-#: cmd/dbus.go:259
+#: cmd/dbus.go:265
 msgid "Build from scratch"
 msgstr ""
 
-#: cmd/dbus.go:260 cmd/dbus.go:326
+#: cmd/dbus.go:266 cmd/dbus.go:332
 msgid "Don't show progress"
 msgstr ""
 
-#: cmd/dbus.go:271
+#: cmd/dbus.go:277
 msgid "Remove package via D-Bus"
 msgstr ""
 
-#: cmd/dbus.go:311
+#: cmd/dbus.go:317
 msgid "Failed to start removal"
 msgstr ""
 
-#: cmd/dbus.go:338
+#: cmd/dbus.go:344
 msgid "Failed to get job info"
 msgstr ""
 
-#: cmd/dbus.go:347
+#: cmd/dbus.go:353
 msgid "Failed to wait for job"
 msgstr ""
 
-#: cmd/dbus.go:351
+#: cmd/dbus.go:357
 msgid "Operation completed successfully"
 msgstr ""
 
-#: cmd/dbus.go:353
+#: cmd/dbus.go:359
 msgid "Operation failed"
 msgstr ""
 
