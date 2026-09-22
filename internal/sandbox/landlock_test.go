@@ -65,6 +65,41 @@ func TestLandlockHelperProcess(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(rwDir, "ok2"), []byte("y"), 0o644); err != nil {
 		os.Exit(7)
 	}
+	// /dev/null неписабелен без спец-правила — а `>/dev/null` повсеместен
+	if err := os.WriteFile("/dev/null", []byte("x"), 0); err != nil {
+		os.Exit(8)
+	}
+	// /dev/zero: запись разрешена
+	if err := os.WriteFile("/dev/zero", []byte("x"), 0); err != nil {
+		os.Exit(9)
+	}
+	// /dev/full: разрешён правилом — ядро отвечает ENOSPC, а не EACCES
+	err = os.WriteFile("/dev/full", []byte("x"), 0)
+	if err == nil || errors.Is(err, unix.EACCES) {
+		os.Exit(10)
+	}
+	// запись в /dev/random по-прежнему запрещена
+	if f, err := os.OpenFile("/dev/random", os.O_WRONLY, 0); err == nil {
+		f.Close()
+		os.Exit(11)
+	}
+	os.Exit(0)
+}
+
+// TestLandlockMkdirHelperProcess — тело TestApplyLandlockCreatesMissingRW.
+func TestLandlockMkdirHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_LANDLOCK_MKDIR_HELPER") != "1" {
+		return
+	}
+	rwDir := os.Getenv("LL_RW")
+	layout := &Layout{Mounts: []Mount{{Source: rwDir, Target: rwDir, RW: true}}}
+	if err := ApplyLandlock(layout); err != nil {
+		os.Exit(2)
+	}
+	// несуществующий до ApplyLandlock rw-путь создан и писабелен
+	if err := os.WriteFile(filepath.Join(rwDir, "ok"), []byte("x"), 0o644); err != nil {
+		os.Exit(3)
+	}
 	os.Exit(0)
 }
 
@@ -93,6 +128,28 @@ func TestApplyLandlockLive(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(roDir, "nope")); !os.IsNotExist(err) {
 		t.Error("запись вне rw-путей должна быть запрещена")
+	}
+}
+
+// TestApplyLandlockCreatesMissingRW — несуществующий rw-путь создаётся
+// ApplyLandlock (иначе O_PATH на нём упал бы и деградировал весь режим).
+func TestApplyLandlockCreatesMissingRW(t *testing.T) {
+	if landlockABI() < 1 {
+		t.Skip("landlock недоступен (ядро < 5.13)")
+	}
+	rwDir := filepath.Join(t.TempDir(), "missing", "nested")
+
+	cmd := exec.Command(os.Args[0], "-test.run=TestLandlockMkdirHelperProcess")
+	cmd.Env = append(os.Environ(),
+		"GO_WANT_LANDLOCK_MKDIR_HELPER=1",
+		"LL_RW="+rwDir,
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("helper-процесс упал: %v\n%s", err, out)
+	}
+	if _, err := os.Stat(filepath.Join(rwDir, "ok")); err != nil {
+		t.Errorf("rw-путь не создан или неписабелен: %v", err)
 	}
 }
 

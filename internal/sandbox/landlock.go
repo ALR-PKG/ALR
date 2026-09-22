@@ -63,6 +63,11 @@ func landlockWriteFlags(abi int) uint64 {
 	return flags
 }
 
+// landlockDevWritable — устройства, которым ApplyLandlock разрешает запись
+// точечными path_beneath-правилами: `>/dev/null` и подобное — повсеместный
+// паттерн в сборочных скриптах. path_beneath работает и по отдельному файлу.
+var landlockDevWritable = []string{"/dev/null", "/dev/zero", "/dev/full"}
+
 // ApplyLandlock ограничивает ТЕКУЩИЙ процесс ruleset'ом landlock.
 // Ограничение наследуется через exec, поэтому применяется обёрткой-init
 // перед exec'ом целевой команды.
@@ -70,11 +75,15 @@ func landlockWriteFlags(abi int) uint64 {
 // Выбранная модель: handled_access_fs включает ТОЛЬКО write-операции.
 // Для путей, не покрытых правилами, landlock запрещает handled-действия —
 // значит, чтение и выполнение остаются доступными по всей ФС (системные
-// каталоги, скрипты), а запись возможна лишь в rw-путях макета. Это
+// каталоги, скрипты), а запись возможна лишь в rw-путях макета (несуществующие
+// rw-цели создаются) и в устройствах из landlockDevWritable. Это
 // соответствует цели режима (запрет записи вне дерева сборки) и не ломает
 // выполнение скомпилированных бинарников и чтение скрипта. Covers макета
 // (сокрытие $HOME) landlock выразить не может — деградация до
 // «домашний каталог читаем, но неписабелен».
+//
+// Ограничение ABI 1 (ядра 5.13–5.18): rename/link из rw-путей наружу не
+// ограничивается — флаг REFER появился только в ABI 2 (ядро 5.19).
 func ApplyLandlock(layout *Layout) error {
 	abi := landlockABI()
 	if abi < 1 {
@@ -100,8 +109,29 @@ func ApplyLandlock(layout *Layout) error {
 		if !m.RW {
 			continue
 		}
+		// rw-цели обязаны существовать к моменту сборки (BuildDir/PkgsDir
+		// создаются prepareDirs, /tmp есть); если ещё нет — создаём, иначе
+		// O_PATH упал бы и уронил весь landlock-режим в прямой запуск.
+		if err := os.MkdirAll(m.Target, 0o755); err != nil {
+			return fmt.Errorf("создание rw-пути %s: %w", m.Target, err)
+		}
 		if err := landlockAllowPath(rulesetFd, m.Target, handled); err != nil {
 			return fmt.Errorf("правило для %s: %w", m.Target, err)
+		}
+	}
+
+	for _, dev := range landlockDevWritable {
+		if _, err := os.Stat(dev); err != nil {
+			continue // минимальный контейнер без этого устройства
+		}
+		// В правиле на файл допустимы только file-операции: WRITE_FILE и
+		// TRUNCATE (directory-only MAKE_*/REMOVE_* и REFER дадут EINVAL).
+		allowed := uint64(unix.LANDLOCK_ACCESS_FS_WRITE_FILE)
+		if handled&unix.LANDLOCK_ACCESS_FS_TRUNCATE != 0 {
+			allowed |= unix.LANDLOCK_ACCESS_FS_TRUNCATE
+		}
+		if err := landlockAllowPath(rulesetFd, dev, allowed); err != nil {
+			return fmt.Errorf("правило для %s: %w", dev, err)
 		}
 	}
 

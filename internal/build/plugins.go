@@ -107,6 +107,9 @@ func GetSafeScriptExecutor(cfg Config, scriptDir string) (ScriptExecutor, func()
 // ВСЕ supplementary groups процесса, поэтому без них plugin теряет
 // членство в группах (например alr для общего dl-кэша). Сюда передаются
 // все группы из NSS, включая основную — ядро дедуплицирует её с Gid.
+// groups действуют только в прямом и landlock режимах; в ns-режиме
+// supplementary groups вызвавшего теряются (маппинг одного uid/gid) —
+// известное ограничение до Task 9.4.
 // cfg — конфиг с путями ВЫЗВАВШЕГО (callerJobConfig), из него строится
 // макет песочницы.
 func GetSafeScriptExecutorAs(uid, gid uint32, groups []uint32, env []string, cfg Config, scriptDir string) (ScriptExecutor, func(), error) {
