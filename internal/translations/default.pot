@@ -235,51 +235,55 @@ msgstr ""
 msgid "Operation failed"
 msgstr ""
 
-#: cmd/fix.go:98
+#: cmd/fix.go:100
 msgid "Attempt to fix problems with ALR"
 msgstr ""
 
-#: cmd/fix.go:115
+#: cmd/fix.go:117
 msgid "Clearing cache and temporary directories"
 msgstr ""
 
-#: cmd/fix.go:122
+#: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:241 cmd/fix.go:320
+msgid "Skipping %s: locked by another process"
+msgstr ""
+
+#: cmd/fix.go:135
 msgid "Unable to create new cache directory"
 msgstr ""
 
-#: cmd/fix.go:130
+#: cmd/fix.go:143
 msgid "Unable to reset directory %s"
 msgstr ""
 
-#: cmd/fix.go:134
+#: cmd/fix.go:147
 msgid "Unable to clean directory %s"
 msgstr ""
 
-#: cmd/fix.go:139
+#: cmd/fix.go:152
 msgid "Rebuilding cache"
 msgstr ""
 
-#: cmd/fix.go:151
+#: cmd/fix.go:164
 msgid "Database rebuild skipped: %s"
 msgstr ""
 
-#: cmd/fix.go:166
+#: cmd/fix.go:179
 msgid "Cache directory does not exist, will create it"
 msgstr ""
 
-#: cmd/fix.go:169
+#: cmd/fix.go:182
 msgid "Unable to open cache directory"
 msgstr ""
 
-#: cmd/fix.go:175
+#: cmd/fix.go:188
 msgid "Unable to read cache directory contents"
 msgstr ""
 
-#: cmd/fix.go:187
+#: cmd/fix.go:209
 msgid "Unable to remove cache item (%s) as current user, trying with sudo"
 msgstr ""
 
-#: cmd/fix.go:190 cmd/fix.go:243
+#: cmd/fix.go:212 cmd/fix.go:334
 msgid "Unable to remove cache item (%s)"
 msgstr ""
 

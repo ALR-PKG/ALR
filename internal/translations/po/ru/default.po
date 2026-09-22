@@ -255,53 +255,57 @@ msgstr "Пакет успешно создан"
 msgid "Operation failed"
 msgstr ""
 
-#: cmd/fix.go:98
+#: cmd/fix.go:100
 msgid "Attempt to fix problems with ALR"
 msgstr "Попытка устранить проблемы с ALR"
 
-#: cmd/fix.go:115
+#: cmd/fix.go:117
 msgid "Clearing cache and temporary directories"
 msgstr "Очистка кэша и временных директорий"
 
-#: cmd/fix.go:122
+#: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:241 cmd/fix.go:320
+msgid "Skipping %s: locked by another process"
+msgstr "Пропуск %s: заблокировано другим процессом"
+
+#: cmd/fix.go:135
 msgid "Unable to create new cache directory"
 msgstr "Не удалось создать новый каталог кэша"
 
-#: cmd/fix.go:130
+#: cmd/fix.go:143
 msgid "Unable to reset directory %s"
 msgstr "Не удалось пересоздать каталог %s"
 
-#: cmd/fix.go:134
+#: cmd/fix.go:147
 msgid "Unable to clean directory %s"
 msgstr "Не удалось очистить каталог %s"
 
-#: cmd/fix.go:139
+#: cmd/fix.go:152
 msgid "Rebuilding cache"
 msgstr "Восстановление кэша"
 
-#: cmd/fix.go:151
+#: cmd/fix.go:164
 msgid "Database rebuild skipped: %s"
 msgstr "Пересборка базы данных пропущена: %s"
 
-#: cmd/fix.go:166
+#: cmd/fix.go:179
 msgid "Cache directory does not exist, will create it"
 msgstr "Каталог кэша не существует, будет создан"
 
-#: cmd/fix.go:169
+#: cmd/fix.go:182
 msgid "Unable to open cache directory"
 msgstr "Невозможно открыть каталог кэша"
 
-#: cmd/fix.go:175
+#: cmd/fix.go:188
 msgid "Unable to read cache directory contents"
 msgstr "Невозможно прочитать содержимое каталога кэша"
 
-#: cmd/fix.go:187
+#: cmd/fix.go:209
 msgid "Unable to remove cache item (%s) as current user, trying with sudo"
 msgstr ""
 "Невозможно удалить элемент кэша (%s) от текущего пользователя, попытка через "
 "sudo"
 
-#: cmd/fix.go:190 cmd/fix.go:243
+#: cmd/fix.go:212 cmd/fix.go:334
 msgid "Unable to remove cache item (%s)"
 msgstr "Невозможно удалить элемент кэша (%s)"
 

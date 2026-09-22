@@ -1566,15 +1566,15 @@ Expected: PASS
 - Modify: `cmd/fix.go`
 - Test: юнит на хелпер
 
-- [ ] **Шаг 1: реализация** — хелпер `lockedPaths(dir string) (map[string]bool,
+- [x] **Шаг 1: реализация** — хелпер `lockedPaths(dir string) (map[string]bool,
   error)`: glob `*.lock` в dir (уровень 1); для каждого `fsutils.TryLock` —
   ErrLocked ⇒ путь занят (handle отпустить). Перед удалением entry в
   BuildDir/PkgsDir (и CacheDir для root): если `<entry>.lock` занят ⇒
   пропустить и entry, и лок с slog.Warn («пропущено: используется другим
   процессом»). `.alr-cache.lock` занят ⇒ пропустить весь PkgsDir с warn.
-- [ ] **Шаг 2: тест** — залоченный .lock (через probe-fd, как в fsutils
+- [x] **Шаг 2: тест** — залоченный .lock (через probe-fd, как в fsutils
   тестах) ⇒ entry не удалён; свободный — удалён
-- [ ] **Шаг 3: коммит** `Добавлено: alr fix уважает активные блокировки`
+- [x] **Шаг 3: коммит** `Добавлено: alr fix уважает активные блокировки`
 
 ### Task 10.4: конвенция gotext для пакетов
 

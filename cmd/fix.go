@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -31,6 +32,7 @@ import (
 
 	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
 	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/utils"
 )
 
@@ -115,6 +117,17 @@ func newFixCmd() *cobra.Command {
 			slog.Info(gotext.Get("Clearing cache and temporary directories"))
 
 			for _, action := range planFixCleanup(paths, isRoot) {
+				// Активная публикация в кэш пакетов (.alr-cache.lock) —
+				// пропускаем PkgsDir целиком
+				if action.path == paths.PkgsDir {
+					cacheLock := filepath.Join(paths.PkgsDir, ".alr-cache.lock")
+					if ok, err := pathLocked(cacheLock); err != nil {
+						slog.Debug("Failed to check package cache lock", "path", cacheLock, "error", err)
+					} else if ok {
+						slog.Warn(gotext.Get("Skipping %s: locked by another process", action.path))
+						continue
+					}
+				}
 				switch action.kind {
 				case fixEnsureCacheDir:
 					err = utils.EnsureTempDirWithRootOwner(action.path, 0o2775)
@@ -175,7 +188,16 @@ func clearCacheDir(cacheDir string) error {
 		return fmt.Errorf("%s: %w", gotext.Get("Unable to read cache directory contents"), err)
 	}
 
+	locked, err := lockedPaths(cacheDir)
+	if err != nil {
+		return err
+	}
+
 	for _, entry := range entries {
+		if locked[entry] || locked[entry+".lock"] {
+			slog.Warn(gotext.Get("Skipping %s: locked by another process", entry))
+			continue
+		}
 		fullPath := filepath.Join(cacheDir, entry)
 
 		if err := makeWritableRecursive(fullPath); err != nil {
@@ -195,13 +217,72 @@ func clearCacheDir(cacheDir string) error {
 	return nil
 }
 
+// resetDir очищает содержимое dirPath, сохраняя записи с активными
+// блокировками (<entry>.lock держит другой процесс): удаление .lock-файла
+// не снимает flock (он живёт на inode), а новый процесс создал бы новый
+// файл и сломал взаимное исключение. Сам каталог гарантированно существует.
 func resetDir(dirPath string) error {
-	if _, err := os.Stat(dirPath); err == nil {
-		if err := os.RemoveAll(dirPath); err != nil {
+	locked, err := lockedPaths(dirPath)
+	if err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return os.MkdirAll(dirPath, 0o755)
+		}
+		return err
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if locked[name] || locked[name+".lock"] {
+			slog.Warn(gotext.Get("Skipping %s: locked by another process", name))
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(dirPath, name)); err != nil {
 			return err
 		}
 	}
-	return os.MkdirAll(dirPath, 0o755)
+	return nil
+}
+
+// lockedPaths возвращает имена .lock-файлов (уровень 1 каталога dir),
+// блокировку которых держит другой процесс. Свободные (stale) .lock-файлы
+// в результат не попадают — их можно удалять.
+func lockedPaths(dir string) (map[string]bool, error) {
+	locks, err := filepath.Glob(filepath.Join(dir, "*.lock"))
+	if err != nil {
+		return nil, err
+	}
+
+	locked := map[string]bool{}
+	for _, lockPath := range locks {
+		isLocked, err := pathLocked(lockPath)
+		if err != nil {
+			slog.Debug("Failed to check lock", "path", lockPath, "error", err)
+			continue
+		}
+		if isLocked {
+			locked[filepath.Base(lockPath)] = true
+		}
+	}
+	return locked, nil
+}
+
+// pathLocked сообщает, держит ли другой процесс flock на path. Свободный
+// лок захватывается и тут же отпускается.
+func pathLocked(path string) (bool, error) {
+	h, err := fsutils.TryLock(path)
+	if err == nil {
+		h.Close()
+		return false, nil
+	}
+	if errors.Is(err, fsutils.ErrLocked) {
+		return true, nil
+	}
+	return false, err
 }
 
 // ownerUID returns the uid of the file owner.
@@ -220,6 +301,11 @@ func ownerUID(path string) (uint32, error) {
 // pruneOwnEntries removes only the entries of dir owned by uid, skipping
 // everything else. The directory itself is kept.
 func pruneOwnEntries(dir string, uid uint32, uidOf func(string) (uint32, error)) error {
+	locked, err := lockedPaths(dir)
+	if err != nil {
+		return err
+	}
+
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -229,7 +315,12 @@ func pruneOwnEntries(dir string, uid uint32, uidOf func(string) (uint32, error))
 	}
 
 	for _, entry := range entries {
-		fullPath := filepath.Join(dir, entry.Name())
+		name := entry.Name()
+		if locked[name] || locked[name+".lock"] {
+			slog.Warn(gotext.Get("Skipping %s: locked by another process", name))
+			continue
+		}
+		fullPath := filepath.Join(dir, name)
 		entryUID, err := uidOf(fullPath)
 		if err != nil {
 			slog.Debug("Failed to determine entry owner", "path", fullPath, "error", err)
