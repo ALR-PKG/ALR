@@ -249,9 +249,20 @@ func dispenseExecutor[T any](cmd *exec.Cmd, pluginName string) (T, func(), error
 	})
 	rpcClient, err := client.Client()
 	if err != nil {
+		// Если процесс успел запуститься, но handshake не удался,
+		// не оставляем его осиротевшим
+		client.Kill()
 		var zero T
 		return zero, nil, err
 	}
+
+	// Родительские копии ExtraFiles (например fd макета песочницы)
+	// процесс уже получил при старте — закрываем, чтобы не копить fd
+	// в долгоживущем демоне.
+	for _, f := range cmd.ExtraFiles {
+		f.Close()
+	}
+	cmd.ExtraFiles = nil
 
 	var cleanupOnce sync.Once
 	cleanup := func() {
