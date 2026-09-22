@@ -263,7 +263,8 @@ msgstr "Попытка устранить проблемы с ALR"
 msgid "Clearing cache and temporary directories"
 msgstr "Очистка кэша и временных директорий"
 
-#: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:241 cmd/fix.go:320
+#: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:207 cmd/fix.go:250 cmd/fix.go:258
+#: cmd/fix.go:354 cmd/fix.go:362
 msgid "Skipping %s: locked by another process"
 msgstr "Пропуск %s: заблокировано другим процессом"
 
@@ -299,13 +300,13 @@ msgstr "Невозможно открыть каталог кэша"
 msgid "Unable to read cache directory contents"
 msgstr "Невозможно прочитать содержимое каталога кэша"
 
-#: cmd/fix.go:209
+#: cmd/fix.go:218
 msgid "Unable to remove cache item (%s) as current user, trying with sudo"
 msgstr ""
 "Невозможно удалить элемент кэша (%s) от текущего пользователя, попытка через "
 "sudo"
 
-#: cmd/fix.go:212 cmd/fix.go:334
+#: cmd/fix.go:221 cmd/fix.go:376
 msgid "Unable to remove cache item (%s)"
 msgstr "Невозможно удалить элемент кэша (%s)"
 

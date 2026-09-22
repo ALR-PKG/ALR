@@ -243,7 +243,8 @@ msgstr ""
 msgid "Clearing cache and temporary directories"
 msgstr ""
 
-#: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:241 cmd/fix.go:320
+#: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:207 cmd/fix.go:250 cmd/fix.go:258
+#: cmd/fix.go:354 cmd/fix.go:362
 msgid "Skipping %s: locked by another process"
 msgstr ""
 
@@ -279,11 +280,11 @@ msgstr ""
 msgid "Unable to read cache directory contents"
 msgstr ""
 
-#: cmd/fix.go:209
+#: cmd/fix.go:218
 msgid "Unable to remove cache item (%s) as current user, trying with sudo"
 msgstr ""
 
-#: cmd/fix.go:212 cmd/fix.go:334
+#: cmd/fix.go:221 cmd/fix.go:376
 msgid "Unable to remove cache item (%s)"
 msgstr ""
 

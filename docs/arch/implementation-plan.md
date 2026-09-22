@@ -1592,14 +1592,43 @@ Expected: PASS
 
 ### Task 10.5: сквозная проверка Этапа 10
 
-- root-сценарий недоступен (нет sudo) — проверить не-root сценарии на
-  хосте (пользователь в wheel): `alr fix` → чистит ~/.cache/alr/build и
-  pkgs, НЕ трогает содержимое /var/cache/alr (alr.db, repo, dl на месте),
-  БД пересобрана (pull прошёл — пользователь в группе)
-- Фоновая сборка с залоченным пакетом во время fix → дерево пакета и
-  .lock не тронуты (warn), остальное вычищено
-- Регрессия root-пути — юнитами/инспекцией (живьём нет sudo)
-- `go build ./...`, `go test ./...`, pre-commit
+- [x] root-сценарий недоступен (нет sudo) — проверен не-root сценарий на
+  хосте (пользователь в wheel, RED OS 8, /var/cache/alr root:wheel 2775):
+  собрано два тестовых rpm-пакета (`alr build -s alr.sh` в /tmp/alr-e10,
+  наполняя ~/.cache/alr/build и pkgs), затем `alr fix` с fake-sudo в PATH:
+  - exit 0, вызовов sudo — 0;
+  - ~/.cache/alr/{build,pkgs} вычищены полностью и существуют;
+  - содержимое /var/cache/alr не тронуто: diff полного снапшота
+    (find -printf + md5) показал изменения только в alr.db (см. ниже);
+    repo/ и dl/ идентичны побайтово;
+  - пересборка БД прошла без ошибки и без sudo (Warn «пересборка
+    пропущена» отсутствует); site-репозитории пропущены Pull'ом
+    («обновляется через RPC», как задокументировано в Этапе 1) — fix сам
+    БД не переписывает; alr.db переписан позже ленивым RPC-кэшем при
+    `alr info alr-bin` (mtime соответствует вызову info, данные валидны,
+    `alr list` отдаёт репозиторий через RPC) — поведение как в master;
+  - замечание: при перенаправленном stdout уровень лога принудительно
+    WARN (main.go:72), для наблюдения за fix нужен ALR_LOG_LEVEL=debug —
+    не баг этапа, но усложняет диагностику.
+- [x] Активные локи: фоновый `flock` на ~/.cache/alr/build/lockpkg.lock +
+  дерево lockpkg/ → fix: warn «Пропуск lockpkg/lockpkg.lock:
+  заблокировано другим процессом», оба СОХРАНЕНЫ; свободные freepkg и
+  stale freepkg.lock вычищены. Залоченный ~/.cache/alr/pkgs/.alr-cache.lock
+  → весь pkgs пропущен с warn, содержимое (should-stay.rpm) сохранено.
+- [x] Призраки: fix на пустом pkgs НЕ создаёт .alr-cache.lock
+  (stat-гард pathLocked, Task 10.3); .alr-cache.lock появляется только
+  после реальной сборки (штатно, publisher lock).
+- [x] Регрессия: после fix `alr build` пересобрал пакет с нуля (кэши
+  пересоздаются на лету), повторный build → «Используется кешированный
+  пакет» (кэш-хит).
+- [x] root-путь — инспекцией кода (sudo недоступен): planFixCleanup для
+  euid=0 ставит fixEnsureCacheDir ПЕРЕД fixClearCacheDir (fail-fast,
+  cmd/fix.go:79-95), далее resetDir для обоих рабочих каталогов, ошибка
+  пересборки фатальна (cmd/fix.go:160-163); логика покрыта юнитами
+  cmd/fix_test.go.
+- [x] `go build ./...`, `go test ./...` (exit 0, без e2e),
+  `pre-commit run --all-files` — все хуки Passed; дифт хуков
+  (coverage-badge, пот/po-переводы) включён в коммит.
 
 ---
 
