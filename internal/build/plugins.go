@@ -119,6 +119,7 @@ func GetSafeScriptExecutor(cfg Config, scriptDir string) (ScriptExecutor, func()
 //     в песочнице не нужны.
 //   - landlock и прямой режим: Credential{Uid,Gid,Groups} сохраняется,
 //     supplementary groups работают.
+//
 // cfg — конфиг с путями ВЫЗВАВШЕГО (callerJobConfig), из него строится
 // макет песочницы.
 func GetSafeScriptExecutorAs(uid, gid uint32, groups []uint32, env []string, cfg Config, scriptDir string) (ScriptExecutor, func(), error) {
