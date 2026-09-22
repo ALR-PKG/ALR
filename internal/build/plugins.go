@@ -107,9 +107,18 @@ func GetSafeScriptExecutor(cfg Config, scriptDir string) (ScriptExecutor, func()
 // ВСЕ supplementary groups процесса, поэтому без них plugin теряет
 // членство в группах (например alr для общего dl-кэша). Сюда передаются
 // все группы из NSS, включая основную — ядро дедуплицирует её с Gid.
-// groups действуют только в прямом и landlock режимах; в ns-режиме
-// supplementary groups вызвавшего теряются (маппинг одного uid/gid) —
-// известное ограничение до Task 9.4.
+//
+// Режимы каскада для демон-пути:
+//   - namespaces: хостовый Credential сбрасывается, вместо него действует
+//     маппинг uid 0→callerUID и gid 0→callerGID — plugin внутри ns root,
+//     маппленный на вызвавшего. Supplementary groups при этом ТЕРЯЮТСЯ
+//     (маппинг ровно одного uid/gid, setgroups в userns недоступен) —
+//     известное ограничение ns-режима. Оно безопасно для сборки: скачивание
+//     исходников (доступ к общему dl-кэшу root:alr) выполняет родитель
+//     (демон, root), а не plugin, поэтому групповые rw-каталоги хоста
+//     в песочнице не нужны.
+//   - landlock и прямой режим: Credential{Uid,Gid,Groups} сохраняется,
+//     supplementary groups работают.
 // cfg — конфиг с путями ВЫЗВАВШЕГО (callerJobConfig), из него строится
 // макет песочницы.
 func GetSafeScriptExecutorAs(uid, gid uint32, groups []uint32, env []string, cfg Config, scriptDir string) (ScriptExecutor, func(), error) {

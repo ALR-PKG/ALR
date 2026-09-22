@@ -1433,15 +1433,19 @@ Expected: PASS
 - Modify: `internal/dbus/package.go` + `internal/build/plugins.go`
   (GetSafeScriptExecutorAs — через sandbox с uid/gid вызвавшего)
 
-- [ ] **Шаг 1: реализация** — в демоне plugin стартует через sandbox.Wrap
+- [x] **Шаг 1: реализация** — в демоне plugin стартует через sandbox.Wrap
   с uid/gid вызвавшего (map 0→callerUID) вместо/поверх Credential
-  (совместимость Credential+NEWUSER: выбери — либо sandbox-mapped root
-  заменяет Credential, либо Credential внутри ns; протестируй выбранное;
-  supplementary groups mapping — ограничение задокументируй).
-  Layout демона: callerCachePaths(uid) rw.
-- [ ] **Шаг 2: тесты** — unit на конфиг Wrap для демон-пути; прогон всех
+  (совместимость Credential+NEWUSER: выбрано — в ns-попытке Credential
+  сбрасывается, его заменяет маппинг 0→callerUID/0→callerGID; в landlock
+  и прямом режиме Credential{Uid,Gid,Groups} сохраняется).
+  Layout демона: callerCachePaths(uid) rw (через callerJobConfig),
+  RepoDir ro. Supplementary groups в ns теряются (маппинг одного uid/gid)
+  — задокументированное ограничение: скачивание sources выполняет
+  родитель (демон, root), поэтому групповые rw-каталоги (dl-кэш
+  root:alr) в песочнице не нужны.
+- [x] **Шаг 2: тесты** — unit на конфиг Wrap для демон-пути; прогон всех
   `go test ./internal/dbus/ ./internal/build/ ./internal/sandbox/`
-- [ ] **Шаг 3: коммит** `Изменено: демон собирает в песочнице с uid-маппингом вызвавшего`
+- [x] **Шаг 3: коммит** `Изменено: демон собирает в песочнице с uid-маппингом вызвавшего`
 
 ### Task 9.5: сквозная проверка Этапа 9
 

@@ -162,6 +162,76 @@ func TestScriptSandboxAttempts(t *testing.T) {
 	})
 }
 
+func TestScriptSandboxAttemptsDaemonPath(t *testing.T) {
+	// Демон-путь: GetSafeScriptExecutorAs(callerUID, gid, groups, env, cfg).
+	// layout строится из callerJobConfig — BuildDir/PkgsDir вызвавшего rw,
+	// RepoDir ro (scriptDir=""), uid/gid вызвавшего идут в маппинг.
+	cfg := &fakeResolverConfig{paths: &config.Paths{
+		RepoDir:  "/var/cache/alr/repo",
+		BuildDir: "/home/alice/.cache/alr/build",
+		PkgsDir:  "/home/alice/.cache/alr/pkgs",
+	}}
+	callerEnv := []string{
+		"HOME=/home/alice",
+		"USER=alice",
+		"LOGNAME=alice",
+		"PATH=/usr/bin:/bin",
+	}
+	cred := &syscall.Credential{Uid: 1000, Gid: 100, Groups: []uint32{100, 998}}
+
+	layout := ScriptSandboxLayout(cfg, "")
+	attempts := scriptSandboxAttempts(layout, int(cred.Uid), int(cred.Gid))
+
+	t.Run("layout uses caller cache paths", func(t *testing.T) {
+		rw := map[string]bool{}
+		for _, m := range layout.Mounts {
+			rw[m.Target] = m.RW
+		}
+		assert.True(t, rw["/home/alice/.cache/alr/build"])
+		assert.True(t, rw["/home/alice/.cache/alr/pkgs"])
+		ro, ok := rw["/var/cache/alr/repo"]
+		require.True(t, ok)
+		assert.False(t, ro, "RepoDir ro при пустом scriptDir (пакет из репозитория)")
+	})
+
+	t.Run("namespaces: caller uid/gid mapped to root, credential cleared", func(t *testing.T) {
+		cmd, err := getExecutorCmd("_internal-safe-script-executor", callerEnv, cred)
+		require.NoError(t, err)
+		require.NoError(t, attempts[0].wrap(cmd))
+
+		require.NotNil(t, cmd.SysProcAttr)
+		assert.Nil(t, cmd.SysProcAttr.Credential,
+			"в userns хостовый Credential невалиден — его заменяет маппинг 0→caller")
+		require.Equal(t,
+			[]syscall.SysProcIDMap{{ContainerID: 0, HostID: 1000, Size: 1}},
+			cmd.SysProcAttr.UidMappings)
+		require.Equal(t,
+			[]syscall.SysProcIDMap{{ContainerID: 0, HostID: 100, Size: 1}},
+			cmd.SysProcAttr.GidMappings)
+
+		home, ok := envVal(cmd.Env, "HOME")
+		require.True(t, ok)
+		assert.Equal(t, "/home/alice", home, "env вызвавшего проходит в ns-попытку")
+	})
+
+	t.Run("landlock: credential with groups preserved", func(t *testing.T) {
+		cmd, err := getExecutorCmd("_internal-safe-script-executor", callerEnv, cred)
+		require.NoError(t, err)
+		require.NoError(t, attempts[1].wrap(cmd))
+
+		require.NotNil(t, cmd.SysProcAttr)
+		require.NotNil(t, cmd.SysProcAttr.Credential)
+		assert.Equal(t, uint32(1000), cmd.SysProcAttr.Credential.Uid)
+		assert.Equal(t, uint32(100), cmd.SysProcAttr.Credential.Gid)
+		assert.Equal(t, []uint32{100, 998}, cmd.SysProcAttr.Credential.Groups,
+			"supplementary groups работают только в landlock/прямом режиме")
+
+		home, ok := envVal(cmd.Env, "HOME")
+		require.True(t, ok)
+		assert.Equal(t, "/home/alice", home)
+	})
+}
+
 func TestSandboxAttemptsNotAppliedToInstaller(t *testing.T) {
 	// installer и repos executor'ы остаются вне песочницы: их команды
 	// не проходят через sandbox.Wrap
