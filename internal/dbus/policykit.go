@@ -116,7 +116,7 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, uid uint32, bu
 	var result struct {
 		IsAuthorized bool
 		IsChallenge  bool
-		Details      map[string]dbus.Variant
+		Details      map[string]string
 	}
 
 	if err := call.Store(&result.IsAuthorized, &result.IsChallenge, &result.Details); err != nil {
