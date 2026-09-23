@@ -80,21 +80,21 @@ func TestJobSetProgressUpdatesProperties(t *testing.T) {
 }
 
 func TestPolkitSubjectMarshalsAsStruct(t *testing.T) {
-	subject := newPolkitSubject(1000)
+	subject := newPolkitSubject(":1.42")
 
 	// polkit ждет subject как ОДНУ структуру (s a{sv}), а не два аргумента
 	sig := dbus.SignatureOf(subject)
 	if sig.String() != "(sa{sv})" {
 		t.Errorf("subject signature = %q, want %q", sig.String(), "(sa{sv})")
 	}
-	if subject.Kind != "unix-user" {
-		t.Errorf("subject kind = %q, want %q", subject.Kind, "unix-user")
+	if subject.Kind != "system-bus-name" {
+		t.Errorf("subject kind = %q, want %q", subject.Kind, "system-bus-name")
 	}
-	uidVar, ok := subject.Details["uid"]
+	nameVar, ok := subject.Details["name"]
 	if !ok {
-		t.Fatal("subject details missing uid")
+		t.Fatal("subject details missing name")
 	}
-	if got, ok := uidVar.Value().(uint32); !ok || got != 1000 {
-		t.Errorf("subject uid = %v, want 1000", uidVar.Value())
+	if got, ok := nameVar.Value().(string); !ok || got != ":1.42" {
+		t.Errorf("subject name = %v, want :1.42", nameVar.Value())
 	}
 }

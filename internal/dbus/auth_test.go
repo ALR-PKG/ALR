@@ -32,7 +32,7 @@ type fakeAuthorizer struct {
 	calls       int
 }
 
-func (f *fakeAuthorizer) CheckAuthorization(actionID string, uid uint32, details map[string]string, allowUserInteraction bool) (bool, error) {
+func (f *fakeAuthorizer) CheckAuthorization(actionID string, uid uint32, busName string, details map[string]string, allowUserInteraction bool) (bool, error) {
 	f.calls++
 	f.gotActionID = actionID
 	f.gotUID = uid

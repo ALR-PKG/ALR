@@ -212,7 +212,7 @@ func (s *Service) authorizeCaller(sender dbus.Sender, actionID string) (uint32, 
 		return 0, fmt.Errorf("failed to resolve caller: %w", err)
 	}
 
-	authorized, err := s.getAuthorizer().CheckAuthorization(actionID, uid, nil, true)
+	authorized, err := s.getAuthorizer().CheckAuthorization(actionID, uid, string(sender), nil, true)
 	if err != nil {
 		slog.Error("Authorization check failed", "action", actionID, "uid", uid, "err", err)
 		return 0, fmt.Errorf("authorization check failed: %w", err)
