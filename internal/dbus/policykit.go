@@ -112,14 +112,14 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, uid uint32, bu
 		return p.fallbackCheck(uid), nil
 	}
 
-	// Результат: (is_authorized, is_challenge, details)
+	// Результат: одна структура (is_authorized, is_challenge, details)
 	var result struct {
 		IsAuthorized bool
 		IsChallenge  bool
 		Details      map[string]string
 	}
 
-	if err := call.Store(&result.IsAuthorized, &result.IsChallenge, &result.Details); err != nil {
+	if err := call.Store(&result); err != nil {
 		slog.Error("Failed to parse PolicyKit response", "err", err)
 		return p.fallbackCheck(uid), nil
 	}
