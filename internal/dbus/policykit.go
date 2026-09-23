@@ -56,20 +56,23 @@ type polkitSubject struct {
 	Details map[string]dbus.Variant
 }
 
-// newPolkitSubject строит subject kind "unix-user" для указанного uid
-func newPolkitSubject(uid uint32) polkitSubject {
+// newPolkitSubject строит subject kind "system-bus-name" для соединения
+// вызвавшего на system-шине. "unix-user" не является валидным видом
+// subject в polkit (валидны: unix-process, unix-session, system-bus-name),
+// из-за него CheckAuthorization возвращал ошибку и грант не работал.
+func newPolkitSubject(busName string) polkitSubject {
 	return polkitSubject{
-		Kind: "unix-user",
+		Kind: "system-bus-name",
 		Details: map[string]dbus.Variant{
-			"uid": dbus.MakeVariant(uid),
+			"name": dbus.MakeVariant(busName),
 		},
 	}
 }
 
 // CheckAuthorization проверяет авторизацию через PolicyKit для указанного
-// uid (uid ВЫЗЫВАВШЕГО, а не демона). При недоступном или ошибочном polkit —
-// fail-closed: разрешено только uid 0.
-func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, uid uint32, details map[string]string, allowUserInteraction bool) (bool, error) {
+// вызова (busName — имя соединения ВЫЗЫВАВШЕГО на system-шине, не демона).
+// При недоступном или ошибочном polkit — fail-closed: разрешено только uid 0.
+func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, uid uint32, busName string, details map[string]string, allowUserInteraction bool) (bool, error) {
 	if p.conn == nil {
 		return false, fmt.Errorf("no D-Bus connection")
 	}
@@ -97,7 +100,7 @@ func (p *PolicyKitAuthorizer) CheckAuthorization(actionID string, uid uint32, de
 	// u flags, s cancellation_id) -> ((bba{ss}) result)
 	obj := p.conn.Object(PolicyKitInterface, dbus.ObjectPath(PolicyKitPath))
 	call := obj.Call(PolicyKitInterface+".Authority.CheckAuthorization", 0,
-		newPolkitSubject(uid),
+		newPolkitSubject(busName),
 		actionID,
 		actionDetails,
 		flags,
@@ -151,7 +154,7 @@ func (p *PolicyKitAuthorizer) fallbackCheck(uid uint32) bool {
 
 // Authorizer интерфейс для авторизации
 type Authorizer interface {
-	CheckAuthorization(actionID string, uid uint32, details map[string]string, allowUserInteraction bool) (bool, error)
+	CheckAuthorization(actionID string, uid uint32, busName string, details map[string]string, allowUserInteraction bool) (bool, error)
 }
 
 // DefaultAuthorizer возвращает авторизатор по умолчанию
