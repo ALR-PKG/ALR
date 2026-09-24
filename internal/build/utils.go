@@ -454,12 +454,13 @@ func createBuildEnvVars(info *distro.OSRelease, dirs types.Directories) []string
 
 	// Кэши тулчейнов по умолчанию живут в $HOME, который в песочнице
 	// недоступен на запись (landlock) или накрыт пустой tmpfs (namespaces) —
-	// сборки go/rust падали бы на mkdir кэша. Переносим кэши в дерево
-	// сборки (оно rw в песочнице), заодно они переживают пересборки.
-	// Переопределяем значения пользователя осознанно: путь вне дерева
-	// сборки в песочнице гарантированно неписабелен.
+	// сборки go/rust падали бы на mkdir кэша. Переносим кэши в отдельный
+	// каталог рядом с деревом сборки (rw в песочнице, переживает пересборки
+	// и alr fix). Переопределяем значения пользователя осознанно: путь вне
+	// rw-дерева в песочнице гарантированно неписабелен.
 	if dirs.BaseDir != "" {
-		toolCache := filepath.Join(filepath.Dir(dirs.BaseDir), ".cache")
+		buildRoot := filepath.Dir(dirs.BaseDir)
+		toolCache := filepath.Join(filepath.Dir(buildRoot), "toolcache")
 		env = append(env,
 			"GOCACHE="+filepath.Join(toolCache, "go-build"),
 			"GOMODCACHE="+filepath.Join(toolCache, "go-mod"),
