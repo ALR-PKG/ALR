@@ -174,6 +174,9 @@ type Config interface {
 	PagerStyle() string
 	PreferALRDeps() bool
 	Site() types.Site
+	// Repos возвращает подключённые репозитории — их хосты считаются
+	// доверенными для скачивания alr.sh и доп. файлов
+	Repos() []types.Repo
 }
 
 type FunctionsOutput struct {
