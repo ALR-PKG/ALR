@@ -64,6 +64,14 @@ func LayoutFromPaths(buildDir, pkgsDir, scriptDir string) *Layout {
 	rw := []string{buildDir, pkgsDir, "/tmp"}
 	ro := []string{scriptDir, "/usr", "/lib", "/lib64", "/bin", "/sbin", "/etc"}
 
+	// Собственный бинарник — plugin перевыполняет себя внутри песочницы;
+	// при расположении вне ro-каталогов (например, dev-бинарник в $HOME,
+	// который накрывается пустой tmpfs) ns-режим падал бы на exec.
+	// Если путь уже покрыт системными ro-mount'ами — dedup уберёт дубликат.
+	if self, err := os.Executable(); err == nil && self != "" {
+		ro = append(ro, filepath.Clean(self))
+	}
+
 	var mounts []Mount
 	for _, p := range rw {
 		p = filepath.Clean(p)
