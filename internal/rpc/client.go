@@ -34,6 +34,9 @@ import (
 type Client struct {
 	baseURL string
 	client  *http.Client
+	// distroID — ID дистрибутива из os-release, передаётся сайту
+	// для фильтрации зависимостей по семейству дистрибутива
+	distroID string
 }
 
 const (
@@ -52,12 +55,19 @@ func NewClient(site types.Site) *Client {
 		timeout = 10 * time.Second
 	}
 
-	return &Client{
+	c := &Client{
 		baseURL: site.URL,
 		client: &http.Client{
 			Timeout: timeout,
 		},
 	}
+
+	// Определяем дистрибутив один раз (результат кэшируется в pkg/distro)
+	if info, err := distro.ParseOSRelease(context.Background()); err == nil {
+		c.distroID = info.ID
+	}
+
+	return c
 }
 
 // get выполняет HTTP GET запрос и декодирует JSON ответ
@@ -140,6 +150,9 @@ func (c *Client) GetPackages(ctx context.Context, names []string) ([]Package, er
 	query := url.Values{}
 	for _, name := range names {
 		query.Add("arg", name)
+	}
+	if c.distroID != "" {
+		query.Set("distro", c.distroID)
 	}
 
 	var resp InfoResponse

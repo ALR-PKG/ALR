@@ -50,6 +50,18 @@ func TestGetPackages(t *testing.T) {
 	assert.Equal(t, "foo", pkgs[0].Name)
 }
 
+func TestGetPackagesSendsDistro(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "redos", r.URL.Query().Get("distro"))
+		w.Write([]byte(`{"version":1,"resultcount":1,"results":[{"name":"foo","version":"1.0","repo":"alr-repo"}]}`))
+	}))
+	client.distroID = "redos"
+
+	pkgs, err := client.GetPackages(context.Background(), []string{"foo"})
+	require.NoError(t, err)
+	require.Len(t, pkgs, 1)
+}
+
 func TestGetPackagesErrorStatus(t *testing.T) {
 	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
