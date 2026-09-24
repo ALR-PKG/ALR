@@ -206,7 +206,19 @@ func applySteps(newroot string, steps []fsStep) error {
 		s := steps[i]
 		dst := filepath.Join(newroot, s.target)
 		if !s.cover {
-			if err := os.MkdirAll(dst, 0o755); err != nil {
+			// Источник может быть файлом (например, бинарник alr) —
+			// тогда точка монтирования создаётся файлом, а не каталогом,
+			// иначе bind файла на каталог упадёт.
+			if st, err := os.Stat(s.mount.Source); err == nil && !st.IsDir() {
+				if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+					return fmt.Errorf("точка монтирования %s: %w", s.target, err)
+				}
+				f, err := os.OpenFile(dst, os.O_CREATE, 0o644)
+				if err != nil {
+					return fmt.Errorf("точка монтирования %s: %w", s.target, err)
+				}
+				f.Close()
+			} else if err := os.MkdirAll(dst, 0o755); err != nil {
 				return fmt.Errorf("точка монтирования %s: %w", s.target, err)
 			}
 			if err := unix.Mount(s.mount.Source, dst, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
