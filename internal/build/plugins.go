@@ -32,6 +32,16 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/internal/sandbox"
 )
 
+const (
+	// EnvSandboxMode — имя переменной окружения, которой песочница сообщает
+	// executor'у активный режим (см. SandboxModeLandlock).
+	EnvSandboxMode = "ALR_SANDBOX_MODE"
+	// SandboxModeLandlock — executor запущен под landlock: запись вне
+	// rw-путей макета запрещена, вложенные user namespaces (fakeroot)
+	// невозможны, нужен прямой exec-handler.
+	SandboxModeLandlock = "landlock"
+)
+
 var pluginMap = map[string]plugin.Plugin{
 	"script-executor": &ScriptExecutorPlugin{},
 	"installer":       &InstallerExecutorPlugin{},
@@ -149,6 +159,15 @@ func scriptSandboxAttempts(layout *sandbox.Layout, uid, gid int) []sandboxAttemp
 			return sandbox.Wrap(cmd, layout, uid, gid)
 		}},
 		{"landlock", func(cmd *exec.Cmd) error {
+			// landlock разрешает запись только в rw-пути макета, поэтому
+			// вложенный userns fakeroot'а (запись /proc/<pid>/uid_map) в этом
+			// режиме невозможен — exec команд падает с EACCES. Сообщаем
+			// executor'у режим, чтобы он использовал прямой exec-handler
+			// (в режиме namespaces fakeroot тоже неактивен: uid 0 внутри).
+			if cmd.Env == nil {
+				cmd.Env = os.Environ()
+			}
+			cmd.Env = append(cmd.Env, EnvSandboxMode+"="+SandboxModeLandlock)
 			return sandbox.WrapLandlock(cmd, layout)
 		}},
 	}

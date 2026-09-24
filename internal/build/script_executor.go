@@ -99,13 +99,19 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 	}
 	env := createBuildEnvVars(input.info, dirs)
 
-	fakeroot := handlers.FakerootExecHandler(2 * time.Second)
+	// Под landlock запись в /proc/<pid>/uid_map запрещена, поэтому
+	// вложенный userns fakeroot'а невозможен — используем прямой
+	// exec-handler. Режим приходит через EnvSandboxMode из plugins.go.
+	execHandler := handlers.FakerootExecHandler(2 * time.Second)
+	if os.Getenv(EnvSandboxMode) == SandboxModeLandlock {
+		execHandler = interp.DefaultExecHandler(2 * time.Second)
+	}
 	runner, err := interp.New(
 		interp.Env(expand.ListEnviron(env...)),       // Устанавливаем окружение
 		interp.StdIO(os.Stdin, os.Stderr, os.Stderr), // Устанавливаем стандартный ввод-вывод
 		interp.ExecHandlers(func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
-			return helpers.Helpers.ExecHandler(fakeroot)
-		}), // Обрабатываем выполнение через fakeroot
+			return helpers.Helpers.ExecHandler(execHandler)
+		}), // Обрабатываем выполнение через fakeroot (или напрямую под landlock)
 	)
 	if err != nil {
 		return nil, err
