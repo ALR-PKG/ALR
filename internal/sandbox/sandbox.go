@@ -64,6 +64,14 @@ func LayoutFromPaths(buildDir, pkgsDir, scriptDir string) *Layout {
 	rw := []string{buildDir, pkgsDir, "/tmp"}
 	ro := []string{scriptDir, "/usr", "/lib", "/lib64", "/bin", "/sbin", "/etc"}
 
+	// /etc/resolv.conf обычно симлинк в /run (systemd-resolved): цель
+	// оказывается вне макета, и DNS в песочнице ломается (Go-резолвер
+	// откатывается на ::1). Монтируем каталог с целью симлинка.
+	if target, err := filepath.EvalSymlinks("/etc/resolv.conf"); err == nil &&
+		strings.HasPrefix(target, "/run/") {
+		ro = append(ro, filepath.Dir(target))
+	}
+
 	var mounts []Mount
 	for _, p := range rw {
 		p = filepath.Clean(p)
