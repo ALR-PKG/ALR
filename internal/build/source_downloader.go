@@ -124,7 +124,8 @@ func (s *SourceDownloader) DownloadSources(
 // resolveDlCacheRoot выбирает корень кэша скачиваний для текущего
 // пользователя (dlcache сам добавит подкаталог "dl"):
 //  1. root — общий CacheDir;
-//  2. член группы "alr" или привилегированной группы дистрибутива — общий
+//  2. член группы-владельца общего кэша (CacheShareGroup: "alr", если
+//     группа есть, иначе привилегированная группа дистрибутива) — общий
 //     CacheDir, предварительно гарантируется CacheDir/dl (fast-path внутри
 //     EnsureTempDirWithRootOwner обходится без sudo); ошибка — фолбэк
 //     per-user;
@@ -144,7 +145,13 @@ func resolveDlCacheRoot(cfg Config) (string, error) {
 		gids = nil
 	}
 
-	if !userInGroups(gids, "alr", fsutils.GetPrivilegedGroup()) {
+	// Членство должно быть именно в группе-владельце общего кэша
+	// (CacheShareGroup: "alr", если группа есть, иначе привилегированная
+	// группа дистрибутива). Проверка по привилегированной группе отдельно
+	// неверна: каталоги создаются для группы alr, и член wheel без членства
+	// в alr получал общий кэш, но не мог писать внутрь (git clone падал с
+	// permission denied на mkdir в root:alr каталоге).
+	if !userInGroups(gids, fsutils.CacheShareGroup()) {
 		return perUserDlCacheRoot()
 	}
 

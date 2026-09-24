@@ -37,12 +37,14 @@ import (
 type fakeResolverConfig struct {
 	paths *config.Paths
 	site  types.Site
+	repos []types.Repo
 }
 
 func (f *fakeResolverConfig) GetPaths() *config.Paths { return f.paths }
 func (f *fakeResolverConfig) PagerStyle() string      { return "" }
 func (f *fakeResolverConfig) PreferALRDeps() bool     { return false }
 func (f *fakeResolverConfig) Site() types.Site        { return f.site }
+func (f *fakeResolverConfig) Repos() []types.Repo     { return f.repos }
 
 func newTestResolver(t *testing.T, site types.Site) (*ScriptResolver, string) {
 	t.Helper()
@@ -89,6 +91,31 @@ func TestValidateDownloadURL(t *testing.T) {
 	// Мусор вместо URL
 	assert.Error(t, r.validateDownloadURL("://bad"))
 	assert.Error(t, r.validateDownloadURL("alr.sh"))
+}
+
+func TestValidateDownloadURL_TrustedRepoHosts(t *testing.T) {
+	// Хосты URL и зеркал подключённых репозиториев считаются доверенными:
+	// сайт отдаёт alr_sh_url, указывающий на raw-файлы хостинга репозитория
+	r, _ := newTestResolver(t, types.Site{
+		URL: "https://alr-pkg.ru",
+	})
+	r.cfg.(*fakeResolverConfig).repos = []types.Repo{
+		{
+			Name:    "alr-default",
+			URL:     "https://git.alr-pkg.ru/ALR/alr-default.git",
+			Mirrors: []string{"https://git.mirror.example/alr-default.git"},
+		},
+	}
+
+	assert.NoError(t, r.validateDownloadURL("https://git.alr-pkg.ru/ALR/alr-default/raw/branch/master/alr-git/alr.sh"))
+	assert.NoError(t, r.validateDownloadURL("https://git.mirror.example/alr-default/raw/branch/master/alr-git/alr.sh"))
+
+	// Субдомен сайта доверен (raw-файлы хостинга репозиториев)
+	assert.NoError(t, r.validateDownloadURL("https://git.alr-pkg.ru/any/raw/alr.sh"))
+	// Подделка через суффикс в домене верхнего уровня — нет
+	assert.Error(t, r.validateDownloadURL("https://evil-alr-pkg.ru/alr.sh"))
+	// Чужой хост по-прежнему отклоняется
+	assert.Error(t, r.validateDownloadURL("https://git.evil.example/alr.sh"))
 }
 
 func TestResolveScriptRejectsUntrustedHost(t *testing.T) {

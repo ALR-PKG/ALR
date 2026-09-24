@@ -147,6 +147,7 @@ func (f *fakeJobConfig) GetPaths() *config.Paths { return f.paths }
 func (f *fakeJobConfig) PagerStyle() string      { return "native" }
 func (f *fakeJobConfig) PreferALRDeps() bool     { return false }
 func (f *fakeJobConfig) Site() types.Site        { return types.Site{} }
+func (f *fakeJobConfig) Repos() []types.Repo     { return nil }
 
 func TestCallerJobConfig(t *testing.T) {
 	stubLookupUser(t, lookupAlice)

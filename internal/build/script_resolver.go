@@ -132,12 +132,25 @@ func (s *ScriptResolver) validateDownloadURL(rawURL string) error {
 
 	site := s.cfg.Site()
 	allowed := append([]string{site.URL}, site.Mirrors...)
+	for _, repo := range s.cfg.Repos() {
+		allowed = append(allowed, repo.URL)
+		allowed = append(allowed, repo.Mirrors...)
+	}
 	for _, base := range allowed {
 		bu, err := url.Parse(base)
 		if err != nil || bu.Host == "" {
 			continue
 		}
-		if u.Host == bu.Host && u.Scheme == bu.Scheme {
+		if u.Scheme != bu.Scheme {
+			continue
+		}
+		if u.Host == bu.Host {
+			return nil
+		}
+		// Субдомены доверенного хоста (например git.alr-pkg.ru для
+		// alr-pkg.ru): сайт отдаёт alr_sh_url на raw-файлы хостинга
+		// репозиториев внутри своего домена
+		if strings.HasSuffix(u.Host, "."+bu.Host) {
 			return nil
 		}
 	}
