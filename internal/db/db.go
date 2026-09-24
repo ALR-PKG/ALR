@@ -24,7 +24,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/leonelquinteros/gotext"
@@ -33,6 +35,7 @@ import (
 
 	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/config"
+	"git.alr-pkg.ru/ALR/ALR/internal/constants"
 	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
@@ -96,7 +99,39 @@ func (d *Database) Connect() error {
 		return err
 	}
 	d.engine = engine
+
+	// Общая БД обязана быть доступной на запись всей группе кэша: файл,
+	// созданный любым пользователем с обычным umask, получает 644, и
+	// остальные получают "attempt to write a readonly database". Каждый
+	// процесс нормализует права на свой файл (root — и владельца).
+	if dbPath == filepath.Join(constants.SystemCachePath, "alr.db") {
+		normalizeSharedDBPerms(dbPath)
+	}
+
 	return nil
+}
+
+// normalizeSharedDBPerms выставляет общей БД права 664, а от root —
+// ещё и группу кэша. Ошибки не фатальны: процесс, не владеющий файлом,
+// исправить его не в силах.
+func normalizeSharedDBPerms(dbPath string) {
+	if err := os.Chmod(dbPath, 0o664); err != nil {
+		slog.Debug("не удалось выставить права общей БД", "path", dbPath, "error", err)
+	}
+	if os.Geteuid() != 0 {
+		return
+	}
+	g, err := user.LookupGroup(fsutils.CacheShareGroup())
+	if err != nil {
+		return
+	}
+	gid, err := strconv.Atoi(g.Gid)
+	if err != nil {
+		return
+	}
+	if err := os.Chown(dbPath, -1, gid); err != nil {
+		slog.Debug("не удалось выставить группу общей БД", "path", dbPath, "error", err)
+	}
 }
 
 func (d *Database) Init(ctx context.Context) error {
