@@ -247,27 +247,43 @@ func (c *Client) SearchAllPackages(ctx context.Context, by, query string) ([]Pac
 	return all, nil
 }
 
-// CheckUpdates проверяет доступные обновления для установленных пакетов
+// updatesBatchSize — максимальное число пакетов в одном запросе
+// /rpc/v1/updates (сервер отклоняет массивы больше 1000 элементов).
+const updatesBatchSize = 500
+
+// CheckUpdates проверяет доступные обновления для установленных пакетов.
+// Список разбивается на батчи по updatesBatchSize пакетов.
 func (c *Client) CheckUpdates(ctx context.Context, installed []InstalledPackage, distroInfo *distro.OSRelease) ([]UpdateInfo, error) {
 	if len(installed) == 0 {
 		return nil, nil
 	}
 
-	req := UpdatesRequest{
-		Packages: installed,
-	}
-
+	var distro *DistroInfo
 	if distroInfo != nil {
-		req.Distro = &DistroInfo{
+		distro = &DistroInfo{
 			ID:        distroInfo.ID,
 			VersionID: distroInfo.VersionID,
 		}
 	}
 
-	var resp UpdatesResponse
-	if err := c.post(ctx, "/rpc/v1/updates", req, &resp); err != nil {
-		return nil, err
+	var all []UpdateInfo
+	for start := 0; start < len(installed); start += updatesBatchSize {
+		end := start + updatesBatchSize
+		if end > len(installed) {
+			end = len(installed)
+		}
+
+		req := UpdatesRequest{
+			Packages: installed[start:end],
+			Distro:   distro,
+		}
+
+		var resp UpdatesResponse
+		if err := c.post(ctx, "/rpc/v1/updates", req, &resp); err != nil {
+			return nil, err
+		}
+		all = append(all, resp.Updates...)
 	}
 
-	return resp.Updates, nil
+	return all, nil
 }
