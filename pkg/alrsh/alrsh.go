@@ -226,13 +226,15 @@ func (s *ScriptFile) ResolveVersion(ctx context.Context, info *distro.OSRelease,
 	scriptDir := filepath.Dir(s.path)
 	dirs := types.Directories{ScriptDir: scriptDir, SrcDir: srcDir}
 
+	// Доступ нужен и к каталогу скрипта, и к srcDir: version() для
+	// git-пакетов ходит в скачанные исходники (git-version по .git).
 	runner, err := interp.New(
 		interp.Env(expand.ListEnviron(createBuildEnvVars(info, dirs)...)),
 		interp.StdIO(os.Stdin, os.Stderr, os.Stderr),
 		interp.ExecHandler(helpers.Restricted.ExecHandler(handlers.NopExec)),
-		interp.ReadDirHandler2(handlers.RestrictedReadDir(scriptDir)),
-		interp.StatHandler(handlers.RestrictedStat(scriptDir)),
-		interp.OpenHandler(handlers.RestrictedOpen(scriptDir)),
+		interp.ReadDirHandler2(handlers.RestrictedReadDir(scriptDir, srcDir)),
+		interp.StatHandler(handlers.RestrictedStat(scriptDir, srcDir)),
+		interp.OpenHandler(handlers.RestrictedOpen(scriptDir, srcDir)),
 		interp.Dir(scriptDir),
 	)
 	if err != nil {
