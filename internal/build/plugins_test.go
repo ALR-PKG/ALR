@@ -159,6 +159,10 @@ func TestScriptSandboxAttempts(t *testing.T) {
 			"без namespaces Credential остаётся — процесс идёт от uid вызвавшего")
 		assert.Zero(t, cmd.SysProcAttr.Cloneflags)
 		assert.Len(t, cmd.ExtraFiles, 1)
+
+		mode, ok := envVal(cmd.Env, EnvSandboxMode)
+		require.True(t, ok, "landlock-режим должен быть помечен для executor'а")
+		assert.Equal(t, SandboxModeLandlock, mode)
 	})
 }
 
