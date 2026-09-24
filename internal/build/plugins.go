@@ -188,10 +188,6 @@ func getSandboxedScriptExecutor(cfg Config, scriptDir string, env []string, cred
 		if m.Source == "/" {
 			continue
 		}
-		// Источник-файл (например, бинарник alr) создавать не нужно
-		if st, err := os.Stat(m.Source); err == nil && !st.IsDir() {
-			continue
-		}
 		if err := os.MkdirAll(m.Source, 0o755); err != nil {
 			slog.Warn("песочница: не удалось создать каталог из макета", "path", m.Source, "error", err)
 		}

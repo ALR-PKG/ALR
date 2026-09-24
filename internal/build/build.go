@@ -37,6 +37,7 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/internal/config"
 	"git.alr-pkg.ru/ALR/ALR/internal/fsutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/manager"
+	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
 	"git.alr-pkg.ru/ALR/ALR/internal/stats"
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
@@ -848,6 +849,7 @@ func (i *Builder) printDependencyTree(
 	printed map[string]bool,
 	redColor, yellowColor, blueColor, grayColor lipgloss.Color,
 	versionStyle, repoStyle lipgloss.Style,
+	formatVersion func(*alrsh.Package) string,
 ) {
 	// Проверяем цикл на текущем пути
 	if path[node.PkgName] {
@@ -908,7 +910,7 @@ func (i *Builder) printDependencyTree(
 	// Формируем строку с пакетом
 	var pkgLine string
 	if node.Package != nil {
-		version := versionStyle.Render(node.Package.Version)
+		version := versionStyle.Render(formatVersion(node.Package))
 		repo := repoStyle.Render("(" + node.Package.Repository + ")")
 		pkgLine = fmt.Sprintf("%s %s %s", pkgStyle.Render(node.PkgName), version, repo)
 	} else {
@@ -934,7 +936,7 @@ func (i *Builder) printDependencyTree(
 		if childNode, ok := tree.Nodes[childName]; ok {
 			isLastChild := idx == len(children)-1 && len(sysDeps) == 0
 			i.printDependencyTree(w, childNode, tree, childPrefix, isLastChild, path, printed,
-				redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle)
+				redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 		} else {
 			// Проверяем, является ли зависимость метапакетом
 			var subpkgs []*DependencyNode
@@ -946,7 +948,7 @@ func (i *Builder) printDependencyTree(
 			if len(subpkgs) > 0 {
 				isLastChild := idx == len(children)-1 && len(sysDeps) == 0
 				i.printMetaPackageTree(w, childName, subpkgs, tree, childPrefix, isLastChild, printed,
-					redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle)
+					redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 			}
 		}
 	}
@@ -978,6 +980,7 @@ func (i *Builder) printMetaPackageTree(
 	printed map[string]bool,
 	redColor, yellowColor, blueColor, grayColor lipgloss.Color,
 	versionStyle, repoStyle lipgloss.Style,
+	formatVersion func(*alrsh.Package) string,
 ) {
 	// Определяем символы для дерева
 	var connector string
@@ -1006,7 +1009,7 @@ func (i *Builder) printMetaPackageTree(
 		isLastSub := idx == len(subpkgs)-1
 		path := make(map[string]bool)
 		i.printDependencyTree(w, subpkg, tree, childPrefix, isLastSub, path, printed,
-			redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle)
+			redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 	}
 }
 
@@ -1102,6 +1105,15 @@ func (i *Builder) InstallPkgs(
 		repoStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#475569"))
 
+		// Версия в формате version-release (release с учётом дистрибутива)
+		formatVersion := func(pkg *alrsh.Package) string {
+			if pkg.Release != 0 {
+				return fmt.Sprintf("%s-%s", pkg.Version,
+					overrides.ReleasePlatformSpecific(pkg.Release, input.OSRelease()))
+			}
+			return pkg.Version
+		}
+
 		fmt.Fprintln(os.Stderr, titleStyle.Render("📦 "+gotext.Get("Installation summary")))
 
 		// Рисуем дерево зависимостей (path отслеживает текущий путь для обнаружения циклов)
@@ -1111,7 +1123,7 @@ func (i *Builder) InstallPkgs(
 			if node, ok := tree.Nodes[pkgName]; ok {
 				path := make(map[string]bool)
 				i.printDependencyTree(os.Stderr, node, tree, "", true, path, printed,
-					redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle)
+					redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 			} else {
 				// Проверяем, является ли пакет метапакетом (есть подпакеты с таким BasePkgName)
 				var subpkgs []*DependencyNode
@@ -1123,7 +1135,7 @@ func (i *Builder) InstallPkgs(
 				if len(subpkgs) > 0 {
 					// Выводим метапакет и его подпакеты
 					i.printMetaPackageTree(os.Stderr, pkgName, subpkgs, tree, "", true, printed,
-						redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle)
+						redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 				}
 			}
 		}
