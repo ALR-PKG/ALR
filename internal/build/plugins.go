@@ -181,6 +181,18 @@ func scriptSandboxAttempts(layout *sandbox.Layout, uid, gid int) []sandboxAttemp
 func getSandboxedScriptExecutor(cfg Config, scriptDir string, env []string, cred *syscall.Credential) (ScriptExecutor, func(), error) {
 	layout := ScriptSandboxLayout(cfg, scriptDir)
 
+	// Источники bind-mount'ов обязаны существовать: на свежей установке
+	// RepoDir/BuildDir/PkgsDir могут ещё не быть созданы, и без них
+	// ns-режим падает на bind («no such file or directory»).
+	for _, m := range layout.Mounts {
+		if m.Source == "/" {
+			continue
+		}
+		if err := os.MkdirAll(m.Source, 0o755); err != nil {
+			slog.Warn("песочница: не удалось создать каталог из макета", "path", m.Source, "error", err)
+		}
+	}
+
 	uid, gid := os.Getuid(), os.Getgid()
 	if cred != nil {
 		uid, gid = int(cred.Uid), int(cred.Gid)
