@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -98,7 +99,14 @@ func ScriptSandboxLayout(cfg Config, scriptDir string) *sandbox.Layout {
 	if scriptDir == "" {
 		scriptDir = paths.RepoDir
 	}
-	return sandbox.LayoutFromPaths(paths.BuildDir, paths.PkgsDir, scriptDir)
+	layout := sandbox.LayoutFromPaths(paths.BuildDir, paths.PkgsDir, scriptDir)
+
+	// Кэши тулчейнов (GOCACHE/GOMODCACHE/CARGO_HOME из createBuildEnvVars)
+	// живут в соседнем с деревом сборки каталоге — ему тоже нужен rw.
+	toolCacheDir := filepath.Join(filepath.Dir(paths.BuildDir), "toolcache")
+	layout.Mounts = append(layout.Mounts, sandbox.Mount{Source: toolCacheDir, Target: toolCacheDir, RW: true})
+
+	return layout
 }
 
 // GetSafeScriptExecutor запускает script executor в песочнице. Каскад

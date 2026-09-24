@@ -259,11 +259,29 @@ func resetDir(dirPath string) error {
 				continue
 			}
 		}
+		if err := makeTreeWritable(filepath.Join(dirPath, name)); err != nil {
+			return err
+		}
 		if err := os.RemoveAll(filepath.Join(dirPath, name)); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// makeTreeWritable выставляет владельцу право записи на всё дерево:
+// сборки оставляют read-only файлы (кэш модулей go — 0444/0555),
+// иначе очистка каталога упирается в permission denied.
+func makeTreeWritable(root string) error {
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // недоступное уже не удалится — даст о себе знать RemoveAll
+		}
+		if info.IsDir() {
+			return os.Chmod(path, info.Mode()|0o700)
+		}
+		return os.Chmod(path, info.Mode()|0o600)
+	})
 }
 
 // lockedPaths возвращает имена .lock-файлов (уровень 1 каталога dir),
