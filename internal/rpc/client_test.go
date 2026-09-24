@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -118,4 +119,43 @@ func genPackages(n int) string {
 		out += fmt.Sprintf(`{"name":"pkg%d","version":"1.0","repo":"r"}`, i)
 	}
 	return out + "]"
+}
+
+func TestCheckUpdatesBatchesLargeLists(t *testing.T) {
+	// 1200 пакетов → 3 батча (500 + 500 + 200), ответы агрегируются
+	var calls int
+	var lastBatch int
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/rpc/v1/updates", r.URL.Path)
+		calls++
+		var req UpdatesRequest
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		lastBatch = len(req.Packages)
+		fmt.Fprintf(w, `{"updates":[{"name":"u%d","repo":"r","version":"2.0"}]}`, calls)
+	}))
+
+	installed := make([]InstalledPackage, 1200)
+	for i := range installed {
+		installed[i] = InstalledPackage{Name: fmt.Sprintf("p%d", i), Repo: "r", Version: "1.0"}
+	}
+
+	updates, err := client.CheckUpdates(context.Background(), installed, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 3, calls)
+	assert.Equal(t, 200, lastBatch)
+	assert.Len(t, updates, 3)
+}
+
+func TestCheckUpdatesSingleBatch(t *testing.T) {
+	var calls int
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Write([]byte(`{"updates":[]}`))
+	}))
+
+	updates, err := client.CheckUpdates(context.Background(),
+		[]InstalledPackage{{Name: "a", Repo: "r", Version: "1"}}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, calls)
+	assert.Empty(t, updates)
 }
