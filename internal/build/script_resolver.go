@@ -20,8 +20,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -30,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	"git.alr-pkg.ru/ALR/ALR/internal/utils"
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
 )
 
@@ -200,7 +203,16 @@ func (s *ScriptResolver) downloadFile(ctx context.Context, url, destPath, expect
 	// Создаём директорию если нужно
 	dir := filepath.Dir(destPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("не удалось создать директорию %s: %w", dir, err)
+		// Общий кэш (/var/cache/alr/repo) мог создать другой пользователь
+		// с негрупповыми правами — выравниваем владельца/права через sudo
+		if errors.Is(err, fs.ErrPermission) {
+			if ensureErr := utils.EnsureTempDirWithRootOwner(dir, 0o2775); ensureErr == nil {
+				err = os.MkdirAll(dir, 0o755)
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("не удалось создать директорию %s: %w", dir, err)
+		}
 	}
 
 	client := &http.Client{Timeout: 30 * time.Second}
