@@ -67,7 +67,7 @@ msgstr "Имя пакета для сборки и его репозиторий
 #: cmd/build.go:185
 msgid ""
 "Build package from scratch even if there's an already built package available"
-msgstr "Создайте пакет с нуля, даже если уже имеется готовый пакет"
+msgstr "Сборка пакета с нуля, даже если уже есть готовый пакет"
 
 #: cmd/config.go:49
 msgid "Manage config"
@@ -91,9 +91,8 @@ msgid "invalid boolean value for %s: %s"
 msgstr "неверное булево значение для %s: %s"
 
 #: cmd/config.go:153
-#, fuzzy
 msgid "invalid integer value for %s: %s"
-msgstr "неверное булево значение для %s: %s"
+msgstr "неверное целочисленное значение для %s: %s"
 
 #: cmd/config.go:169
 msgid "use 'repo add/remove' commands to manage repositories"
@@ -116,14 +115,12 @@ msgid "Get config value"
 msgstr "Получить значение из конфигурации"
 
 #: cmd/config.go:202
-#, fuzzy
 msgid "failed to serialize config"
-msgstr "не удалось сохранить конфигурацию"
+msgstr "не удалось сериализовать конфигурацию"
 
 #: cmd/config.go:247
-#, fuzzy
 msgid "failed to serialize repos"
-msgstr "не удалось сохранить конфигурацию"
+msgstr "не удалось сериализовать репозитории"
 
 #: cmd/config.go:264
 msgid "Shows a list of commands or help for one command"
@@ -154,9 +151,8 @@ msgid "Start D-Bus service"
 msgstr ""
 
 #: cmd/dbus.go:88 cmd/dbus.go:97
-#, fuzzy
 msgid "Failed to start D-Bus service"
-msgstr "Не удалось разобрать релиз"
+msgstr "Не удалось запустить сервис D-Bus"
 
 #: cmd/dbus.go:100
 msgid "D-Bus service started"
@@ -175,19 +171,16 @@ msgid "D-Bus service stopped"
 msgstr ""
 
 #: cmd/dbus.go:136
-#, fuzzy
 msgid "Search packages via D-Bus"
-msgstr "Поиск пакетов"
+msgstr "Поиск пакетов через D-Bus"
 
 #: cmd/dbus.go:169
-#, fuzzy
 msgid "Search failed"
-msgstr "Искать по имени"
+msgstr "Ошибка поиска"
 
 #: cmd/dbus.go:173
-#, fuzzy
 msgid "No packages found"
-msgstr "Нет пакетов к обновлению"
+msgstr "Пакеты не найдены"
 
 #: cmd/dbus.go:193
 msgid "Search by name"
@@ -202,14 +195,12 @@ msgid "Search by repository"
 msgstr "Искать по репозиторию"
 
 #: cmd/dbus.go:209
-#, fuzzy
 msgid "Install package via D-Bus"
-msgstr "Установить новый пакет"
+msgstr "Установка пакета через D-Bus"
 
 #: cmd/dbus.go:213 cmd/dbus.go:281
-#, fuzzy
 msgid "Package name required"
-msgstr "Пакет не найден"
+msgstr "Требуется имя пакета"
 
 #: cmd/dbus.go:239 cmd/dbus.go:307
 msgid "Failed to get package"
@@ -232,24 +223,20 @@ msgid "Remove package via D-Bus"
 msgstr ""
 
 #: cmd/dbus.go:317
-#, fuzzy
 msgid "Failed to start removal"
-msgstr "Не удалось разобрать релиз"
+msgstr "Не удалось начать удаление"
 
 #: cmd/dbus.go:344
-#, fuzzy
 msgid "Failed to get job info"
-msgstr "не удалось сохранить конфигурацию"
+msgstr "Не удалось получить информацию о задаче"
 
 #: cmd/dbus.go:353
-#, fuzzy
 msgid "Failed to wait for job"
-msgstr "Не удалось извлечь из URL"
+msgstr "Не удалось дождаться завершения задачи"
 
 #: cmd/dbus.go:357
-#, fuzzy
 msgid "Operation completed successfully"
-msgstr "Пакет успешно создан"
+msgstr "Операция успешно завершена"
 
 #: cmd/dbus.go:359
 msgid "Operation failed"
@@ -264,7 +251,7 @@ msgid "Clearing cache and temporary directories"
 msgstr "Очистка кэша и временных директорий"
 
 #: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:207 cmd/fix.go:250 cmd/fix.go:258
-#: cmd/fix.go:354 cmd/fix.go:362
+#: cmd/fix.go:372 cmd/fix.go:380
 msgid "Skipping %s: locked by another process"
 msgstr "Пропуск %s: заблокировано другим процессом"
 
@@ -306,7 +293,7 @@ msgstr ""
 "Невозможно удалить элемент кэша (%s) от текущего пользователя, попытка через "
 "sudo"
 
-#: cmd/fix.go:221 cmd/fix.go:376
+#: cmd/fix.go:221 cmd/fix.go:394
 msgid "Unable to remove cache item (%s)"
 msgstr "Невозможно удалить элемент кэша (%s)"
 
@@ -319,14 +306,12 @@ msgid "Generate a ALR script for a pip module"
 msgstr "Генерация скрипта ALR для модуля pip"
 
 #: cmd/gen.go:84
-#, fuzzy
 msgid "Generate a ALR script for an AUR package"
-msgstr "Генерация скрипта ALR из шаблона"
+msgstr "Генерация скрипта ALR для пакета AUR"
 
 #: cmd/gen.go:95
-#, fuzzy
 msgid "Name of the AUR package"
-msgstr "Название нового репозитория"
+msgstr "Имя пакета AUR"
 
 #: cmd/gen.go:96
 msgid "Version of the package (optional, uses latest if not specified)"
@@ -384,19 +369,17 @@ msgstr "Показывать всю информацию, не только дл
 msgid "Install a new package"
 msgstr "Установить новый пакет"
 
-#: cmd/install.go:49
-#, fuzzy
+#: cmd/install.go:50
 msgid "Command install expected at least 1 argument, got 0"
-msgstr "Для команды install ожидался хотя бы 1 аргумент, получено %d"
+msgstr "Команда install ожидает хотя бы 1 аргумент, получено 0"
 
-#: cmd/install.go:107
+#: cmd/install.go:108
 msgid "Error when installing the package"
 msgstr "Ошибка при установке пакета"
 
-#: cmd/install.go:115
-#, fuzzy
+#: cmd/install.go:116
 msgid "Package to install"
-msgstr "Пакет не найден"
+msgstr "Пакет для установки"
 
 #: cmd/internal_build.go:49
 msgid "Error loading config"
@@ -571,6 +554,10 @@ msgstr "Аргументы, которые будут переданы мене�
 msgid "Enable interactive questions and prompts"
 msgstr "Включение интерактивных вопросов и запросов"
 
+#: cmd/root.go:90
+msgid "help for %s"
+msgstr "справка по %s"
+
 #: cmd/search.go:52
 msgid "Search packages"
 msgstr "Поиск пакетов"
@@ -596,9 +583,8 @@ msgid "Updating system packages..."
 msgstr "Обновление системных пакетов..."
 
 #: cmd/upgrade.go:100
-#, fuzzy
 msgid "Error updating system packages"
-msgstr "Обновление системных пакетов..."
+msgstr "Ошибка при обновлении системных пакетов"
 
 #: cmd/upgrade.go:102
 msgid "System packages updated successfully"
@@ -628,85 +614,84 @@ msgstr "Показать текущую версию ALR и выйти"
 msgid "Site: %s"
 msgstr "Сайт: %s"
 
-#: internal/build/build.go:353
+#: internal/build/build.go:357
 msgid "Package is already being built by another process"
 msgstr "Пакет уже собирается другим процессом"
 
-#: internal/build/build.go:381 internal/build/build.go:742
-#: internal/build/build.go:1238
+#: internal/build/build.go:385 internal/build/build.go:746
+#: internal/build/build.go:1253
 msgid "Using cached package"
 msgstr "Используется кешированный пакет"
 
-#: internal/build/build.go:397
+#: internal/build/build.go:401
 msgid "Failed to clean build directory"
 msgstr "Не удалось очистить директорию сборки"
 
-#: internal/build/build.go:399
+#: internal/build/build.go:403
 msgid "Cleaned build directory for rebuild"
 msgstr "Очищена директория сборки для пересборки"
 
-#: internal/build/build.go:433
+#: internal/build/build.go:437
 msgid "The checksums array must be the same length as sources"
 msgstr "Массив контрольных сумм должен быть той же длины, что и источники"
 
-#: internal/build/build.go:497
+#: internal/build/build.go:501
 msgid "Downloading sources"
 msgstr "Скачивание источников"
 
-#: internal/build/build.go:1042
-#, fuzzy
+#: internal/build/build.go:1048
 msgid "Resolving dependencies for packages"
-msgstr "Установка зависимостей"
+msgstr "Разрешение зависимостей пакетов"
 
-#: internal/build/build.go:1044
+#: internal/build/build.go:1050
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1102
+#: internal/build/build.go:1117
 msgid "Installation summary"
 msgstr "Сводка установки"
 
-#: internal/build/build.go:1129
+#: internal/build/build.go:1144
 msgid "Proceed with installation?"
 msgstr "Продолжить установку?"
 
-#: internal/build/build.go:1149
+#: internal/build/build.go:1164
 msgid "Installing system dependencies"
 msgstr "Установка системных зависимостей"
 
-#: internal/build/build.go:1161
+#: internal/build/build.go:1176
 msgid "Processing optional dependencies"
 msgstr "Обработка опциональных зависимостей"
 
-#: internal/build/build.go:1193
+#: internal/build/build.go:1208
 msgid "Building %d packages"
 msgstr "Сборка %d пакетов"
 
-#: internal/build/build.go:1199
+#: internal/build/build.go:1214
 msgid "Package %s not found in tree, skipping"
 msgstr "Пакет %s не найден в дереве, пропускаем"
 
-#: internal/build/build.go:1217
+#: internal/build/build.go:1232
 msgid "Package %s already installed, skipping"
 msgstr "Пакет %s уже установлен, пропускаем"
 
-#: internal/build/build.go:1259
+#: internal/build/build.go:1274
 msgid "Building package %s-%s"
 msgstr "Сборка пакета %s-%s"
 
-#: internal/build/build.go:1261
+#: internal/build/build.go:1276
 msgid "Building dependency %s-%s"
 msgstr "Сборка зависимости %s-%s"
 
-#: internal/build/build.go:1306
+#: internal/build/build.go:1321
 msgid "Installing target packages"
 msgstr "Установка целевых пакетов"
 
-#: internal/build/build.go:1332
+#: internal/build/build.go:1347
 msgid "Would you like to remove all build dependencies?"
 msgstr "Хотите удалить все зависимости сборки?"
 
-#: internal/build/build.go:1342
+#: internal/build/build.go:1357
 msgid "Failed to remove build dependencies: %v"
 msgstr "Не удалось удалить зависимости сборки: %v"
 
@@ -757,14 +742,12 @@ msgid "Applying FireJail integration"
 msgstr "Применение интеграции FireJail"
 
 #: internal/build/installer.go:109
-#, fuzzy
 msgid "Failed to get installed version"
-msgstr "Не удалось получить обновлённый файл из нового коммита"
+msgstr "Не удалось получить установленную версию"
 
 #: internal/build/installer.go:116
-#, fuzzy
 msgid "Package was not installed"
-msgstr "Пакет не найден"
+msgstr "Пакет не был установлен"
 
 #: internal/build/installer.go:122
 msgid "Installed version doesn't satisfy requirement"
@@ -787,55 +770,55 @@ msgstr ""
 "Пакет %s установлен с более новой версией %s (в репозитории %s), пропуск "
 "сборки"
 
-#: internal/build/script_executor.go:180
+#: internal/build/script_executor.go:186
 msgid "Building package metadata"
 msgstr "Сборка метаданных пакета"
 
-#: internal/build/script_executor.go:205
+#: internal/build/script_executor.go:211
 msgid "Creating package file"
 msgstr "Создание файла пакета"
 
-#: internal/build/script_executor.go:209
+#: internal/build/script_executor.go:215
 msgid "Failed to create package file"
 msgstr "Не удалось создать файл пакета"
 
-#: internal/build/script_executor.go:213
+#: internal/build/script_executor.go:219
 msgid "Packaging with nfpm"
 msgstr "Упаковка с помощью nfpm"
 
-#: internal/build/script_executor.go:221
+#: internal/build/script_executor.go:227
 msgid "Failed to create package"
 msgstr "Не удалось создать пакет"
 
-#: internal/build/script_executor.go:225
+#: internal/build/script_executor.go:231
 msgid "Package created successfully"
 msgstr "Пакет успешно создан"
 
-#: internal/build/script_executor.go:229
+#: internal/build/script_executor.go:235
 msgid "Package file not found after creation"
 msgstr "Файл пакета не найден после создания"
 
-#: internal/build/script_executor.go:232
+#: internal/build/script_executor.go:238
 msgid "Package file verified to exist"
 msgstr "Наличие файла пакета подтверждено"
 
-#: internal/build/script_executor.go:236
+#: internal/build/script_executor.go:242
 msgid "Failed to copy package to cache"
 msgstr "Не удалось скопировать пакет в кэш"
 
-#: internal/build/script_executor.go:239
+#: internal/build/script_executor.go:245
 msgid "Package copied to cache"
 msgstr "Пакет скопирован в кэш"
 
-#: internal/build/script_executor.go:353
+#: internal/build/script_executor.go:359
 msgid "Executing prepare()"
 msgstr "Выполнение prepare()"
 
-#: internal/build/script_executor.go:362
+#: internal/build/script_executor.go:368
 msgid "Executing build()"
 msgstr "Выполнение build()"
 
-#: internal/build/script_executor.go:391 internal/build/script_executor.go:411
+#: internal/build/script_executor.go:397 internal/build/script_executor.go:417
 msgid "Executing %s()"
 msgstr "Выполнение %s()"
 
@@ -884,7 +867,6 @@ msgid "Select packages to view build scripts"
 msgstr "Выберите пакеты для просмотра скриптов сборки"
 
 #: internal/cliutils/prompt.go:241
-#, fuzzy
 msgid ""
 "↑↓ to move, space to select, → to select all, ← to clear, enter to confirm"
 msgstr ""
@@ -892,19 +874,18 @@ msgstr ""
 "выбрать все, стрелка влево чтобы очистить, enter для подтверждения"
 
 #: internal/cliutils/prompt.go:266
-#, fuzzy
 msgid "User chose not to continue after reading script(s)"
-msgstr "Пользователь решил не продолжать после просмотра скрипта"
+msgstr "Пользователь решил не продолжать после просмотра скрипта(ов)"
 
-#: internal/db/db.go:77
+#: internal/db/db.go:80
 msgid "Cache directory does not exist, creating it"
 msgstr ""
 
-#: internal/db/db.go:111
+#: internal/db/db.go:146
 msgid "Database version mismatch; resetting"
 msgstr "Несоответствие версий базы данных; сброс настроек"
 
-#: internal/db/db.go:117
+#: internal/db/db.go:152
 msgid ""
 "Database version does not exist. Run alr fix if something isn't working."
 msgstr ""

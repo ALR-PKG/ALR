@@ -77,5 +77,19 @@ func NewRootCmd() *cobra.Command {
 		newInternalDBusServiceCmd(),
 	)
 
+	localizeHelpFlag(root)
+
 	return root
+}
+
+// localizeHelpFlag заменяет английское описание флага --help,
+// которое cobra генерирует по умолчанию, на переведённое
+func localizeHelpFlag(cmd *cobra.Command) {
+	cmd.InitDefaultHelpFlag()
+	if f := cmd.Flags().Lookup("help"); f != nil {
+		f.Usage = gotext.Get("help for %s", cmd.Name())
+	}
+	for _, sub := range cmd.Commands() {
+		localizeHelpFlag(sub)
+	}
 }
