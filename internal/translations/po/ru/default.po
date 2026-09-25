@@ -477,6 +477,22 @@ msgstr "Ошибка при составлении списка установл
 msgid "Format output using a Go template"
 msgstr "Формат выходных данных с использованием шаблона Go"
 
+#: cmd/localize_error.go:40
+msgid "Did you mean this?"
+msgstr "Возможно, вы имели в виду это?"
+
+#: cmd/localize_error.go:41
+msgid "unknown command \"%s\" for \"%s\""
+msgstr "неизвестная команда \"%s\" для \"%s\""
+
+#: cmd/localize_error.go:45
+msgid "unknown flag: %s"
+msgstr "неизвестный флаг: %s"
+
+#: cmd/localize_error.go:49
+msgid "unknown shorthand flag: '%s' in %s"
+msgstr "неизвестный короткий флаг: '%s' в %s"
+
 #: cmd/refresh.go:30
 msgid "Pull all repositories that have changed"
 msgstr "Скачать все изменённые репозитории"
@@ -1019,6 +1035,10 @@ msgstr "Файлы alr.sh не найдены в репозитории"
 msgid "Repository packages processed"
 msgstr "Пакеты репозитория обработаны"
 
+#: main.go:88
+msgid "Error while running app"
+msgstr "Ошибка при запуске приложения"
+
 #: pkg/dl/dl.go:170
 msgid "Source can be updated, updating if required"
 msgstr "Исходный код можно обновлять, обновляя при необходимости"
@@ -1129,9 +1149,6 @@ msgstr "%s %s загружается — %s/с\n"
 
 #~ msgid "Show help"
 #~ msgstr "Показать справку"
-
-#~ msgid "Error while running app"
-#~ msgstr "Ошибка при запуске приложения"
 
 #~ msgid "<name>"
 #~ msgstr "<имя>"

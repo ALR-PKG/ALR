@@ -468,6 +468,22 @@ msgstr ""
 msgid "Format output using a Go template"
 msgstr ""
 
+#: cmd/localize_error.go:40
+msgid "Did you mean this?"
+msgstr ""
+
+#: cmd/localize_error.go:41
+msgid "unknown command \"%s\" for \"%s\""
+msgstr ""
+
+#: cmd/localize_error.go:45
+msgid "unknown flag: %s"
+msgstr ""
+
+#: cmd/localize_error.go:49
+msgid "unknown shorthand flag: '%s' in %s"
+msgstr ""
+
 #: cmd/refresh.go:30
 msgid "Pull all repositories that have changed"
 msgstr ""
@@ -994,6 +1010,10 @@ msgstr ""
 
 #: internal/repos/pull.go:619
 msgid "Repository packages processed"
+msgstr ""
+
+#: main.go:88
+msgid "Error while running app"
 msgstr ""
 
 #: pkg/dl/dl.go:170
