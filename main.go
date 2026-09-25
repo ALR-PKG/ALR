@@ -33,6 +33,8 @@ import (
 	"git.alr-pkg.ru/ALR/ALR/internal/config"
 	"git.alr-pkg.ru/ALR/ALR/internal/logger"
 	"git.alr-pkg.ru/ALR/ALR/internal/translations"
+
+	"github.com/leonelquinteros/gotext"
 )
 
 func setLogLevel(newLevel string) {
@@ -81,7 +83,9 @@ func main() {
 	root.SetErr(os.Stderr)
 
 	if err := root.ExecuteContext(ctx); err != nil {
-		slog.Error("Error while running app", "err", err)
+		// Сообщение собираем одной строкой, а не атрибутом err=,
+		// иначе логгер экранирует кавычки внутри текста ошибки
+		slog.Error(gotext.Get("Error while running app") + ": " + cmd.LocalizeExecuteError(err))
 		os.Exit(1)
 	}
 }
