@@ -20,10 +20,16 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/leonelquinteros/gotext"
+
+	"git.alr-pkg.ru/ALR/ALR/internal/cliutils"
 	"git.alr-pkg.ru/ALR/ALR/internal/overrides"
 	"git.alr-pkg.ru/ALR/ALR/pkg/alrsh"
+	"git.alr-pkg.ru/ALR/ALR/pkg/depver"
 )
 
 // DependencyNode представляет узел в дереве зависимостей
@@ -52,6 +58,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 	ctx context.Context,
 	input interface {
 		OsInfoProvider
+		BuildOptsProvider
 		PkgFormatProvider
 	},
 	initialPkgs []string,
@@ -159,6 +166,22 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 
 			if len(pkgList) == 0 {
 				continue
+			}
+
+			// Несколько РАЗНЫХ пакетов под одно имя (например name, name-git,
+			// name-bin, найденные через provides) — это не мультипакет.
+			// Если же в списке есть подпакеты мультипакета с basepkg_name,
+			// совпадающим с запросом, — это запрос мультипакета: сторонние
+			// provides-совпадения отбрасываем
+			if len(pkgList) > 1 && !cliutils.IsMultiPackage(pkgList) {
+				if subset := multiPackageSubset(pkgList, variantQueryName(pkgName)); len(subset) > 1 {
+					pkgList = subset
+				} else {
+					// Выбираем один вариант: для целевых пакетов в интерактивном
+					// режиме показываем меню, иначе предпочитаем точное
+					// совпадение имени, а при его отсутствии — первый вариант
+					pkgList = selectPackageVariant(ctx, pkgName, pkgList, parentPkg, input.BuildOpts().Interactive)
+				}
 			}
 
 			// Проверяем, найден ли пакет по basepkg_name (мультипакет)
@@ -453,4 +476,68 @@ func GetDependencyOnlyPackages(nodes map[string]*DependencyNode) []*DependencyNo
 		}
 	}
 	return result
+}
+
+// variantQueryName возвращает имя пакета из запроса без версионных
+// ограничений и квалификатора репозитория (repo/pkg, pkg+repo)
+func variantQueryName(query string) string {
+	name := depver.Parse(query).Name
+	if i := strings.Index(name, "/"); i > 0 {
+		return name[i+1:]
+	}
+	if i := strings.Index(name, "+"); i > 0 {
+		return name[:i]
+	}
+	return name
+}
+
+// multiPackageSubset возвращает подпакеты одного мультипакета,
+// чей basepkg_name совпадает с запрошенным именем
+func multiPackageSubset(pkgs []alrsh.Package, queryName string) []alrsh.Package {
+	var subset []alrsh.Package
+	repo := ""
+	for _, p := range pkgs {
+		if p.BasePkgName == "" || p.BasePkgName != queryName {
+			continue
+		}
+		if repo == "" {
+			repo = p.Repository
+		}
+		if p.Repository != repo {
+			continue
+		}
+		subset = append(subset, p)
+	}
+	return subset
+}
+
+// selectPackageVariant выбирает один пакет из списка разных пакетов,
+// найденных под одним именем (точное совпадение имени и provides-варианты).
+// Список pkgs уже отсортирован FindPkgs: точные совпадения в начале
+func selectPackageVariant(
+	ctx context.Context,
+	query string,
+	pkgs []alrsh.Package,
+	parentPkg string,
+	interactive bool,
+) []alrsh.Package {
+	// Меню выбора — только для целевых пакетов в интерактивном режиме;
+	// для зависимостей интерактивный выбор недопустим
+	if parentPkg == "" && interactive {
+		choice, err := cliutils.PkgPrompt(ctx, pkgs, "install", true)
+		if err != nil {
+			slog.Error(gotext.Get("Error prompting for choice of package"))
+			os.Exit(1)
+		}
+		return []alrsh.Package{choice}
+	}
+
+	// Без интерактива предпочитаем точное совпадение имени
+	queryName := variantQueryName(query)
+	for _, p := range pkgs {
+		if p.Name == queryName {
+			return []alrsh.Package{p}
+		}
+	}
+	return []alrsh.Package{pkgs[0]}
 }

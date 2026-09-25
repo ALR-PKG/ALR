@@ -750,6 +750,10 @@ msgstr ""
 msgid "This package is already installed"
 msgstr ""
 
+#: internal/build/dependency_tree.go:529
+msgid "Error prompting for choice of package"
+msgstr ""
+
 #: internal/build/find_deps/alt_linux.go:35
 msgid "Command not found on the system"
 msgstr ""
@@ -878,10 +882,6 @@ msgstr ""
 
 #: internal/cliutils/prompt.go:77
 msgid "User chose not to continue after reading script"
-msgstr ""
-
-#: internal/cliutils/prompt.go:123
-msgid "Error prompting for choice of package"
 msgstr ""
 
 #: internal/cliutils/prompt.go:175

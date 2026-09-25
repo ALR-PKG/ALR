@@ -23,6 +23,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -54,6 +56,11 @@ func (rs *Repos) findInCache(ctx context.Context, pkgNames []string) (map[string
 			result = filterByVersion(result, dep)
 		}
 		if err == nil && len(result) > 0 {
+			// Точные совпадения имени — в начало, как в RPC-ветке
+			queryName, _ := splitRepoQualifier(dep.Name)
+			sort.SliceStable(result, func(i, j int) bool {
+				return matchRank(result[i], queryName) < matchRank(result[j], queryName)
+			})
 			found[name] = result
 			slog.Debug("FindPkgs: пакет найден в локальном кэше", "name", name)
 		} else {
@@ -76,13 +83,16 @@ func splitRepoQualifier(name string) (string, string) {
 }
 
 // nameToQuery строит WHERE-условие поиска по имени пакета
-// с учётом форм repo/pkg и pkg+repo
+// с учётом форм repo/pkg и pkg+repo. Ищет по точному имени,
+// basepkg_name и provides — как RPC-ветка
 func nameToQuery(searchName string) (string, []any) {
 	pkgName, repo := splitRepoQualifier(searchName)
 	if repo != "" {
-		return "name = ? AND repository = ?", []any{pkgName, repo}
+		return "(name = ? OR basepkg_name = ? OR json_array_contains(provides, ?)) AND repository = ?",
+			[]any{pkgName, pkgName, pkgName, repo}
 	}
-	return "name = ?", []any{searchName}
+	return "name = ? OR basepkg_name = ? OR json_array_contains(provides, ?)",
+		[]any{searchName, searchName, searchName}
 }
 
 // findViaRPC ищет пакеты через ALR Site RPC API
@@ -120,9 +130,9 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	// Создаём мапу имя → пакеты (ключ — оригинальное имя запроса)
 	rpcResults := make(map[string][]rpc.Package)
 	for _, p := range rpcPkgs {
-		// Сопоставляем с оригинальным именем запроса по имени пакета или
-		// basepkg_name; если в запросе есть квалификатор репозитория
-		// (repo/pkg или pkg+repo), проверяем и его
+		// Сопоставляем с оригинальным именем запроса по имени пакета,
+		// basepkg_name или provides; если в запросе есть квалификатор
+		// репозитория (repo/pkg или pkg+repo), проверяем и его
 		matched := false
 		for _, origName := range pkgNames {
 			origSearch := depver.Parse(origName).Name
@@ -130,7 +140,7 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 			if repo != "" && p.Repo != repo {
 				continue
 			}
-			if p.Name == pkgName || p.BasePkgName == pkgName {
+			if p.Name == pkgName || p.BasePkgName == pkgName || slices.Contains(p.Provides, pkgName) {
 				rpcResults[origName] = append(rpcResults[origName], p)
 				matched = true
 				break
@@ -144,6 +154,7 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	for _, name := range pkgNames {
 		if pkgs, ok := rpcResults[name]; ok && len(pkgs) > 0 {
 			dep := depver.Parse(name)
+			queryName, _ := splitRepoQualifier(dep.Name)
 			var result []alrsh.Package
 			for _, p := range pkgs {
 				pkg := *p.ToALRShPackage()
@@ -158,6 +169,11 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 				}
 				result = append(result, pkg)
 			}
+			// Точные совпадения имени — в начало списка: потребители,
+			// берущие первый элемент, должны получить наиболее точный вариант
+			sort.SliceStable(result, func(i, j int) bool {
+				return matchRank(result[i], queryName) < matchRank(result[j], queryName)
+			})
 			if len(result) > 0 {
 				found[name] = result
 				slog.Debug("FindPkgs: пакет найден через RPC", "name", name)
@@ -170,6 +186,20 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 	}
 
 	return found, notFound, true
+}
+
+// matchRank возвращает ранг соответствия пакета запросу:
+// 0 — точное совпадение имени, 1 — совпадение по basepkg_name,
+// 2 — совпадение по provides
+func matchRank(pkg alrsh.Package, queryName string) int {
+	switch {
+	case pkg.Name == queryName:
+		return 0
+	case pkg.BasePkgName == queryName:
+		return 1
+	default:
+		return 2
+	}
 }
 
 func (rs *Repos) FindPkgs(ctx context.Context, pkgs []string) (map[string][]alrsh.Package, []string, error) {
