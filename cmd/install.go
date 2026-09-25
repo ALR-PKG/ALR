@@ -36,9 +36,10 @@ func newInstallCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "install",
-		Short:   gotext.Get("Install a new package"),
-		Aliases: []string{"in"},
+		Use:               "install",
+		Short:             gotext.Get("Install a new package"),
+		Aliases:           []string{"in"},
+		ValidArgsFunction: installPackageCompletion,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var packages []string
 			if cmd.Flags().Changed("package") {
