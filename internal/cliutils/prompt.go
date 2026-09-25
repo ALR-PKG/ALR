@@ -112,7 +112,7 @@ func FlattenPkgsWithContext(ctx context.Context, found map[string][]alrsh.Packag
 	for _, pkgs := range found {
 		if len(pkgs) > 1 {
 			// Проверяем, являются ли пакеты подпакетами одного мультипакета
-			if isMultiPackage(pkgs) && verb == "install" {
+			if IsMultiPackage(pkgs) && verb == "install" {
 				// Для мультипакетов при установке ВСЕГДА берем все подпакеты без выбора
 				// Это правильное поведение как для прямой установки, так и для зависимостей
 				outPkgs = append(outPkgs, pkgs...)
@@ -136,8 +136,8 @@ func FlattenPkgsWithContext(ctx context.Context, found map[string][]alrsh.Packag
 	return outPkgs
 }
 
-// isMultiPackage проверяет, являются ли пакеты подпакетами одного мультипакета
-func isMultiPackage(pkgs []alrsh.Package) bool {
+// IsMultiPackage проверяет, являются ли пакеты подпакетами одного мультипакета
+func IsMultiPackage(pkgs []alrsh.Package) bool {
 	if len(pkgs) <= 1 {
 		return false
 	}
