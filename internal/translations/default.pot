@@ -62,60 +62,108 @@ msgid ""
 "Build package from scratch even if there's an already built package available"
 msgstr ""
 
+#: cmd/config.go:38
+msgid "Command for privilege escalation (default: sudo)"
+msgstr ""
+
+#: cmd/config.go:39
+msgid "Run privileged actions via rootCmd (true/false)"
+msgstr ""
+
+#: cmd/config.go:40
+msgid "Pager style for viewing build scripts"
+msgstr ""
+
+#: cmd/config.go:41
+msgid "Automatically pull git repos before operations (true/false)"
+msgstr ""
+
+#: cmd/config.go:42
+msgid "Log level (debug, info, warn, error)"
+msgstr ""
+
+#: cmd/config.go:43
+msgid "Packages to exclude from update offers (comma-separated)"
+msgstr ""
+
+#: cmd/config.go:44
+msgid "Update system packages during upgrade (true/false)"
+msgstr ""
+
+#: cmd/config.go:45
+msgid "Prefer ALR packages over system ones for dependencies (true/false)"
+msgstr ""
+
+#: cmd/config.go:46
+msgid "ALR repository site URL"
+msgstr ""
+
+#: cmd/config.go:47
+msgid "Site request timeout in seconds"
+msgstr ""
+
+#: cmd/config.go:48
+msgid "Completely disable site RPC (true/false)"
+msgstr ""
+
 #: cmd/config.go:49
+msgid "Prefer site RPC over local DB for search and listing (true/false)"
+msgstr ""
+
+#: cmd/config.go:56
 msgid "Manage config"
 msgstr ""
 
-#: cmd/config.go:65
+#: cmd/config.go:72
 msgid "Show config"
 msgstr ""
 
-#: cmd/config.go:89
+#: cmd/config.go:96
 msgid "Set config value"
 msgstr ""
 
-#: cmd/config.go:93
+#: cmd/config.go:100
 msgid "missing args"
 msgstr ""
 
-#: cmd/config.go:114 cmd/config.go:122 cmd/config.go:139 cmd/config.go:145
-#: cmd/config.go:159 cmd/config.go:165
+#: cmd/config.go:121 cmd/config.go:129 cmd/config.go:146 cmd/config.go:152
+#: cmd/config.go:166 cmd/config.go:172
 msgid "invalid boolean value for %s: %s"
 msgstr ""
 
-#: cmd/config.go:153
+#: cmd/config.go:160
 msgid "invalid integer value for %s: %s"
 msgstr ""
 
-#: cmd/config.go:169
+#: cmd/config.go:176
 msgid "use 'repo add/remove' commands to manage repositories"
 msgstr ""
 
-#: cmd/config.go:171 cmd/config.go:252
+#: cmd/config.go:178 cmd/config.go:259
 msgid "unknown config key: %s"
 msgstr ""
 
-#: cmd/config.go:175
+#: cmd/config.go:182
 msgid "failed to save config"
 msgstr ""
 
-#: cmd/config.go:178
+#: cmd/config.go:185
 msgid "Successfully set %s = %s"
 msgstr ""
 
-#: cmd/config.go:187
+#: cmd/config.go:194
 msgid "Get config value"
 msgstr ""
 
-#: cmd/config.go:202
+#: cmd/config.go:209
 msgid "failed to serialize config"
 msgstr ""
 
-#: cmd/config.go:247
+#: cmd/config.go:254
 msgid "failed to serialize repos"
 msgstr ""
 
-#: cmd/config.go:264
+#: cmd/config.go:271
 msgid "Shows a list of commands or help for one command"
 msgstr ""
 

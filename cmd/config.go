@@ -28,19 +28,26 @@ import (
 	appbuilder "git.alr-pkg.ru/ALR/ALR/internal/cliutils/app_builder"
 )
 
-var configKeys = []string{
-	"rootCmd",
-	"useRootCmd",
-	"pagerStyle",
-	"autoPull",
-	"logLevel",
-	"ignorePkgUpdates",
-	"updateSystemOnUpgrade",
-	"preferALRDeps",
-	"site.url",
-	"site.timeout",
-	"site.disableRPC",
-	"site.preferRPC",
+type configKeyInfo struct {
+	key  string
+	desc string
+}
+
+func configKeyInfos() []configKeyInfo {
+	return []configKeyInfo{
+		{"rootCmd", gotext.Get("Command for privilege escalation (default: sudo)")},
+		{"useRootCmd", gotext.Get("Run privileged actions via rootCmd (true/false)")},
+		{"pagerStyle", gotext.Get("Pager style for viewing build scripts")},
+		{"autoPull", gotext.Get("Automatically pull git repos before operations (true/false)")},
+		{"logLevel", gotext.Get("Log level (debug, info, warn, error)")},
+		{"ignorePkgUpdates", gotext.Get("Packages to exclude from update offers (comma-separated)")},
+		{"updateSystemOnUpgrade", gotext.Get("Update system packages during upgrade (true/false)")},
+		{"preferALRDeps", gotext.Get("Prefer ALR packages over system ones for dependencies (true/false)")},
+		{"site.url", gotext.Get("ALR repository site URL")},
+		{"site.timeout", gotext.Get("Site request timeout in seconds")},
+		{"site.disableRPC", gotext.Get("Completely disable site RPC (true/false)")},
+		{"site.preferRPC", gotext.Get("Prefer site RPC over local DB for search and listing (true/false)")},
+	}
 }
 
 func newConfigCmd() *cobra.Command {
@@ -282,9 +289,9 @@ func configKeyCompletion(cmd *cobra.Command, args []string, toComplete string) (
 	}
 
 	var out []string
-	for _, key := range configKeys {
-		if toComplete == "" || strings.HasPrefix(key, toComplete) {
-			out = append(out, key)
+	for _, info := range configKeyInfos() {
+		if toComplete == "" || strings.HasPrefix(info.key, toComplete) {
+			out = append(out, info.key+"\t"+info.desc)
 		}
 	}
 	return out, cobra.ShellCompDirectiveNoFileComp

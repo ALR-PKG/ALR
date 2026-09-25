@@ -69,60 +69,108 @@ msgid ""
 "Build package from scratch even if there's an already built package available"
 msgstr "Сборка пакета с нуля, даже если уже есть готовый пакет"
 
+#: cmd/config.go:38
+msgid "Command for privilege escalation (default: sudo)"
+msgstr "Команда для повышения привилегий (по умолчанию sudo)"
+
+#: cmd/config.go:39
+msgid "Run privileged actions via rootCmd (true/false)"
+msgstr "Выполнять привилегированные действия через rootCmd (true/false)"
+
+#: cmd/config.go:40
+msgid "Pager style for viewing build scripts"
+msgstr "Стиль пейджера для просмотра скриптов сборки"
+
+#: cmd/config.go:41
+msgid "Automatically pull git repos before operations (true/false)"
+msgstr "Автоматически обновлять git-репозитории перед операциями (true/false)"
+
+#: cmd/config.go:42
+msgid "Log level (debug, info, warn, error)"
+msgstr "Уровень логирования (debug, info, warn, error)"
+
+#: cmd/config.go:43
+msgid "Packages to exclude from update offers (comma-separated)"
+msgstr "Пакеты, для которых не предлагать обновления (через запятую)"
+
+#: cmd/config.go:44
+msgid "Update system packages during upgrade (true/false)"
+msgstr "Обновлять системные пакеты при обновлении (true/false)"
+
+#: cmd/config.go:45
+msgid "Prefer ALR packages over system ones for dependencies (true/false)"
+msgstr "Предпочитать ALR-пакеты системным для зависимостей (true/false)"
+
+#: cmd/config.go:46
+msgid "ALR repository site URL"
+msgstr "URL сайта репозитория ALR"
+
+#: cmd/config.go:47
+msgid "Site request timeout in seconds"
+msgstr "Таймаут запросов к сайту в секундах"
+
+#: cmd/config.go:48
+msgid "Completely disable site RPC (true/false)"
+msgstr "Полностью отключить RPC-взаимодействие с сайтом (true/false)"
+
 #: cmd/config.go:49
+msgid "Prefer site RPC over local DB for search and listing (true/false)"
+msgstr "Предпочитать RPC сайта локальной БД для поиска и листинга (true/false)"
+
+#: cmd/config.go:56
 msgid "Manage config"
 msgstr "Управление конфигурацией"
 
-#: cmd/config.go:65
+#: cmd/config.go:72
 msgid "Show config"
 msgstr "Показать конфигурацию"
 
-#: cmd/config.go:89
+#: cmd/config.go:96
 msgid "Set config value"
 msgstr "Установить значение в конфигурации"
 
-#: cmd/config.go:93
+#: cmd/config.go:100
 msgid "missing args"
 msgstr ""
 
-#: cmd/config.go:114 cmd/config.go:122 cmd/config.go:139 cmd/config.go:145
-#: cmd/config.go:159 cmd/config.go:165
+#: cmd/config.go:121 cmd/config.go:129 cmd/config.go:146 cmd/config.go:152
+#: cmd/config.go:166 cmd/config.go:172
 msgid "invalid boolean value for %s: %s"
 msgstr "неверное булево значение для %s: %s"
 
-#: cmd/config.go:153
+#: cmd/config.go:160
 msgid "invalid integer value for %s: %s"
 msgstr "неверное целочисленное значение для %s: %s"
 
-#: cmd/config.go:169
+#: cmd/config.go:176
 msgid "use 'repo add/remove' commands to manage repositories"
 msgstr "используйте команды 'repo add/remove' для управления репозиториями"
 
-#: cmd/config.go:171 cmd/config.go:252
+#: cmd/config.go:178 cmd/config.go:259
 msgid "unknown config key: %s"
 msgstr "неизвестный ключ конфигурации: %s"
 
-#: cmd/config.go:175
+#: cmd/config.go:182
 msgid "failed to save config"
 msgstr "не удалось сохранить конфигурацию"
 
-#: cmd/config.go:178
+#: cmd/config.go:185
 msgid "Successfully set %s = %s"
 msgstr "Успешно установлено %s = %s"
 
-#: cmd/config.go:187
+#: cmd/config.go:194
 msgid "Get config value"
 msgstr "Получить значение из конфигурации"
 
-#: cmd/config.go:202
+#: cmd/config.go:209
 msgid "failed to serialize config"
 msgstr "не удалось сериализовать конфигурацию"
 
-#: cmd/config.go:247
+#: cmd/config.go:254
 msgid "failed to serialize repos"
 msgstr "не удалось сериализовать репозитории"
 
-#: cmd/config.go:264
+#: cmd/config.go:271
 msgid "Shows a list of commands or help for one command"
 msgstr "Показывает список команд или справку по одной команде"
 
