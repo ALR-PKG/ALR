@@ -925,11 +925,11 @@ msgstr ""
 msgid "Cache directory does not exist, creating it"
 msgstr ""
 
-#: internal/db/db.go:146
+#: internal/db/db.go:144
 msgid "Database version mismatch; resetting"
 msgstr ""
 
-#: internal/db/db.go:152
+#: internal/db/db.go:150
 msgid ""
 "Database version does not exist. Run alr fix if something isn't working."
 msgstr ""
@@ -940,6 +940,12 @@ msgstr ""
 
 #: internal/logger/log.go:44
 msgid "ERROR"
+msgstr ""
+
+#: internal/manager/cached_manager.go:81
+msgid ""
+"Failed to cache package availability (further cache errors — only in debug "
+"log)"
 msgstr ""
 
 #: internal/repos/pull.go:107

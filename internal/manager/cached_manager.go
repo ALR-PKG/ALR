@@ -19,15 +19,19 @@ package manager
 import (
 	"log/slog"
 	"sync"
+	"sync/atomic"
+
+	"github.com/leonelquinteros/gotext"
 )
 
 // CachedManager оборачивает Manager и кэширует результаты
 type CachedManager struct {
 	Manager
-	db          DBCacheInterface
-	cacheMu     sync.RWMutex
-	isAvailHit  int
-	isAvailMiss int
+	db             DBCacheInterface
+	cacheMu        sync.RWMutex
+	isAvailHit     int
+	isAvailMiss    int
+	cacheWarnFired atomic.Bool
 }
 
 // DBCacheInterface интерфейс для работы с кэшем в БД
@@ -71,7 +75,13 @@ func (c *CachedManager) IsAvailable(name string) (bool, error) {
 	// Сохраняем в кэш БД
 	if c.db != nil {
 		if err := c.db.SetPackageAvailability(name, c.Manager.Name(), isAvail); err != nil {
-			slog.Warn("Failed to cache package availability", "pkg", name, "error", err)
+			// Предупреждаем один раз за запуск: при сломанных правах на общую
+			// БД WARN сыпался бы на каждый проверяемый пакет
+			if c.cacheWarnFired.CompareAndSwap(false, true) {
+				slog.Warn(gotext.Get("Failed to cache package availability (further cache errors — only in debug log)"), "pkg", name, "error", err)
+			} else {
+				slog.Debug("Failed to cache package availability", "pkg", name, "error", err)
+			}
 		}
 	}
 

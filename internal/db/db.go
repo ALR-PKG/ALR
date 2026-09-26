@@ -111,15 +111,13 @@ func (d *Database) Connect() error {
 	return nil
 }
 
-// normalizeSharedDBPerms выставляет общей БД права 664, а от root —
-// ещё и группу кэша. Ошибки не фатальны: процесс, не владеющий файлом,
-// исправить его не в силах.
+// normalizeSharedDBPerms выставляет общей БД права 664 и группу кэша.
+// Ошибки не фатальны: процесс, не владеющий файлом, исправить его не в
+// силах. chown срабатывает от root всегда, а от обычного пользователя —
+// если он владелец файла и входит в группу кэша
 func normalizeSharedDBPerms(dbPath string) {
 	if err := os.Chmod(dbPath, 0o664); err != nil {
 		slog.Debug("не удалось выставить права общей БД", "path", dbPath, "error", err)
-	}
-	if os.Geteuid() != 0 {
-		return
 	}
 	g, err := user.LookupGroup(fsutils.CacheShareGroup())
 	if err != nil {
