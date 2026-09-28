@@ -141,7 +141,7 @@ func applyFirejailIntegration(
 	dirs types.Directories,
 	contents []*files.Content,
 ) ([]*files.Content, error) {
-	slog.Info(gotext.Get("Applying FireJail integration"), "package", vars.Name)
+	slog.Info(gotext.Get("Applying FireJail integration for %s", vars.Name))
 
 	if err := createFirejailedDirectory(dirs.PkgDir); err != nil {
 		return nil, fmt.Errorf("failed to create firejailed directory: %w", err)

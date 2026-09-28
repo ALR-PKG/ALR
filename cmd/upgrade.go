@@ -200,7 +200,8 @@ func checkForUpdates(
 	pkgIdx := build.RegexpALRPackageName.SubexpIndex("package")
 	repoIdx := build.RegexpALRPackageName.SubexpIndex("repo")
 
-	slog.Info(gotext.Get("Checking for ALR package updates..."), "count", len(pkgNames))
+	slog.Info(gotext.Get("Checking for ALR package updates..."))
+	slog.Debug("checkForUpdates: package count", "count", len(pkgNames))
 
 	gradientColor := func(pos float64) string {
 		var r, g, b int
@@ -383,7 +384,7 @@ func checkForUpdates(
 	fmt.Fprintln(os.Stderr)
 
 	slog.Debug("checkForUpdates: finished", "time", time.Now().Format("15:04:05.000"), "updates_available", len(out))
-	slog.Info(gotext.Get("Finished checking for updates"), "updates_available", len(out))
+	slog.Info(gotext.Get("Finished checking for updates, %d available", len(out)))
 
 	return out, nil
 }

@@ -666,9 +666,9 @@ msgstr "Действия не требуются."
 msgid "Checking for ALR package updates..."
 msgstr "Проверка обновлений ALR пакетов..."
 
-#: cmd/upgrade.go:386
-msgid "Finished checking for updates"
-msgstr "Проверка обновлений завершена"
+#: cmd/upgrade.go:387
+msgid "Finished checking for updates, %d available"
+msgstr "Проверка обновлений завершена, доступно: %d"
 
 #: cmd/version.go:33
 msgid "Print the current ALR version and exit"
@@ -683,9 +683,9 @@ msgid "Package is already being built by another process"
 msgstr "Пакет уже собирается другим процессом"
 
 #: internal/build/build.go:386 internal/build/build.go:747
-#: internal/build/build.go:1292
-msgid "Using cached package"
-msgstr "Используется кешированный пакет"
+#: internal/build/build.go:1297
+msgid "Using cached package %s"
+msgstr "Используется кэшированный пакет %s"
 
 #: internal/build/build.go:402
 msgid "Failed to clean build directory"
@@ -703,63 +703,63 @@ msgstr "Массив контрольных сумм должен быть то�
 msgid "Downloading sources"
 msgstr "Скачивание источников"
 
-#: internal/build/build.go:835
+#: internal/build/build.go:837
 msgid " (already installed)"
 msgstr " (уже установлен)"
 
-#: internal/build/build.go:1087
+#: internal/build/build.go:1092
 msgid "Resolving dependencies for packages"
 msgstr "Разрешение зависимостей пакетов"
 
-#: internal/build/build.go:1089
+#: internal/build/build.go:1094
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1156
+#: internal/build/build.go:1161
 msgid "Installation summary"
 msgstr "Сводка установки"
 
-#: internal/build/build.go:1183
+#: internal/build/build.go:1188
 msgid "Proceed with installation?"
 msgstr "Продолжить установку?"
 
-#: internal/build/build.go:1203
-msgid "Installing system dependencies"
-msgstr "Установка системных зависимостей"
+#: internal/build/build.go:1208
+msgid "Installing system dependencies (%d)"
+msgstr "Установка системных зависимостей (%d)"
 
-#: internal/build/build.go:1215
+#: internal/build/build.go:1220
 msgid "Processing optional dependencies"
 msgstr "Обработка опциональных зависимостей"
 
-#: internal/build/build.go:1247
+#: internal/build/build.go:1252
 msgid "Building %d packages"
 msgstr "Сборка %d пакетов"
 
-#: internal/build/build.go:1253
+#: internal/build/build.go:1258
 msgid "Package %s not found in tree, skipping"
 msgstr "Пакет %s не найден в дереве, пропускаем"
 
-#: internal/build/build.go:1271
+#: internal/build/build.go:1276
 msgid "Package %s already installed, skipping"
 msgstr "Пакет %s уже установлен, пропускаем"
 
-#: internal/build/build.go:1313
+#: internal/build/build.go:1318
 msgid "Building package %s-%s"
 msgstr "Сборка пакета %s-%s"
 
-#: internal/build/build.go:1315
+#: internal/build/build.go:1320
 msgid "Building dependency %s-%s"
 msgstr "Сборка зависимости %s-%s"
 
-#: internal/build/build.go:1360
+#: internal/build/build.go:1365
 msgid "Installing target packages"
 msgstr "Установка целевых пакетов"
 
-#: internal/build/build.go:1386
+#: internal/build/build.go:1391
 msgid "Would you like to remove all build dependencies?"
 msgstr "Хотите удалить все зависимости сборки?"
 
-#: internal/build/build.go:1396
+#: internal/build/build.go:1401
 msgid "Failed to remove build dependencies: %v"
 msgstr "Не удалось удалить зависимости сборки: %v"
 
@@ -792,16 +792,16 @@ msgid "Error prompting for choice of package"
 msgstr "Ошибка при запросе выбора пакета"
 
 #: internal/build/find_deps/alt_linux.go:35
-msgid "Command not found on the system"
-msgstr "Команда не найдена в системе"
+msgid "Command %s not found on the system"
+msgstr "Команда %s не найдена в системе"
 
 #: internal/build/find_deps/alt_linux.go:86
-msgid "Provided dependency found"
-msgstr "Найденная предоставленная зависимость"
+msgid "Provided dependency found: %s"
+msgstr "Найдена предоставляемая зависимость: %s"
 
 #: internal/build/find_deps/alt_linux.go:93
-msgid "Required dependency found"
-msgstr "Найдена требуемая зависимость"
+msgid "Required dependency found: %s"
+msgstr "Найдена требуемая зависимость: %s"
 
 #: internal/build/find_deps/empty.go:32
 msgid "AutoProv is not implemented for this package format, so it's skipped"
@@ -814,8 +814,8 @@ msgstr ""
 "AutoReq не реализовано для этого формата пакета, поэтому будет пропущено"
 
 #: internal/build/firejail.go:144
-msgid "Applying FireJail integration"
-msgstr "Применение интеграции FireJail"
+msgid "Applying FireJail integration for %s"
+msgstr "Применение интеграции FireJail для %s"
 
 #: internal/build/installer.go:109
 msgid "Failed to get installed version"
@@ -847,54 +847,54 @@ msgstr ""
 "сборки"
 
 #: internal/build/script_executor.go:186
-msgid "Building package metadata"
-msgstr "Сборка метаданных пакета"
+msgid "Building package metadata for %s"
+msgstr "Сборка метаданных пакета %s"
 
 #: internal/build/script_executor.go:211
-msgid "Creating package file"
-msgstr "Создание файла пакета"
+msgid "Creating package file %s"
+msgstr "Создание файла пакета %s"
 
-#: internal/build/script_executor.go:215
+#: internal/build/script_executor.go:216
 msgid "Failed to create package file"
 msgstr "Не удалось создать файл пакета"
 
-#: internal/build/script_executor.go:219
-msgid "Packaging with nfpm"
-msgstr "Упаковка с помощью nfpm"
+#: internal/build/script_executor.go:220
+msgid "Packaging with nfpm (%s)"
+msgstr "Упаковка с помощью nfpm (%s)"
 
-#: internal/build/script_executor.go:227
+#: internal/build/script_executor.go:228
 msgid "Failed to create package"
 msgstr "Не удалось создать пакет"
 
-#: internal/build/script_executor.go:231
-msgid "Package created successfully"
-msgstr "Пакет успешно создан"
+#: internal/build/script_executor.go:232
+msgid "Package created successfully: %s"
+msgstr "Пакет успешно создан: %s"
 
-#: internal/build/script_executor.go:235
+#: internal/build/script_executor.go:236
 msgid "Package file not found after creation"
 msgstr "Файл пакета не найден после создания"
 
-#: internal/build/script_executor.go:238
+#: internal/build/script_executor.go:239
 msgid "Package file verified to exist"
 msgstr "Наличие файла пакета подтверждено"
 
-#: internal/build/script_executor.go:242
+#: internal/build/script_executor.go:243
 msgid "Failed to copy package to cache"
 msgstr "Не удалось скопировать пакет в кэш"
 
-#: internal/build/script_executor.go:245
+#: internal/build/script_executor.go:246
 msgid "Package copied to cache"
 msgstr "Пакет скопирован в кэш"
 
-#: internal/build/script_executor.go:359
+#: internal/build/script_executor.go:360
 msgid "Executing prepare()"
 msgstr "Выполнение prepare()"
 
-#: internal/build/script_executor.go:368
+#: internal/build/script_executor.go:369
 msgid "Executing build()"
 msgstr "Выполнение build()"
 
-#: internal/build/script_executor.go:397 internal/build/script_executor.go:417
+#: internal/build/script_executor.go:398 internal/build/script_executor.go:418
 msgid "Executing %s()"
 msgstr "Выполнение %s()"
 
@@ -914,38 +914,38 @@ msgstr "Ошибка инициализации базы данных"
 msgid "Error parsing os release"
 msgstr "Ошибка при разборе файла выпуска операционной системы"
 
-#: internal/cliutils/prompt.go:60
+#: internal/cliutils/prompt.go:59
 msgid "Would you like to view the build script for %s"
 msgstr "Показать скрипт для пакета %s"
 
-#: internal/cliutils/prompt.go:71 internal/cliutils/prompt.go:261
+#: internal/cliutils/prompt.go:70 internal/cliutils/prompt.go:258
 msgid "Would you still like to continue?"
 msgstr "Продолжить?"
 
-#: internal/cliutils/prompt.go:77
+#: internal/cliutils/prompt.go:76
 msgid "User chose not to continue after reading script"
 msgstr "Пользователь решил не продолжать после просмотра скрипта"
 
-#: internal/cliutils/prompt.go:175
+#: internal/cliutils/prompt.go:174
 msgid "Choose which package to %s"
 msgstr "Выберите, какой пакет использовать для %s"
 
-#: internal/cliutils/prompt.go:196
+#: internal/cliutils/prompt.go:198
 msgid "Choose which optional package(s) to install"
 msgstr "Выберите дополнительные пакеты для установки"
 
-#: internal/cliutils/prompt.go:240
+#: internal/cliutils/prompt.go:237
 msgid "Select packages to view build scripts"
 msgstr "Выберите пакеты для просмотра скриптов сборки"
 
-#: internal/cliutils/prompt.go:241
+#: internal/cliutils/prompt.go:238
 msgid ""
 "↑↓ to move, space to select, → to select all, ← to clear, enter to confirm"
 msgstr ""
 "Используйте стрелки для перемещения, пробел для выбора, стрелка вправо чтобы "
 "выбрать все, стрелка влево чтобы очистить, enter для подтверждения"
 
-#: internal/cliutils/prompt.go:266
+#: internal/cliutils/prompt.go:263
 msgid "User chose not to continue after reading script(s)"
 msgstr "Пользователь решил не продолжать после просмотра скрипта(ов)"
 
@@ -984,32 +984,36 @@ msgid "Repository %s is already being pulled by another process"
 msgstr "Репозиторий %s уже обновляется другим процессом"
 
 #: internal/repos/pull.go:120
-msgid "Trying mirror"
-msgstr "Пробую зеркало"
+msgid "Trying mirror %s for repository %s"
+msgstr "Пробую зеркало %s для репозитория %s"
 
 #: internal/repos/pull.go:126
 msgid "Failed to pull from URL"
 msgstr "Не удалось извлечь из URL"
 
 #: internal/repos/pull.go:190
-msgid "Pulling repository"
-msgstr "Скачивание репозитория"
+msgid "Pulling repository %s"
+msgstr "Скачивание репозитория %s"
 
 #: internal/repos/pull.go:230
-msgid "Repository up to date"
-msgstr "Репозиторий уже обновлён"
+msgid "Repository %s is up to date"
+msgstr "Репозиторий %s уже обновлён"
+
+#: internal/repos/pull.go:236
+msgid "Repository %s unchanged but no packages in DB, processing anyway"
+msgstr "Репозиторий %s не изменился, но в БД нет пакетов — обрабатываю заново"
 
 #: internal/repos/pull.go:242
-msgid "Checking out repository..."
-msgstr "Переключение репозитория..."
+msgid "Checking out repository %s..."
+msgstr "Переключение репозитория %s..."
 
 #: internal/repos/pull.go:266
-msgid "Processing repository packages (full)..."
-msgstr "Обработка пакетов репозитория (полная)..."
+msgid "Processing repository packages (full): %s"
+msgstr "Обработка пакетов репозитория (полная): %s"
 
 #: internal/repos/pull.go:272
-msgid "Processing repository changes..."
-msgstr "Обработка изменений репозитория..."
+msgid "Processing repository changes: %s"
+msgstr "Обработка изменений репозитория: %s"
 
 #: internal/repos/pull.go:281
 msgid "Git repository does not appear to be a valid ALR repo"
@@ -1040,16 +1044,16 @@ msgid "Failed to read updated file"
 msgstr "Не удалось прочитать обновлённый файл"
 
 #: internal/repos/pull.go:520 internal/repos/pull.go:556
-msgid "Processing repository packages..."
-msgstr "Обработка пакетов репозитория..."
+msgid "Processing repository packages: %s"
+msgstr "Обработка пакетов репозитория: %s"
 
 #: internal/repos/pull.go:552
 msgid "No alr.sh files found in repository"
 msgstr "Файлы alr.sh не найдены в репозитории"
 
-#: internal/repos/pull.go:619
-msgid "Repository packages processed"
-msgstr "Пакеты репозитория обработаны"
+#: internal/repos/pull.go:620
+msgid "Repository %s processed: %d packages"
+msgstr "Репозиторий %s обработан: пакетов %d"
 
 #: internal/rpc/client.go:87
 msgid ""
@@ -1088,8 +1092,8 @@ msgid "Source updated and linked to destination"
 msgstr "Источник обновлён и связан с пунктом назначения"
 
 #: pkg/dl/dl.go:217
-msgid "Downloading source"
-msgstr "Скачивание источника"
+msgid "Downloading source %s"
+msgstr "Скачивание источника %s"
 
 #: pkg/dl/progress_tui.go:102
 msgid "%s: done!\n"
@@ -1098,6 +1102,12 @@ msgstr "%s: выполнено!\n"
 #: pkg/dl/progress_tui.go:106
 msgid "%s %s downloading at %s/s\n"
 msgstr "%s %s загружается — %s/с\n"
+
+#~ msgid "Trying mirror"
+#~ msgstr "Пробую зеркало"
+
+#~ msgid "Downloading source"
+#~ msgstr "Скачивание источника"
 
 #~ msgid "Clearing build directory"
 #~ msgstr "Очистка каталога сборки"

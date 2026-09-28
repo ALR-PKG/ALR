@@ -35,7 +35,7 @@ type FedoraFindProvReq struct{}
 
 func rpmFindDependenciesFedora(ctx context.Context, pkgInfo *nfpm.Info, dirs types.Directories, command string, args []string, updateFunc func(string)) error {
 	if _, err := exec.LookPath(command); err != nil {
-		slog.Info(gotext.Get("Command not found on the system"), "command", command)
+		slog.Info(gotext.Get("Command %s not found on the system", command))
 		return nil
 	}
 
@@ -95,7 +95,7 @@ func (o *FedoraFindProvReq) FindProvides(ctx context.Context, pkgInfo *nfpm.Info
 		"/usr/lib/rpm/rpmdeps",
 		args,
 		func(dep string) {
-			slog.Info(gotext.Get("Provided dependency found"), "dep", dep)
+			slog.Info(gotext.Get("Provided dependency found: %s", dep))
 			pkgInfo.Overridables.Provides = append(pkgInfo.Overridables.Provides, dep)
 		})
 }
@@ -118,7 +118,7 @@ func (o *FedoraFindProvReq) FindRequires(ctx context.Context, pkgInfo *nfpm.Info
 		"/usr/lib/rpm/rpmdeps",
 		args,
 		func(dep string) {
-			slog.Info(gotext.Get("Required dependency found"), "dep", dep)
+			slog.Info(gotext.Get("Required dependency found: %s", dep))
 			pkgInfo.Overridables.Depends = append(pkgInfo.Overridables.Depends, dep)
 		})
 }
