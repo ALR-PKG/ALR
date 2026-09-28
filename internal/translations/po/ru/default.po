@@ -783,7 +783,11 @@ msgstr ""
 msgid "This package is already installed"
 msgstr "Этот пакет уже установлен"
 
-#: internal/build/dependency_tree.go:529
+#: internal/build/dependency_tree.go:93
+msgid "Resolving dependencies: %d packages, %d system deps (current: %s)"
+msgstr "Разрешение зависимостей: пакетов %d, системных %d (текущий: %s)"
+
+#: internal/build/dependency_tree.go:577
 msgid "Error prompting for choice of package"
 msgstr "Ошибка при запросе выбора пакета"
 

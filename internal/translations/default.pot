@@ -770,7 +770,11 @@ msgstr ""
 msgid "This package is already installed"
 msgstr ""
 
-#: internal/build/dependency_tree.go:529
+#: internal/build/dependency_tree.go:93
+msgid "Resolving dependencies: %d packages, %d system deps (current: %s)"
+msgstr ""
+
+#: internal/build/dependency_tree.go:577
 msgid "Error prompting for choice of package"
 msgstr ""
 
