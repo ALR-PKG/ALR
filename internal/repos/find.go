@@ -91,7 +91,10 @@ func nameToQuery(searchName string) (string, []any) {
 		return "(name = ? OR basepkg_name = ? OR json_array_contains(provides, ?)) AND repository = ?",
 			[]any{pkgName, pkgName, pkgName, repo}
 	}
-	return "name = ? OR basepkg_name = ? OR json_array_contains(provides, ?)",
+	// Скобки обязательны: findInCache дописывает " AND cached_at > ?",
+	// а AND связывает сильнее OR — без скобок TTL применялся бы только
+	// к provides-условию и протухший кэш считался бы свежим
+	return "(name = ? OR basepkg_name = ? OR json_array_contains(provides, ?))",
 		[]any{searchName, searchName, searchName}
 }
 
