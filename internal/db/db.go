@@ -104,11 +104,23 @@ func (d *Database) Connect() error {
 	// созданный любым пользователем с обычным umask, получает 644, и
 	// остальные получают "attempt to write a readonly database". Каждый
 	// процесс нормализует права на свой файл (root — и владельца).
-	if dbPath == filepath.Join(constants.SystemCachePath, "alr.db") {
-		normalizeSharedDBPerms(dbPath)
-	}
+	// Движок ленивый и файла может ещё не быть — тогда нормализация
+	// повторяется в Init после Sync2, который его создаёт.
+	d.normalizeSharedPerms()
 
 	return nil
+}
+
+// systemDBPath — путь общей системной БД; переменная для подмены в тестах
+var systemDBPath = filepath.Join(constants.SystemCachePath, "alr.db")
+
+// normalizeSharedPerms чинит права общей системной БД, если процесс
+// работает именно с ней (per-user БД в ~/.cache трогать не нужно)
+func (d *Database) normalizeSharedPerms() {
+	dbPath := d.config.GetPaths().DBPath
+	if dbPath == systemDBPath {
+		normalizeSharedDBPerms(dbPath)
+	}
 }
 
 // normalizeSharedDBPerms выставляет общей БД права 664 и группу кэша.
@@ -139,6 +151,9 @@ func (d *Database) Init(ctx context.Context) error {
 	if err := d.engine.Sync2(new(alrsh.Package), new(Version), new(PackageAvailabilityCache)); err != nil {
 		return err
 	}
+	// Sync2 создаёт файл БД, если его не было, с правами по umask (644) —
+	// нормализуем права теперь, когда файл гарантированно существует
+	d.normalizeSharedPerms()
 	ver, ok := d.GetVersion(ctx)
 	if ok && ver != CurrentVersion {
 		slog.Warn(gotext.Get("Database version mismatch; resetting"), "version", ver, "expected", CurrentVersion)
