@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,6 +72,50 @@ func TestGetPackagesErrorStatus(t *testing.T) {
 	_, err := client.GetPackages(context.Background(), []string{"foo"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "500")
+}
+
+// HTML-страница обслуживания (maintenance mode сайта) не должна
+// попадать в текст ошибки — только короткое описание ситуации
+func TestGetPackagesMaintenancePage(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		fmt.Fprintf(w, "<!DOCTYPE html>\n<html lang=\"ru\"><head><title>ALR - Обновление системы</title>%s</head></html>", strings.Repeat("<style>body{color:red}</style>", 100))
+	}))
+
+	_, err := client.GetPackages(context.Background(), []string{"foo"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "503")
+	assert.Contains(t, err.Error(), "temporarily unavailable")
+	assert.NotContains(t, err.Error(), "<!DOCTYPE")
+	assert.NotContains(t, err.Error(), "<style>")
+}
+
+// HTML с другим статусом тоже не вываливается в ошибку целиком
+func TestGetPackagesHTMLErrorPage(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+		w.Write([]byte("<html><body>Bad Gateway</body></html>"))
+	}))
+
+	_, err := client.GetPackages(context.Background(), []string{"foo"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "502")
+	assert.Contains(t, err.Error(), "HTML")
+	assert.NotContains(t, err.Error(), "<html>")
+}
+
+// Длинное текстовое тело ошибки обрезается и склеивается в одну строку
+func TestGetPackagesLongErrorBody(t *testing.T) {
+	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("{\"error\":\"" + strings.Repeat("very long error\n", 100) + "\"}"))
+	}))
+
+	_, err := client.GetPackages(context.Background(), []string{"foo"})
+	require.Error(t, err)
+	assert.LessOrEqual(t, len(err.Error()), 300)
+	assert.NotContains(t, err.Error(), "\n")
 }
 
 func TestGetPackagesInvalidJSON(t *testing.T) {

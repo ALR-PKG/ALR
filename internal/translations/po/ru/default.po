@@ -949,11 +949,11 @@ msgstr "Пользователь решил не продолжать после
 msgid "Cache directory does not exist, creating it"
 msgstr ""
 
-#: internal/db/db.go:144
+#: internal/db/db.go:159
 msgid "Database version mismatch; resetting"
 msgstr "Несоответствие версий базы данных; сброс настроек"
 
-#: internal/db/db.go:150
+#: internal/db/db.go:165
 msgid ""
 "Database version does not exist. Run alr fix if something isn't working."
 msgstr ""
@@ -1046,6 +1046,26 @@ msgstr "Файлы alr.sh не найдены в репозитории"
 #: internal/repos/pull.go:619
 msgid "Repository packages processed"
 msgstr "Пакеты репозитория обработаны"
+
+#: internal/rpc/client.go:87
+msgid ""
+"site is temporarily unavailable (HTTP %d): an update may be in progress, try "
+"again in a couple of minutes"
+msgstr ""
+"сайт временно недоступен (HTTP %d): возможно, идёт обновление — повторите "
+"через пару минут"
+
+#: internal/rpc/client.go:89
+msgid "RPC returned status %d (HTML page instead of JSON)"
+msgstr "RPC вернул статус %d (HTML-страница вместо JSON)"
+
+#: internal/rpc/client.go:98
+msgid "RPC returned status %d"
+msgstr "RPC вернул статус %d"
+
+#: internal/rpc/client.go:100
+msgid "RPC returned status %d: %s"
+msgstr "RPC вернул статус %d: %s"
 
 #: main.go:88
 msgid "Error while running app"

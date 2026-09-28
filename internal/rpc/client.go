@@ -20,11 +20,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
+
+	"github.com/leonelquinteros/gotext"
 
 	"git.alr-pkg.ru/ALR/ALR/pkg/distro"
 	"git.alr-pkg.ru/ALR/ALR/pkg/types"
@@ -70,6 +74,32 @@ func NewClient(site types.Site) *Client {
 	return c
 }
 
+// statusError формирует короткую понятную ошибку из HTTP-ответа.
+// HTML-страницы (например, страница обновления сайта в maintenance-режиме)
+// в текст ошибки не включаются — только их смысл
+func statusError(resp *http.Response) error {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
+	text := strings.TrimSpace(string(body))
+
+	ct := resp.Header.Get("Content-Type")
+	if strings.Contains(ct, "text/html") || strings.HasPrefix(text, "<!") || strings.HasPrefix(text, "<html") {
+		if resp.StatusCode == http.StatusServiceUnavailable {
+			return errors.New(gotext.Get("site is temporarily unavailable (HTTP %d): an update may be in progress, try again in a couple of minutes", resp.StatusCode))
+		}
+		return errors.New(gotext.Get("RPC returned status %d (HTML page instead of JSON)", resp.StatusCode))
+	}
+
+	// Прочие тела (обычно JSON с описанием) — одной строкой и не длиннее 200 символов
+	text = strings.Join(strings.Fields(text), " ")
+	if len(text) > 200 {
+		text = text[:200] + "…"
+	}
+	if text == "" {
+		return errors.New(gotext.Get("RPC returned status %d", resp.StatusCode))
+	}
+	return errors.New(gotext.Get("RPC returned status %d: %s", resp.StatusCode, text))
+}
+
 // get выполняет HTTP GET запрос и декодирует JSON ответ
 func (c *Client) get(ctx context.Context, endpoint string, query url.Values, result any) error {
 	u, err := url.Parse(c.baseURL + endpoint)
@@ -90,8 +120,7 @@ func (c *Client) get(ctx context.Context, endpoint string, query url.Values, res
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
-		return fmt.Errorf("RPC вернул статус %d: %s", resp.StatusCode, string(body))
+		return statusError(resp)
 	}
 
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseSize)).Decode(result); err != nil {
@@ -121,8 +150,7 @@ func (c *Client) post(ctx context.Context, endpoint string, body, result any) er
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
-		return fmt.Errorf("RPC вернул статус %d: %s", resp.StatusCode, string(bodyBytes))
+		return statusError(resp)
 	}
 
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseSize)).Decode(result); err != nil {
