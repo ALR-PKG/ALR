@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/leonelquinteros/gotext"
@@ -75,6 +76,26 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 	systemVisited := make(map[string]bool)
 	optVisited := make(map[string]bool)
 	buildDepVisited := make(map[string]bool)
+
+	// Счётчики прогресса для спиннера (читаются из горутины спиннера)
+	var progressPkgs atomic.Int32
+	var progressSysDeps atomic.Int32
+	var progressCurrent atomic.Value // string
+	progressCurrent.Store("…")
+
+	// Дерево строится долго (проверки доступности системных пакетов через
+	// менеджер пакетов), и всё это время не видно ни строчки — показываем
+	// спиннер с ходом работы
+	var spinner *cliutils.Spinner
+	interactive := input.BuildOpts().Interactive
+	if interactive {
+		spinner = cliutils.NewSpinner(func() string {
+			return gotext.Get("Resolving dependencies: %d packages, %d system deps (current: %s)",
+				progressPkgs.Load(), progressSysDeps.Load(), progressCurrent.Load())
+		})
+		spinner.Start()
+		defer spinner.Stop()
+	}
 
 	overrideNames, err := overrides.Resolve(input.OSRelease(), overrides.DefaultOpts)
 	if err != nil {
@@ -157,6 +178,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 				tree.AllBuildDeps = append(tree.AllBuildDeps, pkgName)
 			}
 		}
+		progressSysDeps.Store(int32(len(tree.AllSystemDeps)))
 
 		// Обрабатываем найденные ALR пакеты
 		pkgCounter := 0
@@ -179,8 +201,16 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 				} else {
 					// Выбираем один вариант: для целевых пакетов в интерактивном
 					// режиме показываем меню, иначе предпочитаем точное
-					// совпадение имени, а при его отсутствии — первый вариант
+					// совпадение имени, а при его отсутствии — первый вариант.
+					// На время меню спиннер останавливаем: его перерисовка
+					// в stderr ломает отрисовку пунктов
+					if interactive {
+						spinner.Stop()
+					}
 					pkgList = selectPackageVariant(ctx, pkgName, pkgList, parentPkg, input.BuildOpts().Interactive)
+					if interactive {
+						spinner.Start()
+					}
 				}
 			}
 
@@ -197,6 +227,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 						continue
 					}
 					visited[subPkgName] = true
+					progressCurrent.Store(subPkgName)
 
 					if pkgCounter%5 == 0 || pkgCounter == 1 {
 						slog.Debug(fmt.Sprintf("[TIME: %s] Processing package", time.Now().Format("15:04:05.000")), "call", resolveCallCount, "pkg", pkgCounter, "name", subPkgName, "total", totalProcessed)
@@ -230,15 +261,22 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 						}
 					}
 
-					// Отслеживаем build зависимости для удаления
+					// Отслеживаем build зависимости для удаления.
+					// Уже встреченные зависимости пропускаем ДО проверки
+					// доступности: IsAvailable при промахе кэша вызывает
+					// системный менеджер пакетов, и это самое дорогое место
 					slog.Debug(fmt.Sprintf("[TIME: %s] Checking build deps", time.Now().Format("15:04:05.000")), "pkg", subPkgName, "count", len(buildDeps))
 					for i, bd := range buildDeps {
+						if buildDepVisited[bd] {
+							continue
+						}
 						if b.mgr != nil {
 							if i%5 == 0 {
 								slog.Debug(fmt.Sprintf("[TIME: %s] IsAvailable", time.Now().Format("15:04:05.000")), "pkg", subPkgName, "dep", bd, "idx", i)
 							}
+							progressCurrent.Store(bd)
 							isAvail, _ := b.mgr.IsAvailable(bd)
-							if isAvail && !buildDepVisited[bd] {
+							if isAvail {
 								buildDepVisited[bd] = true
 								tree.AllBuildDeps = append(tree.AllBuildDeps, bd)
 							}
@@ -259,6 +297,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 
 					// Добавляем пакет в порядок
 					order = append(order, subPkgName)
+					progressPkgs.Add(1)
 				}
 			} else {
 				// Обычный пакет (не мультипакет)
@@ -266,6 +305,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 					continue
 				}
 				visited[pkgName] = true
+				progressCurrent.Store(pkgName)
 
 				if pkgCounter%5 == 0 || pkgCounter == 1 {
 					slog.Debug(fmt.Sprintf("[TIME: %s] Processing package", time.Now().Format("15:04:05.000")), "call", resolveCallCount, "pkg", pkgCounter, "name", pkgName, "total", totalProcessed)
@@ -300,15 +340,22 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 					}
 				}
 
-				// Отслеживаем build зависимости для удаления
+				// Отслеживаем build зависимости для удаления.
+				// Уже встреченные зависимости пропускаем ДО проверки
+				// доступности: IsAvailable при промахе кэша вызывает
+				// системный менеджер пакетов, и это самое дорогое место
 				slog.Debug(fmt.Sprintf("[TIME: %s] Checking build deps", time.Now().Format("15:04:05.000")), "pkg", pkgName, "count", len(buildDeps))
 				for i, bd := range buildDeps {
+					if buildDepVisited[bd] {
+						continue
+					}
 					if b.mgr != nil {
 						if i%5 == 0 {
 							slog.Debug(fmt.Sprintf("[TIME: %s] IsAvailable", time.Now().Format("15:04:05.000")), "pkg", pkgName, "dep", bd, "idx", i)
 						}
+						progressCurrent.Store(bd)
 						isAvail, _ := b.mgr.IsAvailable(bd)
-						if isAvail && !buildDepVisited[bd] {
+						if isAvail {
 							buildDepVisited[bd] = true
 							tree.AllBuildDeps = append(tree.AllBuildDeps, bd)
 						}
@@ -329,6 +376,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 
 				// Добавляем пакет в порядок
 				order = append(order, pkgName)
+				progressPkgs.Add(1)
 			}
 		}
 
