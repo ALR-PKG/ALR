@@ -28,6 +28,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -809,29 +810,67 @@ func (i *Builder) installOptDeps(
 	pkgs []string,
 ) ([]*BuiltDep, error) {
 	var builtDeps []*BuiltDep
-	optDeps, err := i.installerExecutor.RemoveAlreadyInstalled(ctx, pkgs)
+	if len(pkgs) == 0 {
+		return builtDeps, nil
+	}
+
+	// Записи opt_deps могут быть в формате «имя: описание» — для проверки
+	// установленности и установки нужно только имя
+	names := make([]string, len(pkgs))
+	for idx, dep := range pkgs {
+		names[idx], _, _ = strings.Cut(dep, ": ")
+	}
+
+	notInstalled, err := i.installerExecutor.RemoveAlreadyInstalled(ctx, names)
 	if err != nil {
 		return nil, err
 	}
-	if len(optDeps) > 0 {
-		optDeps, err := cliutils.ChooseOptDepends(
-			ctx,
-			optDeps,
-			"install",
-			input.BuildOpts().Interactive,
-		) // Пользователя просят выбрать опциональные зависимости
-		if err != nil {
-			return nil, err
-		}
+	notInstalledSet := make(map[string]bool, len(notInstalled))
+	for _, name := range notInstalled {
+		notInstalledSet[name] = true
+	}
 
-		if len(optDeps) == 0 {
-			return builtDeps, nil
+	// Уже установленные опциональные зависимости остаются в меню с пометкой:
+	// пользователь должен видеть полный список из скрипта пакета
+	installedMarker := gotext.Get(" (already installed)")
+	options := make([]string, len(pkgs))
+	for idx, dep := range pkgs {
+		options[idx] = dep
+		if !notInstalledSet[names[idx]] {
+			options[idx] += installedMarker
 		}
+	}
 
-		builtDeps, err = i.InstallPkgs(ctx, input, optDeps) // Устанавливаем выбранные пакеты
-		if err != nil {
-			return nil, err
+	chosen, err := cliutils.ChooseOptDepends(
+		ctx,
+		options,
+		"install",
+		input.BuildOpts().Interactive,
+	) // Пользователя просят выбрать опциональные зависимости
+	if err != nil {
+		return nil, err
+	}
+
+	// ChooseOptDepends отрезает описание по «: », но для записей без описания
+	// в выбор попадает пометка об установленности — срезаем её. Выбранные
+	// уже установленные пакеты повторно не ставим
+	var toInstall []string
+	for _, name := range chosen {
+		name = strings.TrimSuffix(name, installedMarker)
+		if notInstalledSet[name] {
+			toInstall = append(toInstall, name)
+		} else {
+			slog.Debug("опциональная зависимость уже установлена, пропуск", "pkg", name)
 		}
+	}
+
+	if len(toInstall) == 0 {
+		return builtDeps, nil
+	}
+
+	builtDeps, err = i.InstallPkgs(ctx, input, toInstall) // Устанавливаем выбранные пакеты
+	if err != nil {
+		return nil, err
 	}
 	return builtDeps, nil
 }
