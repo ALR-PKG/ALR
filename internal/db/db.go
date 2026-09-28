@@ -189,19 +189,14 @@ func (d *Database) reset() error {
 func (d *Database) InsertPackage(ctx context.Context, pkg alrsh.Package) error {
 	session := d.engine.Context(ctx)
 
-	affected, err := session.Where("name = ? AND repository = ?", pkg.Name, pkg.Repository).Update(&pkg)
-	if err != nil {
+	// Кэш обязан отражать источник целиком: Update по struct обновляет
+	// только ненулевые поля, и данные, пропавшие у пакета (например,
+	// зависимости), остались бы в кэше навсегда — перезаписываем строку
+	if _, err := session.Where("name = ? AND repository = ?", pkg.Name, pkg.Repository).Delete(&alrsh.Package{}); err != nil {
 		return err
 	}
-
-	if affected == 0 {
-		_, err = session.Insert(&pkg)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	_, err := session.Insert(&pkg)
+	return err
 }
 
 func (d *Database) GetPkgs(_ context.Context, where string, args ...any) ([]alrsh.Package, error) {

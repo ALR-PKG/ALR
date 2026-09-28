@@ -58,6 +58,23 @@ func newRPCTestRepos(t *testing.T, fixture []rpctestPackage) (*Repos, *db.Databa
 	t.Helper()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Список site-репозиториев — из репозиториев, встречающихся в фикстуре
+		if r.URL.Path == "/rpc/v1/repos" {
+			seen := map[string]bool{}
+			var repos []map[string]string
+			for _, p := range fixture {
+				if !seen[p.Repo] {
+					seen[p.Repo] = true
+					repos = append(repos, map[string]string{"name": p.Repo})
+				}
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"version":      1,
+				"repositories": repos,
+			}))
+			return
+		}
+
 		require.Equal(t, "/rpc/v1/info", r.URL.Path)
 
 		var results []rpctestPackage
