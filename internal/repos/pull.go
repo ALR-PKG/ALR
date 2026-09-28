@@ -117,7 +117,7 @@ func (rs *Repos) pullRepo(ctx context.Context, repo *types.Repo, updateRepoFromT
 
 	for i, repoURL := range urls {
 		if i > 0 {
-			slog.Info(gotext.Get("Trying mirror"), "repo", repo.Name, "mirror", repoURL)
+			slog.Info(gotext.Get("Trying mirror %s for repository %s", repoURL, repo.Name))
 		}
 
 		err := rs.pullRepoFromURL(ctx, repoURL, repo, updateRepoFromToml)
@@ -187,7 +187,7 @@ func (rs *Repos) pullRepoFromURL(ctx context.Context, rawRepoUrl string, repo *t
 		return fmt.Errorf("invalid URL %s: %w", rawRepoUrl, err)
 	}
 
-	slog.Info(gotext.Get("Pulling repository"), "name", repo.Name)
+	slog.Info(gotext.Get("Pulling repository %s", repo.Name))
 	repoDir := filepath.Join(rs.cfg.GetPaths().RepoDir, repo.Name)
 
 	var repoFS billy.Filesystem
@@ -227,19 +227,19 @@ func (rs *Repos) pullRepoFromURL(ctx context.Context, rawRepoUrl string, repo *t
 		slog.Debug("Repository status check", "name", repo.Name, "old_hash", old.Hash().String(), "new_hash", revHash.String(), "has_packages", hasPackages)
 
 		if old.Hash() == *revHash {
-			slog.Info(gotext.Get("Repository up to date"), "name", repo.Name)
+			slog.Info(gotext.Get("Repository %s is up to date", repo.Name))
 			// Если репозиторий не изменился и пакеты есть в БД, пропускаем обработку
 			if hasPackages {
 				slog.Debug("Repository unchanged and packages exist in DB, skipping processing", "name", repo.Name)
 				return nil
 			}
-			slog.Info("Repository unchanged but no packages in DB, processing anyway", "name", repo.Name)
+			slog.Info(gotext.Get("Repository %s unchanged but no packages in DB, processing anyway", repo.Name))
 		}
 	} else {
 		slog.Debug("Fresh git clone, processing repository", "name", repo.Name)
 	}
 
-	slog.Info(gotext.Get("Checking out repository..."), "name", repo.Name)
+	slog.Info(gotext.Get("Checking out repository %s...", repo.Name))
 	err = w.Checkout(&git.CheckoutOptions{
 		Hash:  plumbing.NewHash(revHash.String()),
 		Force: true,
@@ -263,13 +263,13 @@ func (rs *Repos) pullRepoFromURL(ctx context.Context, rawRepoUrl string, repo *t
 
 	// Если в БД нет пакетов этого репозитория или это fresh clone - полная обработка
 	if !rs.db.HasRepoPackages(repo.Name) || freshGit {
-		slog.Info(gotext.Get("Processing repository packages (full)..."), "name", repo.Name)
+		slog.Info(gotext.Get("Processing repository packages (full): %s", repo.Name))
 		err = rs.processRepoFull(ctx, *repo, repoDir)
 		if err != nil {
 			return err
 		}
 	} else {
-		slog.Info(gotext.Get("Processing repository changes..."), "name", repo.Name)
+		slog.Info(gotext.Get("Processing repository changes: %s", repo.Name))
 		err = rs.processRepoChanges(ctx, *repo, r, w, old, new)
 		if err != nil {
 			return err
@@ -517,7 +517,7 @@ func isValidScriptPath(path string) bool {
 }
 
 func (rs *Repos) processRepoFull(ctx context.Context, repo types.Repo, repoDir string) error {
-	slog.Info(gotext.Get("Processing repository packages..."), "repo", repo.Name)
+	slog.Info(gotext.Get("Processing repository packages: %s", repo.Name))
 
 	rootScript := filepath.Join(repoDir, "alr.sh")
 	if fi, err := os.Stat(rootScript); err == nil && !fi.IsDir() {
@@ -553,7 +553,8 @@ func (rs *Repos) processRepoFull(ctx context.Context, repo types.Repo, repoDir s
 		return nil
 	}
 
-	slog.Info(gotext.Get("Processing repository packages..."), "repo", repo.Name, "count", len(matches))
+	slog.Info(gotext.Get("Processing repository packages: %s", repo.Name))
+	slog.Debug("Processing repository packages", "repo", repo.Name, "count", len(matches))
 
 	// Функция для плавного RGB-градиента между тремя цветами
 	gradientColor := func(pos float64) string {
@@ -616,7 +617,7 @@ func (rs *Repos) processRepoFull(ctx context.Context, repo types.Repo, repoDir s
 	}
 
 	fmt.Fprintln(os.Stderr) // новая строка после завершения
-	slog.Info(gotext.Get("Repository packages processed"), "repo", repo.Name, "count", len(matches))
+	slog.Info(gotext.Get("Repository %s processed: %d packages", repo.Name, len(matches)))
 
 	return nil
 }

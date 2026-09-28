@@ -183,7 +183,7 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 			return nil, err
 		}
 
-		slog.Info(gotext.Get("Building package metadata"), "name", basePkg)
+		slog.Info(gotext.Get("Building package metadata for %s", basePkg))
 
 		pkgInfo, err := buildPkgMetadata(
 			ctx,
@@ -208,7 +208,8 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 		pkgName := packager.ConventionalFileName(pkgInfo)  // Получаем имя файла пакета
 		pkgPath := filepath.Join(pkgDirs.BaseDir, pkgName) // Определяем путь к пакету
 
-		slog.Info(gotext.Get("Creating package file"), "path", pkgPath, "name", pkgName)
+		slog.Info(gotext.Get("Creating package file %s", pkgName))
+		slog.Debug("Creating package file", "path", pkgPath, "name", pkgName)
 
 		pkgFile, err := os.Create(pkgPath)
 		if err != nil {
@@ -216,7 +217,7 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 			return nil, err
 		}
 
-		slog.Info(gotext.Get("Packaging with nfpm"), "format", pkgFormat)
+		slog.Info(gotext.Get("Packaging with nfpm (%s)", pkgFormat))
 		err = packager.Package(pkgInfo, pkgFile)
 		// Закрываем файл явно до проверки и копирования в кэш:
 		// иначе кэш может получить недописанные данные из буфера
@@ -228,21 +229,21 @@ func (e *LocalScriptExecutor) ExecuteSecondPass(
 			return nil, err
 		}
 
-		slog.Info(gotext.Get("Package created successfully"), "path", pkgPath)
+		slog.Info(gotext.Get("Package created successfully: %s", pkgPath))
 
 		// Проверяем, что файл действительно существует
 		if _, err := os.Stat(pkgPath); err != nil {
 			slog.Error(gotext.Get("Package file not found after creation"), "path", pkgPath, "error", err)
 			return nil, err
 		}
-		slog.Info(gotext.Get("Package file verified to exist"), "path", pkgPath)
+		slog.Debug(gotext.Get("Package file verified to exist"), "path", pkgPath)
 
 		cachedPath, err := copyToCache(e.cfg, pkgPath, pkgName, SemanticCacheKey(vars, funcsKey))
 		if err != nil {
 			slog.Error(gotext.Get("Failed to copy package to cache"), "path", pkgPath, "error", err)
 			return nil, err
 		}
-		slog.Info(gotext.Get("Package copied to cache"), "path", cachedPath)
+		slog.Debug(gotext.Get("Package copied to cache"), "path", cachedPath)
 
 		builtDeps = append(builtDeps, &BuiltDep{
 			Name: vars.Name,

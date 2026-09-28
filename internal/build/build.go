@@ -383,7 +383,7 @@ func (b *Builder) BuildPackage(
 		}
 
 		if len(remainingVars) == 0 {
-			slog.Info(gotext.Get("Using cached package"), "name", basePkg)
+			slog.Info(gotext.Get("Using cached package %s", basePkg))
 			return builtDeps, nil
 		}
 
@@ -744,7 +744,8 @@ func (b *Builder) checkCacheForAllSubpackages(
 			}
 
 			if found {
-				slog.Info(gotext.Get("Using cached package"), "name", pkgName, "path", pkgPath)
+				slog.Info(gotext.Get("Using cached package %s", pkgName))
+				slog.Debug("Using cached package", "name", pkgName, "path", pkgPath)
 				cachedDeps = append(cachedDeps, &BuiltDep{
 					Name: pkgName,
 					Path: pkgPath,
@@ -1086,7 +1087,9 @@ func (i *Builder) InstallPkgs(
 			pkgList = append(pkgList, pkgName)
 		}
 	}
-	slog.Info(gotext.Get("Resolving dependencies for packages"), "packages", pkgList)
+	// Спиннер (интерактив) и сводка ниже уже показывают ход и итог —
+	// список имён с версиями это отладочная информация
+	slog.Debug(gotext.Get("Resolving dependencies for packages"), "packages", pkgList)
 
 	slog.Debug(gotext.Get("Dependency tree resolved"),
 		"alr_packages", len(tree.AllALRPackages),
@@ -1202,7 +1205,7 @@ func (i *Builder) InstallPkgs(
 
 	// Шаг 2: Устанавливаем ВСЕ системные зависимости одним вызовом
 	if len(tree.AllSystemDeps) > 0 {
-		slog.Info(gotext.Get("Installing system dependencies"), "count", len(tree.AllSystemDeps))
+		slog.Info(gotext.Get("Installing system dependencies (%d)", len(tree.AllSystemDeps)))
 		err = i.installerExecutor.Install(ctx, tree.AllSystemDeps, &manager.Opts{
 			NoConfirm: userConfirmed || !input.BuildOpts().Interactive,
 		})
@@ -1291,7 +1294,7 @@ func (i *Builder) InstallPkgs(
 		}
 
 		if allInCache {
-			slog.Info(gotext.Get("Using cached package"), "name", pkgName)
+			slog.Info(gotext.Get("Using cached package %s", pkgName))
 			// Целевые пакеты откладываем для финальной установки
 			if node.IsTarget {
 				targetDeps = append(targetDeps, cachedDeps...)

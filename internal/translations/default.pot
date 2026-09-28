@@ -655,8 +655,8 @@ msgstr ""
 msgid "Checking for ALR package updates..."
 msgstr ""
 
-#: cmd/upgrade.go:386
-msgid "Finished checking for updates"
+#: cmd/upgrade.go:387
+msgid "Finished checking for updates, %d available"
 msgstr ""
 
 #: cmd/version.go:33
@@ -672,8 +672,8 @@ msgid "Package is already being built by another process"
 msgstr ""
 
 #: internal/build/build.go:386 internal/build/build.go:747
-#: internal/build/build.go:1292
-msgid "Using cached package"
+#: internal/build/build.go:1297
+msgid "Using cached package %s"
 msgstr ""
 
 #: internal/build/build.go:402
@@ -692,63 +692,63 @@ msgstr ""
 msgid "Downloading sources"
 msgstr ""
 
-#: internal/build/build.go:835
+#: internal/build/build.go:837
 msgid " (already installed)"
 msgstr ""
 
-#: internal/build/build.go:1087
+#: internal/build/build.go:1092
 msgid "Resolving dependencies for packages"
 msgstr ""
 
-#: internal/build/build.go:1089
+#: internal/build/build.go:1094
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1156
+#: internal/build/build.go:1161
 msgid "Installation summary"
 msgstr ""
 
-#: internal/build/build.go:1183
+#: internal/build/build.go:1188
 msgid "Proceed with installation?"
 msgstr ""
 
-#: internal/build/build.go:1203
-msgid "Installing system dependencies"
+#: internal/build/build.go:1208
+msgid "Installing system dependencies (%d)"
 msgstr ""
 
-#: internal/build/build.go:1215
+#: internal/build/build.go:1220
 msgid "Processing optional dependencies"
 msgstr ""
 
-#: internal/build/build.go:1247
+#: internal/build/build.go:1252
 msgid "Building %d packages"
 msgstr ""
 
-#: internal/build/build.go:1253
+#: internal/build/build.go:1258
 msgid "Package %s not found in tree, skipping"
 msgstr ""
 
-#: internal/build/build.go:1271
+#: internal/build/build.go:1276
 msgid "Package %s already installed, skipping"
 msgstr ""
 
-#: internal/build/build.go:1313
+#: internal/build/build.go:1318
 msgid "Building package %s-%s"
 msgstr ""
 
-#: internal/build/build.go:1315
+#: internal/build/build.go:1320
 msgid "Building dependency %s-%s"
 msgstr ""
 
-#: internal/build/build.go:1360
+#: internal/build/build.go:1365
 msgid "Installing target packages"
 msgstr ""
 
-#: internal/build/build.go:1386
+#: internal/build/build.go:1391
 msgid "Would you like to remove all build dependencies?"
 msgstr ""
 
-#: internal/build/build.go:1396
+#: internal/build/build.go:1401
 msgid "Failed to remove build dependencies: %v"
 msgstr ""
 
@@ -779,15 +779,15 @@ msgid "Error prompting for choice of package"
 msgstr ""
 
 #: internal/build/find_deps/alt_linux.go:35
-msgid "Command not found on the system"
+msgid "Command %s not found on the system"
 msgstr ""
 
 #: internal/build/find_deps/alt_linux.go:86
-msgid "Provided dependency found"
+msgid "Provided dependency found: %s"
 msgstr ""
 
 #: internal/build/find_deps/alt_linux.go:93
-msgid "Required dependency found"
+msgid "Required dependency found: %s"
 msgstr ""
 
 #: internal/build/find_deps/empty.go:32
@@ -799,7 +799,7 @@ msgid "AutoReq is not implemented for this package format, so it's skipped"
 msgstr ""
 
 #: internal/build/firejail.go:144
-msgid "Applying FireJail integration"
+msgid "Applying FireJail integration for %s"
 msgstr ""
 
 #: internal/build/installer.go:109
@@ -829,54 +829,54 @@ msgid ""
 msgstr ""
 
 #: internal/build/script_executor.go:186
-msgid "Building package metadata"
+msgid "Building package metadata for %s"
 msgstr ""
 
 #: internal/build/script_executor.go:211
-msgid "Creating package file"
+msgid "Creating package file %s"
 msgstr ""
 
-#: internal/build/script_executor.go:215
+#: internal/build/script_executor.go:216
 msgid "Failed to create package file"
 msgstr ""
 
-#: internal/build/script_executor.go:219
-msgid "Packaging with nfpm"
+#: internal/build/script_executor.go:220
+msgid "Packaging with nfpm (%s)"
 msgstr ""
 
-#: internal/build/script_executor.go:227
+#: internal/build/script_executor.go:228
 msgid "Failed to create package"
 msgstr ""
 
-#: internal/build/script_executor.go:231
-msgid "Package created successfully"
+#: internal/build/script_executor.go:232
+msgid "Package created successfully: %s"
 msgstr ""
 
-#: internal/build/script_executor.go:235
+#: internal/build/script_executor.go:236
 msgid "Package file not found after creation"
 msgstr ""
 
-#: internal/build/script_executor.go:238
+#: internal/build/script_executor.go:239
 msgid "Package file verified to exist"
 msgstr ""
 
-#: internal/build/script_executor.go:242
+#: internal/build/script_executor.go:243
 msgid "Failed to copy package to cache"
 msgstr ""
 
-#: internal/build/script_executor.go:245
+#: internal/build/script_executor.go:246
 msgid "Package copied to cache"
 msgstr ""
 
-#: internal/build/script_executor.go:359
+#: internal/build/script_executor.go:360
 msgid "Executing prepare()"
 msgstr ""
 
-#: internal/build/script_executor.go:368
+#: internal/build/script_executor.go:369
 msgid "Executing build()"
 msgstr ""
 
-#: internal/build/script_executor.go:397 internal/build/script_executor.go:417
+#: internal/build/script_executor.go:398 internal/build/script_executor.go:418
 msgid "Executing %s()"
 msgstr ""
 
@@ -896,36 +896,36 @@ msgstr ""
 msgid "Error parsing os release"
 msgstr ""
 
-#: internal/cliutils/prompt.go:60
+#: internal/cliutils/prompt.go:59
 msgid "Would you like to view the build script for %s"
 msgstr ""
 
-#: internal/cliutils/prompt.go:71 internal/cliutils/prompt.go:261
+#: internal/cliutils/prompt.go:70 internal/cliutils/prompt.go:258
 msgid "Would you still like to continue?"
 msgstr ""
 
-#: internal/cliutils/prompt.go:77
+#: internal/cliutils/prompt.go:76
 msgid "User chose not to continue after reading script"
 msgstr ""
 
-#: internal/cliutils/prompt.go:175
+#: internal/cliutils/prompt.go:174
 msgid "Choose which package to %s"
 msgstr ""
 
-#: internal/cliutils/prompt.go:196
+#: internal/cliutils/prompt.go:198
 msgid "Choose which optional package(s) to install"
 msgstr ""
 
-#: internal/cliutils/prompt.go:240
+#: internal/cliutils/prompt.go:237
 msgid "Select packages to view build scripts"
 msgstr ""
 
-#: internal/cliutils/prompt.go:241
+#: internal/cliutils/prompt.go:238
 msgid ""
 "↑↓ to move, space to select, → to select all, ← to clear, enter to confirm"
 msgstr ""
 
-#: internal/cliutils/prompt.go:266
+#: internal/cliutils/prompt.go:263
 msgid "User chose not to continue after reading script(s)"
 msgstr ""
 
@@ -961,7 +961,7 @@ msgid "Repository %s is already being pulled by another process"
 msgstr ""
 
 #: internal/repos/pull.go:120
-msgid "Trying mirror"
+msgid "Trying mirror %s for repository %s"
 msgstr ""
 
 #: internal/repos/pull.go:126
@@ -969,23 +969,27 @@ msgid "Failed to pull from URL"
 msgstr ""
 
 #: internal/repos/pull.go:190
-msgid "Pulling repository"
+msgid "Pulling repository %s"
 msgstr ""
 
 #: internal/repos/pull.go:230
-msgid "Repository up to date"
+msgid "Repository %s is up to date"
+msgstr ""
+
+#: internal/repos/pull.go:236
+msgid "Repository %s unchanged but no packages in DB, processing anyway"
 msgstr ""
 
 #: internal/repos/pull.go:242
-msgid "Checking out repository..."
+msgid "Checking out repository %s..."
 msgstr ""
 
 #: internal/repos/pull.go:266
-msgid "Processing repository packages (full)..."
+msgid "Processing repository packages (full): %s"
 msgstr ""
 
 #: internal/repos/pull.go:272
-msgid "Processing repository changes..."
+msgid "Processing repository changes: %s"
 msgstr ""
 
 #: internal/repos/pull.go:281
@@ -1015,15 +1019,15 @@ msgid "Failed to read updated file"
 msgstr ""
 
 #: internal/repos/pull.go:520 internal/repos/pull.go:556
-msgid "Processing repository packages..."
+msgid "Processing repository packages: %s"
 msgstr ""
 
 #: internal/repos/pull.go:552
 msgid "No alr.sh files found in repository"
 msgstr ""
 
-#: internal/repos/pull.go:619
-msgid "Repository packages processed"
+#: internal/repos/pull.go:620
+msgid "Repository %s processed: %d packages"
 msgstr ""
 
 #: internal/rpc/client.go:87
@@ -1061,7 +1065,7 @@ msgid "Source updated and linked to destination"
 msgstr ""
 
 #: pkg/dl/dl.go:217
-msgid "Downloading source"
+msgid "Downloading source %s"
 msgstr ""
 
 #: pkg/dl/progress_tui.go:102
