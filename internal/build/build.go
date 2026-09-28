@@ -830,20 +830,25 @@ func (i *Builder) installOptDeps(
 		notInstalledSet[name] = true
 	}
 
-	// Уже установленные опциональные зависимости остаются в меню с пометкой:
-	// пользователь должен видеть полный список из скрипта пакета
+	// Уже установленные опциональные зависимости остаются в меню: подсвечены
+	// зелёным с пометкой и предвыбранной галочкой — пользователь видит
+	// полный список из скрипта пакета
 	installedMarker := gotext.Get(" (already installed)")
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
 	options := make([]string, len(pkgs))
+	var defaults []int
 	for idx, dep := range pkgs {
 		options[idx] = dep
 		if !notInstalledSet[names[idx]] {
-			options[idx] += installedMarker
+			options[idx] = green.Render(dep + installedMarker)
+			defaults = append(defaults, idx)
 		}
 	}
 
-	chosen, err := cliutils.ChooseOptDepends(
+	chosenIdx, err := cliutils.ChooseOptDepends(
 		ctx,
 		options,
+		defaults,
 		"install",
 		input.BuildOpts().Interactive,
 	) // Пользователя просят выбрать опциональные зависимости
@@ -851,16 +856,13 @@ func (i *Builder) installOptDeps(
 		return nil, err
 	}
 
-	// ChooseOptDepends отрезает описание по «: », но для записей без описания
-	// в выбор попадает пометка об установленности — срезаем её. Выбранные
-	// уже установленные пакеты повторно не ставим
+	// Выбранные уже установленные пакеты повторно не ставим
 	var toInstall []string
-	for _, name := range chosen {
-		name = strings.TrimSuffix(name, installedMarker)
-		if notInstalledSet[name] {
-			toInstall = append(toInstall, name)
+	for _, idx := range chosenIdx {
+		if notInstalledSet[names[idx]] {
+			toInstall = append(toInstall, names[idx])
 		} else {
-			slog.Debug("опциональная зависимость уже установлена, пропуск", "pkg", name)
+			slog.Debug("опциональная зависимость уже установлена, пропуск", "pkg", names[idx])
 		}
 	}
 
