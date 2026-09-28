@@ -929,11 +929,11 @@ msgstr ""
 msgid "Cache directory does not exist, creating it"
 msgstr ""
 
-#: internal/db/db.go:144
+#: internal/db/db.go:159
 msgid "Database version mismatch; resetting"
 msgstr ""
 
-#: internal/db/db.go:150
+#: internal/db/db.go:165
 msgid ""
 "Database version does not exist. Run alr fix if something isn't working."
 msgstr ""
@@ -1020,6 +1020,24 @@ msgstr ""
 
 #: internal/repos/pull.go:619
 msgid "Repository packages processed"
+msgstr ""
+
+#: internal/rpc/client.go:87
+msgid ""
+"site is temporarily unavailable (HTTP %d): an update may be in progress, try "
+"again in a couple of minutes"
+msgstr ""
+
+#: internal/rpc/client.go:89
+msgid "RPC returned status %d (HTML page instead of JSON)"
+msgstr ""
+
+#: internal/rpc/client.go:98
+msgid "RPC returned status %d"
+msgstr ""
+
+#: internal/rpc/client.go:100
+msgid "RPC returned status %d: %s"
 msgstr ""
 
 #: main.go:88
