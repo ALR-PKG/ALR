@@ -82,6 +82,24 @@ func splitRepoQualifier(name string) (string, string) {
 	return name, ""
 }
 
+// invalidateCacheEntry удаляет записи пакета из локального RPC-кэша:
+// вызывается, когда живой RPC-запрос узнал о пакете что-то новее,
+// чем могло попасть в кэш (например, о наличии обновления)
+func (rs *Repos) invalidateCacheEntry(ctx context.Context, name, repo string) {
+	var where string
+	var args []any
+	if repo != "" {
+		where = "(name = ? OR basepkg_name = ?) AND repository = ?"
+		args = []any{name, name, repo}
+	} else {
+		where = "name = ? OR basepkg_name = ?"
+		args = []any{name, name}
+	}
+	if err := rs.db.DeletePkgs(ctx, where, args...); err != nil {
+		slog.Debug("не удалось инвалидировать кэш пакета", "pkg", name, "repo", repo, "error", err)
+	}
+}
+
 // nameToQuery строит WHERE-условие поиска по имени пакета
 // с учётом форм repo/pkg и pkg+repo. Ищет по точному имени,
 // basepkg_name и provides — как RPC-ветка
