@@ -115,6 +115,39 @@ func TestInsertPackage(t *testing.T) {
 	assert.Equal(t, testPkg, pkgs[0])
 }
 
+// Регрессия: InsertPackage обновлял строку через Update по struct, который
+// затрагивает только ненулевые поля — если у пакета данные пропали (пустые
+// зависимости в ответе RPC), в кэше навсегда оставались старые значения
+func TestInsertPackageReplacesStaleFields(t *testing.T) {
+	ctx := context.Background()
+	database := prepareDb()
+	defer database.Close()
+
+	full := testPkg
+	full.BuildDepends = alrsh.OverridableFromMap(map[string][]string{"": {"git", "gcc"}})
+	if err := database.InsertPackage(ctx, full); err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+
+	// Повторная запись того же пакета с пустыми build deps
+	reduced := testPkg
+	if err := database.InsertPackage(ctx, reduced); err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+
+	pkgs, err := database.GetPkgs(ctx, "name = 'test' AND repository = 'default'")
+	if err != nil {
+		t.Fatalf("Expected no error, got %s", err)
+	}
+	if len(pkgs) != 1 {
+		t.Fatalf("Expected 1 package, got %d", len(pkgs))
+	}
+
+	assert.Equal(t, reduced, pkgs[0])
+	assert.Empty(t, pkgs[0].BuildDepends.Resolved(),
+		"пропавшие у пакета данные не должны оставаться в кэше")
+}
+
 func TestGetPkgs(t *testing.T) {
 	ctx := context.Background()
 	database := prepareDb()
