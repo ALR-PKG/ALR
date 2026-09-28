@@ -28,6 +28,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -881,12 +882,14 @@ func (i *Builder) installOptDeps(
 // printDependencyTree рекурсивно выводит дерево зависимостей
 // path используется для отслеживания текущего пути (для обнаружения циклов)
 // printed используется для отслеживания уже выведенных пакетов (дедупликация)
+// isBuildDep помечает узлы, попавшие в дерево как зависимости сборки
 func (i *Builder) printDependencyTree(
 	w *os.File,
 	node *DependencyNode,
 	tree *UnifiedDependencyTree,
 	prefix string,
 	isLast bool,
+	isBuildDep bool,
 	path map[string]bool,
 	printed map[string]bool,
 	redColor, yellowColor, blueColor, grayColor lipgloss.Color,
@@ -908,18 +911,9 @@ func (i *Builder) printDependencyTree(
 		return
 	}
 
-	// Проверяем, выводился ли уже этот пакет (дедупликация)
+	// Проверяем, выводился ли уже этот пакет (дедупликация):
+	// повторы не показываем вовсе, чтобы не засорять дерево
 	if printed[node.PkgName] {
-		// Пакет уже выводился, показываем только имя без зависимостей
-		connectorStyle := lipgloss.NewStyle().Foreground(grayColor)
-		dupStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
-		var connector string
-		if isLast {
-			connector = "└── "
-		} else {
-			connector = "├── "
-		}
-		fmt.Fprintf(w, "%s%s%s\n", prefix, connectorStyle.Render(connector), dupStyle.Render(node.PkgName+" [already listed]"))
 		return
 	}
 
@@ -958,6 +952,9 @@ func (i *Builder) printDependencyTree(
 	} else {
 		pkgLine = pkgStyle.Render(node.PkgName)
 	}
+	if isBuildDep {
+		pkgLine += " " + connectorStyle.Render(gotext.Get("(build)"))
+	}
 
 	fmt.Fprintf(w, "%s%s%s\n", prefix, connectorStyle.Render(connector), pkgLine)
 
@@ -973,26 +970,63 @@ func (i *Builder) printDependencyTree(
 	children := node.Dependencies
 	sysDeps := node.SystemDeps
 
+	// Отбрасываем детей, которые уже были выведены ранее (повторы скрываем),
+	// чтобы коннекторы дерева считались только по видимым узлам
+	var visibleChildren []string
+	for _, childName := range children {
+		if printed[childName] {
+			continue
+		}
+		if _, ok := tree.Nodes[childName]; ok {
+			visibleChildren = append(visibleChildren, childName)
+			continue
+		}
+		// Проверяем, является ли зависимость метапакетом с видимыми подпакетами
+		for _, node := range tree.Nodes {
+			if node.BasePkgName == childName && !printed[node.PkgName] {
+				visibleChildren = append(visibleChildren, childName)
+				break
+			}
+		}
+	}
+
+	// ALR-зависимости сборки тоже показываем (с пометкой): их системные
+	// зависимости входят в счётчик установки, без этих узлов дерево
+	// не сходится с количеством устанавливаемых системных пакетов
+	var visibleBuildChildren []string
+	for _, bd := range node.BuildDeps {
+		if printed[bd] || slices.Contains(visibleChildren, bd) || slices.Contains(visibleBuildChildren, bd) {
+			continue
+		}
+		if _, ok := tree.Nodes[bd]; ok {
+			visibleBuildChildren = append(visibleBuildChildren, bd)
+		}
+	}
+
 	// Сначала ALR зависимости
-	for idx, childName := range children {
+	for idx, childName := range visibleChildren {
+		isLastChild := idx == len(visibleChildren)-1 && len(visibleBuildChildren) == 0 && len(sysDeps) == 0
 		if childNode, ok := tree.Nodes[childName]; ok {
-			isLastChild := idx == len(children)-1 && len(sysDeps) == 0
-			i.printDependencyTree(w, childNode, tree, childPrefix, isLastChild, path, printed,
+			i.printDependencyTree(w, childNode, tree, childPrefix, isLastChild, false, path, printed,
 				redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 		} else {
-			// Проверяем, является ли зависимость метапакетом
 			var subpkgs []*DependencyNode
 			for _, node := range tree.Nodes {
 				if node.BasePkgName == childName {
 					subpkgs = append(subpkgs, node)
 				}
 			}
-			if len(subpkgs) > 0 {
-				isLastChild := idx == len(children)-1 && len(sysDeps) == 0
-				i.printMetaPackageTree(w, childName, subpkgs, tree, childPrefix, isLastChild, printed,
-					redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
-			}
+			i.printMetaPackageTree(w, childName, subpkgs, tree, childPrefix, isLastChild, printed,
+				redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 		}
+	}
+
+	// Затем ALR зависимости сборки
+	for idx, bd := range visibleBuildChildren {
+		isLastChild := idx == len(visibleBuildChildren)-1 && len(sysDeps) == 0
+		childNode := tree.Nodes[bd]
+		i.printDependencyTree(w, childNode, tree, childPrefix, isLastChild, true, path, printed,
+			redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 	}
 
 	// Затем системные зависимости (синим цветом)
@@ -1046,11 +1080,17 @@ func (i *Builder) printMetaPackageTree(
 		childPrefix = prefix + "│   "
 	}
 
-	// Выводим подпакеты
-	for idx, subpkg := range subpkgs {
-		isLastSub := idx == len(subpkgs)-1
+	// Выводим подпакеты (уже выведенные ранее пропускаем)
+	var visibleSubpkgs []*DependencyNode
+	for _, subpkg := range subpkgs {
+		if !printed[subpkg.PkgName] {
+			visibleSubpkgs = append(visibleSubpkgs, subpkg)
+		}
+	}
+	for idx, subpkg := range visibleSubpkgs {
+		isLastSub := idx == len(visibleSubpkgs)-1
 		path := make(map[string]bool)
-		i.printDependencyTree(w, subpkg, tree, childPrefix, isLastSub, path, printed,
+		i.printDependencyTree(w, subpkg, tree, childPrefix, isLastSub, false, path, printed,
 			redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 	}
 }
@@ -1166,7 +1206,7 @@ func (i *Builder) InstallPkgs(
 		for _, pkgName := range pkgs {
 			if node, ok := tree.Nodes[pkgName]; ok {
 				path := make(map[string]bool)
-				i.printDependencyTree(os.Stderr, node, tree, "", true, path, printed,
+				i.printDependencyTree(os.Stderr, node, tree, "", true, false, path, printed,
 					redColor, yellowColor, blueColor, grayColor, versionStyle, repoStyle, formatVersion)
 			} else {
 				// Проверяем, является ли пакет метапакетом (есть подпакеты с таким BasePkgName)
