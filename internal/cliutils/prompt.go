@@ -23,7 +23,6 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/leonelquinteros/gotext"
@@ -185,14 +184,17 @@ func PkgPrompt(ctx context.Context, options []alrsh.Package, verb string, intera
 }
 
 // ChooseOptDepends asks the user to choose between multiple optional dependencies.
-// The user may choose multiple items.
-func ChooseOptDepends(ctx context.Context, options []string, verb string, interactive bool) ([]string, error) {
+// The user may choose multiple items. Возвращает индексы выбранных пунктов;
+// в defaults передаются индексы предвыбранных пунктов (например, уже
+// установленные пакеты — видны в списке с проставленной галочкой)
+func ChooseOptDepends(ctx context.Context, options []string, defaults []int, verb string, interactive bool) ([]int, error) {
 	if !interactive {
-		return []string{}, nil
+		return []int{}, nil
 	}
 
 	prompt := &survey.MultiSelect{
 		Options: options,
+		Default: defaults,
 		Message: gotext.Get("Choose which optional package(s) to install"),
 	}
 
@@ -202,12 +204,7 @@ func ChooseOptDepends(ctx context.Context, options []string, verb string, intera
 		return nil, err
 	}
 
-	out := make([]string, len(choices))
-	for i, choiceIndex := range choices {
-		out[i], _, _ = strings.Cut(options[choiceIndex], ": ")
-	}
-
-	return out, nil
+	return choices, nil
 }
 
 // ScriptInfo содержит информацию о скрипте пакета
