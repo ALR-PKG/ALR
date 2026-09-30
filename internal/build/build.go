@@ -974,7 +974,7 @@ func (i *Builder) printDependencyTree(
 	// чтобы коннекторы дерева считались только по видимым узлам
 	var visibleChildren []string
 	for _, childName := range children {
-		if printed[childName] {
+		if printed[childName] || slices.Contains(visibleChildren, childName) {
 			continue
 		}
 		if _, ok := tree.Nodes[childName]; ok {

@@ -81,6 +81,12 @@ type Package struct {
 	// CachedAt — время последнего кэширования пакета через RPC (unix timestamp)
 	CachedAt int64 `sh:"-" xorm:"'cached_at'" json:"-"`
 
+	// CachedDistro — дистрибутив, под который отфильтрованы зависимости
+	// в кэшированной записи (сайт отдаёт distro-специфичный срез). Пустая
+	// строка — запись получена без фильтрации (list/search/completion) и
+	// для разрешения зависимостей непригодна
+	CachedDistro string `sh:"-" xorm:"'cached_distro'" json:"-"`
+
 	// ExtraFiles — дополнительные файлы из директории пакета (.desktop, .service и т.д.)
 	ExtraFiles []ExtraFile `sh:"-" xorm:"json 'extra_files'" json:"extra_files,omitempty"`
 

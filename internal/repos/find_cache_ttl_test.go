@@ -37,9 +37,11 @@ func TestExpiredCacheEntryIsRefreshedViaRPC(t *testing.T) {
 	}
 	rs, database := newRPCTestRepos(t, fixture)
 
-	// Протухшая запись в локальном кэше (старше rpcCacheTTL)
+	// Протухшая запись в локальном кэше (старше rpcCacheTTL);
+	// CachedDistro проставлен, чтобы промах решался именно по TTL
 	stale := alrsh.Package{Name: "oldpkg", Repository: "alr-repo", Version: "1.0"}
 	stale.CachedAt = time.Now().Add(-2 * time.Hour).Unix()
+	stale.CachedDistro = rs.RPCClient().DistroID()
 	require.NoError(t, database.InsertPackage(context.Background(), stale))
 
 	found, notFound, err := rs.FindPkgs(context.Background(), []string{"oldpkg"})
@@ -48,4 +50,34 @@ func TestExpiredCacheEntryIsRefreshedViaRPC(t *testing.T) {
 	require.Len(t, found["oldpkg"], 1)
 	assert.Equal(t, "2.0", found["oldpkg"][0].Version,
 		"протухший кэш должен обновиться через RPC, а не отдать старую версию")
+}
+
+// Регрессия: записи кэша, полученные из эндпоинтов без distro-параметра
+// (list/search/completion), содержат зависимости всех дистрибутивов
+// склеенными — разрешение зависимостей из такой записи тащило в установку
+// чужие имена пакетов (linux-headers-amd64 на RedOS). findInCache обязан
+// игнорировать записи без distro-среза и запрашивать свежие через RPC
+func TestCacheEntryWithoutDistroIsIgnored(t *testing.T) {
+	fixture := []rpctestPackage{
+		{Name: "mixedpkg", Version: "2.0", Repo: "alr-repo"},
+	}
+	rs, database := newRPCTestRepos(t, fixture)
+
+	// Свежая по TTL запись, но без distro-среза (как её пишут list/search)
+	unfiltered := alrsh.Package{Name: "mixedpkg", Repository: "alr-repo", Version: "1.0"}
+	unfiltered.CachedAt = time.Now().Unix()
+	require.NoError(t, database.InsertPackage(context.Background(), unfiltered))
+
+	found, notFound, err := rs.FindPkgs(context.Background(), []string{"mixedpkg"})
+	require.NoError(t, err)
+	assert.Empty(t, notFound)
+	require.Len(t, found["mixedpkg"], 1)
+	assert.Equal(t, "2.0", found["mixedpkg"][0].Version,
+		"запись без distro-среза должна игнорироваться и обновляться через RPC")
+
+	// После RPC кэшированная запись получила distro-метку
+	cached, err := database.GetPkgs(context.Background(), "name = ?", "mixedpkg")
+	require.NoError(t, err)
+	require.Len(t, cached, 1)
+	assert.Equal(t, rs.RPCClient().DistroID(), cached[0].CachedDistro)
 }
