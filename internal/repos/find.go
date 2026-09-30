@@ -50,6 +50,11 @@ func (rs *Repos) findInCache(ctx context.Context, pkgNames []string) (map[string
 		where, args := nameToQuery(dep.Name)
 		where += " AND cached_at > ?"
 		args = append(args, cutoff)
+		// Записи без distro-среза (list/search/completion) непригодны для
+		// разрешения зависимостей: сайт отдаёт зависимости под конкретный
+		// дистрибутив, иначе в установку утекают чужие имена пакетов
+		where += " AND cached_distro = ?"
+		args = append(args, rs.cacheDistro())
 
 		result, err := rs.db.GetPkgs(ctx, where, args...)
 		if err == nil && dep.HasVersionConstraint() && len(result) > 0 {
@@ -116,6 +121,15 @@ func nameToQuery(searchName string) (string, []any) {
 		[]any{searchName, searchName, searchName}
 }
 
+// cacheDistro возвращает distro-идентификатор для фильтрации кэша;
+// без RPC-клиента (git-режим, тесты) — пустая строка
+func (rs *Repos) cacheDistro() string {
+	if rs.rpc == nil {
+		return ""
+	}
+	return rs.rpc.DistroID()
+}
+
 // findViaRPC ищет пакеты через ALR Site RPC API
 // Возвращает найденные пакеты, список не найденных, и флаг успеха RPC-запроса
 func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string][]alrsh.Package, []string, bool) {
@@ -180,6 +194,7 @@ func (rs *Repos) findViaRPC(ctx context.Context, pkgNames []string) (map[string]
 			for _, p := range pkgs {
 				pkg := *p.ToALRShPackage()
 				pkg.CachedAt = time.Now().Unix()
+				pkg.CachedDistro = rs.rpc.DistroID()
 				// Сохраняем пакет в локальную БД для кэширования и tab completion
 				if err := rs.db.InsertPackage(ctx, pkg); err != nil {
 					slog.Debug("FindPkgs: не удалось сохранить пакет в кэш", "name", pkg.Name, "error", err)

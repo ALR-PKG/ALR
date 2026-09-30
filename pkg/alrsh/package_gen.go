@@ -48,6 +48,7 @@ type packageResolved struct {
 	AlrShURL         string            `json:"-"`
 	AlrShSHA256      string            `json:"-"`
 	CachedAt         int64             `json:"-"`
+	CachedDistro     string            `json:"-"`
 	ExtraFiles       []ExtraFile       `json:"extra_files,omitempty"`
 	FireJailed       bool              `json:"firejailed"`
 	FireJailProfiles map[string]string `json:"firejail_profiles,omitempty"`
@@ -85,6 +86,7 @@ func PackageToResolved(src *Package) packageResolved {
 		AlrShURL:         src.AlrShURL,
 		AlrShSHA256:      src.AlrShSHA256,
 		CachedAt:         src.CachedAt,
+		CachedDistro:     src.CachedDistro,
 		ExtraFiles:       src.ExtraFiles,
 		FireJailed:       src.FireJailed.Resolved(),
 		FireJailProfiles: src.FireJailProfiles.Resolved(),

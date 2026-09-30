@@ -74,6 +74,17 @@ func NewClient(site types.Site) *Client {
 	return c
 }
 
+// DistroID возвращает ID дистрибутива, который клиент передаёт сайту
+// для фильтрации зависимостей (пустая строка — дистрибутив не определён)
+func (c *Client) DistroID() string {
+	return c.distroID
+}
+
+// SetDistroID переопределяет ID дистрибутива (для тестов)
+func (c *Client) SetDistroID(id string) {
+	c.distroID = id
+}
+
 // statusError формирует короткую понятную ошибку из HTTP-ответа.
 // HTML-страницы (например, страница обновления сайта в maintenance-режиме)
 // в текст ошибки не включаются — только их смысл
