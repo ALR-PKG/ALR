@@ -86,7 +86,7 @@ alr repo add alr-LG https://git.linux-gaming.ru/Linux-Gaming/alr-LG.git
 
 ---
 ## Соцсети
-Telegram - https://t.me/plemyakh
+Telegram - https://t.me/alr_pkg
 
 ## Спасибы
 
@@ -98,6 +98,3 @@ Telegram - https://t.me/plemyakh
 - <https://github.com/goreleaser/nfpm>
 - <https://github.com/charmbracelet/bubbletea>
 - <https://gitlab.com/cznic/sqlite>
-
-Благодарим за активное участие в развитии проекта:
-- Maks1mS <maxim@slipenko.com>
