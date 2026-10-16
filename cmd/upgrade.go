@@ -130,6 +130,7 @@ func newUpgradeCmd() *cobra.Command {
 						Opts: &types.BuildOpts{
 							Clean:       clean,
 							Interactive: interactive,
+							Upgrade:     true,
 						},
 						Info:       deps.Info,
 						PkgFormat_: build.GetPkgFormat(deps.Manager),

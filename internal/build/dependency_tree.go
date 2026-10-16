@@ -207,7 +207,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 					if interactive {
 						spinner.Stop()
 					}
-					pkgList = selectPackageVariant(ctx, pkgName, pkgList, parentPkg, input.BuildOpts().Interactive)
+					pkgList = selectPackageVariant(ctx, pkgName, pkgList, parentPkg, input.BuildOpts().Interactive, input.BuildOpts().Upgrade)
 					if interactive {
 						spinner.Start()
 					}
@@ -561,17 +561,20 @@ func multiPackageSubset(pkgs []alrsh.Package, queryName string) []alrsh.Package 
 
 // selectPackageVariant выбирает один пакет из списка разных пакетов,
 // найденных под одним именем (точное совпадение имени и provides-варианты).
-// Список pkgs уже отсортирован FindPkgs: точные совпадения в начале
+// Список pkgs уже отсортирован FindPkgs: точные совпадения в начале.
+// При upgrade меню не показывается: запрос содержит точное имя
+// установленного пакета, его и берём
 func selectPackageVariant(
 	ctx context.Context,
 	query string,
 	pkgs []alrsh.Package,
 	parentPkg string,
 	interactive bool,
+	upgrade bool,
 ) []alrsh.Package {
 	// Меню выбора — только для целевых пакетов в интерактивном режиме;
-	// для зависимостей интерактивный выбор недопустим
-	if parentPkg == "" && interactive {
+	// для зависимостей и при обновлении интерактивный выбор недопустим
+	if parentPkg == "" && interactive && !upgrade {
 		choice, err := cliutils.PkgPrompt(ctx, pkgs, "install", true)
 		if err != nil {
 			slog.Error(gotext.Get("Error prompting for choice of package"))

@@ -22,6 +22,9 @@ package types
 type BuildOpts struct {
 	Clean       bool
 	Interactive bool
+	// Upgrade — вызов из команды обновления: вариант пакета не
+	// спрашивается, берётся точное совпадение установленного имени
+	Upgrade bool
 }
 
 type Scripts struct {
