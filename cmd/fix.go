@@ -272,10 +272,16 @@ func resetDir(dirPath string) error {
 // makeTreeWritable выставляет владельцу право записи на всё дерево:
 // сборки оставляют read-only файлы (кэш модулей go — 0444/0555),
 // иначе очистка каталога упирается в permission denied.
+// Симлинки пропускаются: chmod идёт за ссылкой и упрётся в чужой
+// системный файл (package() линкует /usr/...), а удалению симлинка
+// права его цели не нужны.
 func makeTreeWritable(root string) error {
 	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // недоступное уже не удалится — даст о себе знать RemoveAll
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
 		}
 		if info.IsDir() {
 			return os.Chmod(path, info.Mode()|0o700)
