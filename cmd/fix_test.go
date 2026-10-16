@@ -183,6 +183,36 @@ func TestResetDir(t *testing.T) {
 	}
 }
 
+// Симлинк в дереве сборки может указывать на чужой системный файл
+// (package() линкует /usr/...): chmod обязан не идти за симлинком.
+func TestMakeTreeWritableSkipsSymlinks(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target")
+	if err := os.WriteFile(target, []byte("x"), 0o444); err != nil {
+		t.Fatal(err)
+	}
+	sub := filepath.Join(dir, "pkg")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(sub, "link")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := makeTreeWritable(sub); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := os.Stat(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o444 {
+		t.Errorf("expected symlink target mode to stay 0444, got %o", info.Mode().Perm())
+	}
+}
+
 func TestLockedPaths(t *testing.T) {
 	dir := t.TempDir()
 	release := holdFlockViaProbe(t, filepath.Join(dir, "a.lock"))
