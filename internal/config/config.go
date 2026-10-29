@@ -166,25 +166,32 @@ func (c *ALRConfig) migrateConfig() error {
 			fmt.Fprintf(os.Stderr, "Предупреждение: не удалось создать конфигурационный файл %s: %v\n", constants.SystemConfigPath, err)
 			return nil
 		}
-	} else {
-		needSave := false
-		// Если файл существует, проверяем, есть ли в нем новые опции
-		if !c.System.k.Exists("updateSystemOnUpgrade") {
-			c.System.SetUpdateSystemOnUpgrade(false)
-			needSave = true
-		}
-		if !c.System.k.Exists("preferALRDeps") {
-			c.System.SetPreferALRDeps(false)
-			needSave = true
-		}
-		if needSave {
-			if err := c.System.Save(); err != nil {
-				return nil
-			}
+	} else if c.migrateMissingKeys() {
+		if err := c.System.Save(); err != nil {
+			return nil
 		}
 	}
 
 	return nil
+}
+
+func (c *ALRConfig) migrateMissingKeys() bool {
+	needSave := false
+	if !c.System.k.Exists("updateSystemOnUpgrade") {
+		c.System.SetUpdateSystemOnUpgrade(false)
+		needSave = true
+	}
+	if !c.System.k.Exists("preferALRDeps") {
+		c.System.SetPreferALRDeps(false)
+		needSave = true
+	}
+	if !c.System.k.Exists("site.preferRPC") {
+		if err := c.System.k.Set("site.preferRPC", true); err != nil {
+			panic(err)
+		}
+		needSave = true
+	}
+	return needSave
 }
 
 func (c *ALRConfig) createDefaultConfig() error {
