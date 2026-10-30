@@ -21,6 +21,7 @@ package cliutils
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -158,6 +159,10 @@ func IsMultiPackage(pkgs []alrsh.Package) bool {
 	return true
 }
 
+func pkgPromptOption(option alrsh.Package) string {
+	return fmt.Sprintf("%s/%s %s-%d", option.Repository, option.Name, option.Version, option.Release)
+}
+
 // PkgPrompt asks the user to choose between multiple packages.
 func PkgPrompt(ctx context.Context, options []alrsh.Package, verb string, interactive bool) (alrsh.Package, error) {
 	if !interactive {
@@ -166,7 +171,7 @@ func PkgPrompt(ctx context.Context, options []alrsh.Package, verb string, intera
 
 	names := make([]string, len(options))
 	for i, option := range options {
-		names[i] = option.Repository + "/" + option.Name + " " + option.Version
+		names[i] = pkgPromptOption(option)
 	}
 
 	prompt := &survey.Select{
