@@ -683,7 +683,7 @@ msgid "Package is already being built by another process"
 msgstr "Пакет уже собирается другим процессом"
 
 #: internal/build/build.go:387 internal/build/build.go:748
-#: internal/build/build.go:1337
+#: internal/build/build.go:1346
 msgid "Using cached package %s"
 msgstr "Используется кэшированный пакет %s"
 
@@ -703,67 +703,71 @@ msgstr "Массив контрольных сумм должен быть то�
 msgid "Downloading sources"
 msgstr "Скачивание источников"
 
-#: internal/build/build.go:838
+#: internal/build/build.go:809
+msgid " (for %s)"
+msgstr " (для %s)"
+
+#: internal/build/build.go:846
 msgid " (already installed)"
 msgstr " (уже установлен)"
 
-#: internal/build/build.go:956
+#: internal/build/build.go:965
 msgid "(build)"
 msgstr "(сборка)"
 
-#: internal/build/build.go:1132
+#: internal/build/build.go:1141
 msgid "Resolving dependencies for packages"
 msgstr "Разрешение зависимостей пакетов"
 
-#: internal/build/build.go:1134
+#: internal/build/build.go:1143
 msgid "Dependency tree resolved"
 msgstr ""
 
-#: internal/build/build.go:1201
+#: internal/build/build.go:1210
 msgid "Installation summary"
 msgstr "Сводка установки"
 
-#: internal/build/build.go:1228
+#: internal/build/build.go:1237
 msgid "Proceed with installation?"
 msgstr "Продолжить установку?"
 
-#: internal/build/build.go:1248
+#: internal/build/build.go:1257
 msgid "Installing system dependencies (%d)"
 msgstr "Установка системных зависимостей (%d)"
 
-#: internal/build/build.go:1260
+#: internal/build/build.go:1269
 msgid "Processing optional dependencies"
 msgstr "Обработка опциональных зависимостей"
 
-#: internal/build/build.go:1292
+#: internal/build/build.go:1301
 msgid "Building %d packages"
 msgstr "Сборка %d пакетов"
 
-#: internal/build/build.go:1298
+#: internal/build/build.go:1307
 msgid "Package %s not found in tree, skipping"
 msgstr "Пакет %s не найден в дереве, пропускаем"
 
-#: internal/build/build.go:1316
+#: internal/build/build.go:1325
 msgid "Package %s already installed, skipping"
 msgstr "Пакет %s уже установлен, пропускаем"
 
-#: internal/build/build.go:1358
+#: internal/build/build.go:1367
 msgid "Building package %s-%s"
 msgstr "Сборка пакета %s-%s"
 
-#: internal/build/build.go:1360
+#: internal/build/build.go:1369
 msgid "Building dependency %s-%s"
 msgstr "Сборка зависимости %s-%s"
 
-#: internal/build/build.go:1405
+#: internal/build/build.go:1414
 msgid "Installing target packages"
 msgstr "Установка целевых пакетов"
 
-#: internal/build/build.go:1431
+#: internal/build/build.go:1440
 msgid "Would you like to remove all build dependencies?"
 msgstr "Хотите удалить все зависимости сборки?"
 
-#: internal/build/build.go:1441
+#: internal/build/build.go:1450
 msgid "Failed to remove build dependencies: %v"
 msgstr "Не удалось удалить зависимости сборки: %v"
 
@@ -787,11 +791,11 @@ msgstr ""
 msgid "This package is already installed"
 msgstr "Этот пакет уже установлен"
 
-#: internal/build/dependency_tree.go:93
+#: internal/build/dependency_tree.go:108
 msgid "Resolving dependencies: %d packages, %d system deps (current: %s)"
 msgstr "Разрешение зависимостей: пакетов %d, системных %d (текущий: %s)"
 
-#: internal/build/dependency_tree.go:580
+#: internal/build/dependency_tree.go:589
 msgid "Error prompting for choice of package"
 msgstr "Ошибка при запросе выбора пакета"
 
@@ -983,23 +987,23 @@ msgstr ""
 "Не удалось записать в кэш доступности пакетов (дальнейшие ошибки кэша — "
 "только в отладочном логе)"
 
-#: internal/repos/git_progress.go:127
+#: internal/repos/git_progress.go:128
 msgid "Enumerating objects"
 msgstr "Перечисление объектов"
 
-#: internal/repos/git_progress.go:129
+#: internal/repos/git_progress.go:130
 msgid "Counting objects"
 msgstr "Подсчёт объектов"
 
-#: internal/repos/git_progress.go:131
+#: internal/repos/git_progress.go:132
 msgid "Compressing objects"
 msgstr "Сжатие объектов"
 
-#: internal/repos/git_progress.go:133
+#: internal/repos/git_progress.go:134
 msgid "Receiving objects"
 msgstr "Получение объектов"
 
-#: internal/repos/git_progress.go:135
+#: internal/repos/git_progress.go:136
 msgid "Resolving deltas"
 msgstr "Разрешение дельт"
 

@@ -47,10 +47,24 @@ type DependencyNode struct {
 // UnifiedDependencyTree представляет единое дерево зависимостей для однопроходной установки
 type UnifiedDependencyTree struct {
 	Nodes          map[string]*DependencyNode
-	AllALRPackages []string // Все ALR пакеты в порядке топологической сортировки (от листьев)
-	AllSystemDeps  []string // Все системные зависимости (build + runtime)
-	AllOptDeps     []string // Все опциональные зависимости
-	AllBuildDeps   []string // Все build зависимости для отслеживания
+	AllALRPackages []string            // Все ALR пакеты в порядке топологической сортировки (от листьев)
+	AllSystemDeps  []string            // Все системные зависимости (build + runtime)
+	AllOptDeps     []string            // Все опциональные зависимости
+	OptDepOwners   map[string][]string // Пакеты, объявившие каждую опциональную зависимость
+	AllBuildDeps   []string            // Все build зависимости для отслеживания
+}
+
+func addOptDepOwner(tree *UnifiedDependencyTree, visited map[string]bool, dep, owner string) {
+	if !visited[dep] {
+		visited[dep] = true
+		tree.AllOptDeps = append(tree.AllOptDeps, dep)
+	}
+	for _, existing := range tree.OptDepOwners[dep] {
+		if existing == owner {
+			return
+		}
+	}
+	tree.OptDepOwners[dep] = append(tree.OptDepOwners[dep], owner)
 }
 
 // ResolveUnifiedDependencyTree строит единое дерево зависимостей
@@ -69,6 +83,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 		AllALRPackages: []string{},
 		AllSystemDeps:  []string{},
 		AllOptDeps:     []string{},
+		OptDepOwners:   make(map[string][]string),
 		AllBuildDeps:   []string{},
 	}
 
@@ -255,10 +270,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 
 					// Собираем опциональные зависимости
 					for _, optDep := range optDeps {
-						if !optVisited[optDep] {
-							optVisited[optDep] = true
-							tree.AllOptDeps = append(tree.AllOptDeps, optDep)
-						}
+						addOptDepOwner(tree, optVisited, optDep, subPkgName)
 					}
 
 					// Отслеживаем build зависимости для удаления.
@@ -334,10 +346,7 @@ func (b *Builder) ResolveUnifiedDependencyTree(
 
 				// Собираем опциональные зависимости
 				for _, optDep := range optDeps {
-					if !optVisited[optDep] {
-						optVisited[optDep] = true
-						tree.AllOptDeps = append(tree.AllOptDeps, optDep)
-					}
+					addOptDepOwner(tree, optVisited, optDep, pkgName)
 				}
 
 				// Отслеживаем build зависимости для удаления.

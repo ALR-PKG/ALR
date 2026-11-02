@@ -452,7 +452,7 @@ func (b *Builder) BuildPackage(
 		}
 
 		slog.Debug("installOptDeps")
-		_, err = b.installOptDeps(ctx, input, optDepends)
+		_, err = b.installOptDeps(ctx, input, optDepends, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -802,6 +802,13 @@ func (i *Builder) installBuildDeps(
 	return builtDeps, deps, nil
 }
 
+func formatOptDepOption(dep string, owners []string) string {
+	if len(owners) == 0 {
+		return dep
+	}
+	return dep + gotext.Get(" (for %s)", strings.Join(owners, ", "))
+}
+
 func (i *Builder) installOptDeps(
 	ctx context.Context,
 	input interface {
@@ -810,6 +817,7 @@ func (i *Builder) installOptDeps(
 		PkgFormatProvider
 	},
 	pkgs []string,
+	owners map[string][]string,
 ) ([]*BuiltDep, error) {
 	var builtDeps []*BuiltDep
 	if len(pkgs) == 0 {
@@ -840,9 +848,10 @@ func (i *Builder) installOptDeps(
 	options := make([]string, len(pkgs))
 	var defaults []int
 	for idx, dep := range pkgs {
-		options[idx] = dep
+		option := formatOptDepOption(dep, owners[dep])
+		options[idx] = option
 		if !notInstalledSet[names[idx]] {
-			options[idx] = green.Render(dep + installedMarker)
+			options[idx] = green.Render(option + installedMarker)
 			defaults = append(defaults, idx)
 		}
 	}
@@ -1258,7 +1267,7 @@ func (i *Builder) InstallPkgs(
 	// Шаг 3: Обрабатываем опциональные зависимости (если есть)
 	if len(tree.AllOptDeps) > 0 && input.BuildOpts().Interactive {
 		slog.Info(gotext.Get("Processing optional dependencies"))
-		_, err := i.installOptDeps(ctx, input, tree.AllOptDeps)
+		_, err := i.installOptDeps(ctx, input, tree.AllOptDeps, tree.OptDepOwners)
 		if err != nil {
 			return nil, fmt.Errorf("failed to install optional dependencies: %w", err)
 		}
@@ -1328,9 +1337,13 @@ func (i *Builder) InstallPkgs(
 			info:       input.OSRelease(),
 		}
 
-		cachedDeps, allInCache, err := i.checkCacheForAllSubpackages(ctx, buildInput, basePkgName, []string{cleanPkgName})
-		if err != nil {
-			return nil, err
+		var cachedDeps []*BuiltDep
+		allInCache := false
+		if !input.BuildOpts().Clean {
+			cachedDeps, allInCache, err = i.checkCacheForAllSubpackages(ctx, buildInput, basePkgName, []string{cleanPkgName})
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if allInCache {
