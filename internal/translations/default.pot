@@ -292,7 +292,7 @@ msgid "Clearing cache and temporary directories"
 msgstr ""
 
 #: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:207 cmd/fix.go:250 cmd/fix.go:258
-#: cmd/fix.go:372 cmd/fix.go:380
+#: cmd/fix.go:378 cmd/fix.go:386
 msgid "Skipping %s: locked by another process"
 msgstr ""
 
@@ -332,7 +332,7 @@ msgstr ""
 msgid "Unable to remove cache item (%s) as current user, trying with sudo"
 msgstr ""
 
-#: cmd/fix.go:221 cmd/fix.go:394
+#: cmd/fix.go:221 cmd/fix.go:400
 msgid "Unable to remove cache item (%s)"
 msgstr ""
 
@@ -643,19 +643,19 @@ msgstr ""
 msgid "System packages updated successfully"
 msgstr ""
 
-#: cmd/upgrade.go:122 cmd/upgrade.go:140
+#: cmd/upgrade.go:122 cmd/upgrade.go:141
 msgid "Error checking for updates"
 msgstr ""
 
-#: cmd/upgrade.go:143
+#: cmd/upgrade.go:144
 msgid "There is nothing to do."
 msgstr ""
 
-#: cmd/upgrade.go:203
+#: cmd/upgrade.go:204
 msgid "Checking for ALR package updates..."
 msgstr ""
 
-#: cmd/upgrade.go:387
+#: cmd/upgrade.go:388
 msgid "Finished checking for updates, %d available"
 msgstr ""
 
@@ -778,7 +778,7 @@ msgstr ""
 msgid "Resolving dependencies: %d packages, %d system deps (current: %s)"
 msgstr ""
 
-#: internal/build/dependency_tree.go:577
+#: internal/build/dependency_tree.go:580
 msgid "Error prompting for choice of package"
 msgstr ""
 
@@ -900,36 +900,36 @@ msgstr ""
 msgid "Error parsing os release"
 msgstr ""
 
-#: internal/cliutils/prompt.go:59
+#: internal/cliutils/prompt.go:60
 msgid "Would you like to view the build script for %s"
 msgstr ""
 
-#: internal/cliutils/prompt.go:70 internal/cliutils/prompt.go:258
+#: internal/cliutils/prompt.go:71 internal/cliutils/prompt.go:263
 msgid "Would you still like to continue?"
 msgstr ""
 
-#: internal/cliutils/prompt.go:76
+#: internal/cliutils/prompt.go:77
 msgid "User chose not to continue after reading script"
 msgstr ""
 
-#: internal/cliutils/prompt.go:174
+#: internal/cliutils/prompt.go:179
 msgid "Choose which package to %s"
 msgstr ""
 
-#: internal/cliutils/prompt.go:198
+#: internal/cliutils/prompt.go:203
 msgid "Choose which optional package(s) to install"
 msgstr ""
 
-#: internal/cliutils/prompt.go:237
+#: internal/cliutils/prompt.go:242
 msgid "Select packages to view build scripts"
 msgstr ""
 
-#: internal/cliutils/prompt.go:238
+#: internal/cliutils/prompt.go:243
 msgid ""
 "↑↓ to move, space to select, → to select all, ← to clear, enter to confirm"
 msgstr ""
 
-#: internal/cliutils/prompt.go:263
+#: internal/cliutils/prompt.go:268
 msgid "User chose not to continue after reading script(s)"
 msgstr ""
 
@@ -960,6 +960,26 @@ msgid ""
 "log)"
 msgstr ""
 
+#: internal/repos/git_progress.go:127
+msgid "Enumerating objects"
+msgstr ""
+
+#: internal/repos/git_progress.go:129
+msgid "Counting objects"
+msgstr ""
+
+#: internal/repos/git_progress.go:131
+msgid "Compressing objects"
+msgstr ""
+
+#: internal/repos/git_progress.go:133
+msgid "Receiving objects"
+msgstr ""
+
+#: internal/repos/git_progress.go:135
+msgid "Resolving deltas"
+msgstr ""
+
 #: internal/repos/pull.go:107
 msgid "Repository %s is already being pulled by another process"
 msgstr ""
@@ -976,79 +996,79 @@ msgstr ""
 msgid "Pulling repository %s"
 msgstr ""
 
-#: internal/repos/pull.go:230
+#: internal/repos/pull.go:234
 msgid "Repository %s is up to date"
 msgstr ""
 
-#: internal/repos/pull.go:236
+#: internal/repos/pull.go:240
 msgid "Repository %s unchanged but no packages in DB, processing anyway"
 msgstr ""
 
-#: internal/repos/pull.go:242
+#: internal/repos/pull.go:246
 msgid "Checking out repository %s..."
 msgstr ""
 
-#: internal/repos/pull.go:266
+#: internal/repos/pull.go:270
 msgid "Processing repository packages (full): %s"
 msgstr ""
 
-#: internal/repos/pull.go:272
+#: internal/repos/pull.go:276
 msgid "Processing repository changes: %s"
 msgstr ""
 
-#: internal/repos/pull.go:281
+#: internal/repos/pull.go:285
 msgid "Git repository does not appear to be a valid ALR repo"
 msgstr ""
 
-#: internal/repos/pull.go:297
+#: internal/repos/pull.go:301
 msgid ""
 "ALR repo's minimum ALR version is greater than the current version. Try "
 "updating ALR if something doesn't work."
 msgstr ""
 
-#: internal/repos/pull.go:465
+#: internal/repos/pull.go:469
 msgid "Failed to get deleted file from old commit"
 msgstr ""
 
-#: internal/repos/pull.go:471
+#: internal/repos/pull.go:475
 msgid "Failed to read deleted file"
 msgstr ""
 
-#: internal/repos/pull.go:490
+#: internal/repos/pull.go:494
 msgid "Failed to get updated file from new commit"
 msgstr ""
 
-#: internal/repos/pull.go:496
+#: internal/repos/pull.go:500
 msgid "Failed to read updated file"
 msgstr ""
 
-#: internal/repos/pull.go:520 internal/repos/pull.go:556
+#: internal/repos/pull.go:524 internal/repos/pull.go:560
 msgid "Processing repository packages: %s"
 msgstr ""
 
-#: internal/repos/pull.go:552
+#: internal/repos/pull.go:556
 msgid "No alr.sh files found in repository"
 msgstr ""
 
-#: internal/repos/pull.go:620
+#: internal/repos/pull.go:624
 msgid "Repository %s processed: %d packages"
 msgstr ""
 
-#: internal/rpc/client.go:87
+#: internal/rpc/client.go:98
 msgid ""
 "site is temporarily unavailable (HTTP %d): an update may be in progress, try "
 "again in a couple of minutes"
 msgstr ""
 
-#: internal/rpc/client.go:89
+#: internal/rpc/client.go:100
 msgid "RPC returned status %d (HTML page instead of JSON)"
 msgstr ""
 
-#: internal/rpc/client.go:98
+#: internal/rpc/client.go:109
 msgid "RPC returned status %d"
 msgstr ""
 
-#: internal/rpc/client.go:100
+#: internal/rpc/client.go:111
 msgid "RPC returned status %d: %s"
 msgstr ""
 

@@ -197,10 +197,14 @@ func (rs *Repos) pullRepoFromURL(ctx context.Context, rawRepoUrl string, repo *t
 		return fmt.Errorf("failed to open repo")
 	}
 
+	progress := newGitProgressWriter(os.Stderr)
 	err = r.FetchContext(ctx, &git.FetchOptions{
-		Progress: os.Stderr,
+		Progress: progress,
 		Force:    true,
 	})
+	if closeErr := progress.Close(); err == nil {
+		err = closeErr
+	}
 	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return err
 	}

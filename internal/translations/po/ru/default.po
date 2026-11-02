@@ -299,7 +299,7 @@ msgid "Clearing cache and temporary directories"
 msgstr "Очистка кэша и временных директорий"
 
 #: cmd/fix.go:127 cmd/fix.go:198 cmd/fix.go:207 cmd/fix.go:250 cmd/fix.go:258
-#: cmd/fix.go:372 cmd/fix.go:380
+#: cmd/fix.go:378 cmd/fix.go:386
 msgid "Skipping %s: locked by another process"
 msgstr "Пропуск %s: заблокировано другим процессом"
 
@@ -341,7 +341,7 @@ msgstr ""
 "Невозможно удалить элемент кэша (%s) от текущего пользователя, попытка через "
 "sudo"
 
-#: cmd/fix.go:221 cmd/fix.go:394
+#: cmd/fix.go:221 cmd/fix.go:400
 msgid "Unable to remove cache item (%s)"
 msgstr "Невозможно удалить элемент кэша (%s)"
 
@@ -654,19 +654,19 @@ msgstr "Ошибка при обновлении системных пакето
 msgid "System packages updated successfully"
 msgstr "Системные пакеты успешно обновлены"
 
-#: cmd/upgrade.go:122 cmd/upgrade.go:140
+#: cmd/upgrade.go:122 cmd/upgrade.go:141
 msgid "Error checking for updates"
 msgstr "Ошибка при проверке обновлений"
 
-#: cmd/upgrade.go:143
+#: cmd/upgrade.go:144
 msgid "There is nothing to do."
 msgstr "Действия не требуются."
 
-#: cmd/upgrade.go:203
+#: cmd/upgrade.go:204
 msgid "Checking for ALR package updates..."
 msgstr "Проверка обновлений ALR пакетов..."
 
-#: cmd/upgrade.go:387
+#: cmd/upgrade.go:388
 msgid "Finished checking for updates, %d available"
 msgstr "Проверка обновлений завершена, доступно: %d"
 
@@ -791,7 +791,7 @@ msgstr "Этот пакет уже установлен"
 msgid "Resolving dependencies: %d packages, %d system deps (current: %s)"
 msgstr "Разрешение зависимостей: пакетов %d, системных %d (текущий: %s)"
 
-#: internal/build/dependency_tree.go:577
+#: internal/build/dependency_tree.go:580
 msgid "Error prompting for choice of package"
 msgstr "Ошибка при запросе выбора пакета"
 
@@ -918,38 +918,38 @@ msgstr "Ошибка инициализации базы данных"
 msgid "Error parsing os release"
 msgstr "Ошибка при разборе файла выпуска операционной системы"
 
-#: internal/cliutils/prompt.go:59
+#: internal/cliutils/prompt.go:60
 msgid "Would you like to view the build script for %s"
 msgstr "Показать скрипт для пакета %s"
 
-#: internal/cliutils/prompt.go:70 internal/cliutils/prompt.go:258
+#: internal/cliutils/prompt.go:71 internal/cliutils/prompt.go:263
 msgid "Would you still like to continue?"
 msgstr "Продолжить?"
 
-#: internal/cliutils/prompt.go:76
+#: internal/cliutils/prompt.go:77
 msgid "User chose not to continue after reading script"
 msgstr "Пользователь решил не продолжать после просмотра скрипта"
 
-#: internal/cliutils/prompt.go:174
+#: internal/cliutils/prompt.go:179
 msgid "Choose which package to %s"
 msgstr "Выберите, какой пакет использовать для %s"
 
-#: internal/cliutils/prompt.go:198
+#: internal/cliutils/prompt.go:203
 msgid "Choose which optional package(s) to install"
 msgstr "Выберите дополнительные пакеты для установки"
 
-#: internal/cliutils/prompt.go:237
+#: internal/cliutils/prompt.go:242
 msgid "Select packages to view build scripts"
 msgstr "Выберите пакеты для просмотра скриптов сборки"
 
-#: internal/cliutils/prompt.go:238
+#: internal/cliutils/prompt.go:243
 msgid ""
 "↑↓ to move, space to select, → to select all, ← to clear, enter to confirm"
 msgstr ""
 "Используйте стрелки для перемещения, пробел для выбора, стрелка вправо чтобы "
 "выбрать все, стрелка влево чтобы очистить, enter для подтверждения"
 
-#: internal/cliutils/prompt.go:263
+#: internal/cliutils/prompt.go:268
 msgid "User chose not to continue after reading script(s)"
 msgstr "Пользователь решил не продолжать после просмотра скрипта(ов)"
 
@@ -983,6 +983,26 @@ msgstr ""
 "Не удалось записать в кэш доступности пакетов (дальнейшие ошибки кэша — "
 "только в отладочном логе)"
 
+#: internal/repos/git_progress.go:127
+msgid "Enumerating objects"
+msgstr "Перечисление объектов"
+
+#: internal/repos/git_progress.go:129
+msgid "Counting objects"
+msgstr "Подсчёт объектов"
+
+#: internal/repos/git_progress.go:131
+msgid "Compressing objects"
+msgstr "Сжатие объектов"
+
+#: internal/repos/git_progress.go:133
+msgid "Receiving objects"
+msgstr "Получение объектов"
+
+#: internal/repos/git_progress.go:135
+msgid "Resolving deltas"
+msgstr "Разрешение дельт"
+
 #: internal/repos/pull.go:107
 msgid "Repository %s is already being pulled by another process"
 msgstr "Репозиторий %s уже обновляется другим процессом"
@@ -999,31 +1019,31 @@ msgstr "Не удалось извлечь из URL"
 msgid "Pulling repository %s"
 msgstr "Скачивание репозитория %s"
 
-#: internal/repos/pull.go:230
+#: internal/repos/pull.go:234
 msgid "Repository %s is up to date"
 msgstr "Репозиторий %s уже обновлён"
 
-#: internal/repos/pull.go:236
+#: internal/repos/pull.go:240
 msgid "Repository %s unchanged but no packages in DB, processing anyway"
 msgstr "Репозиторий %s не изменился, но в БД нет пакетов — обрабатываю заново"
 
-#: internal/repos/pull.go:242
+#: internal/repos/pull.go:246
 msgid "Checking out repository %s..."
 msgstr "Переключение репозитория %s..."
 
-#: internal/repos/pull.go:266
+#: internal/repos/pull.go:270
 msgid "Processing repository packages (full): %s"
 msgstr "Обработка пакетов репозитория (полная): %s"
 
-#: internal/repos/pull.go:272
+#: internal/repos/pull.go:276
 msgid "Processing repository changes: %s"
 msgstr "Обработка изменений репозитория: %s"
 
-#: internal/repos/pull.go:281
+#: internal/repos/pull.go:285
 msgid "Git repository does not appear to be a valid ALR repo"
 msgstr "Репозиторий Git не поддерживается репозиторием ALR"
 
-#: internal/repos/pull.go:297
+#: internal/repos/pull.go:301
 msgid ""
 "ALR repo's minimum ALR version is greater than the current version. Try "
 "updating ALR if something doesn't work."
@@ -1031,35 +1051,35 @@ msgstr ""
 "Минимальная версия ALR для ALR-репозитория выше текущей версии. Попробуйте "
 "обновить ALR, если что-то не работает."
 
-#: internal/repos/pull.go:465
+#: internal/repos/pull.go:469
 msgid "Failed to get deleted file from old commit"
 msgstr "Не удалось получить удалённый файл из старого коммита"
 
-#: internal/repos/pull.go:471
+#: internal/repos/pull.go:475
 msgid "Failed to read deleted file"
 msgstr "Не удалось прочитать удалённый файл"
 
-#: internal/repos/pull.go:490
+#: internal/repos/pull.go:494
 msgid "Failed to get updated file from new commit"
 msgstr "Не удалось получить обновлённый файл из нового коммита"
 
-#: internal/repos/pull.go:496
+#: internal/repos/pull.go:500
 msgid "Failed to read updated file"
 msgstr "Не удалось прочитать обновлённый файл"
 
-#: internal/repos/pull.go:520 internal/repos/pull.go:556
+#: internal/repos/pull.go:524 internal/repos/pull.go:560
 msgid "Processing repository packages: %s"
 msgstr "Обработка пакетов репозитория: %s"
 
-#: internal/repos/pull.go:552
+#: internal/repos/pull.go:556
 msgid "No alr.sh files found in repository"
 msgstr "Файлы alr.sh не найдены в репозитории"
 
-#: internal/repos/pull.go:620
+#: internal/repos/pull.go:624
 msgid "Repository %s processed: %d packages"
 msgstr "Репозиторий %s обработан: пакетов %d"
 
-#: internal/rpc/client.go:87
+#: internal/rpc/client.go:98
 msgid ""
 "site is temporarily unavailable (HTTP %d): an update may be in progress, try "
 "again in a couple of minutes"
@@ -1067,15 +1087,15 @@ msgstr ""
 "сайт временно недоступен (HTTP %d): возможно, идёт обновление — повторите "
 "через пару минут"
 
-#: internal/rpc/client.go:89
+#: internal/rpc/client.go:100
 msgid "RPC returned status %d (HTML page instead of JSON)"
 msgstr "RPC вернул статус %d (HTML-страница вместо JSON)"
 
-#: internal/rpc/client.go:98
+#: internal/rpc/client.go:109
 msgid "RPC returned status %d"
 msgstr "RPC вернул статус %d"
 
-#: internal/rpc/client.go:100
+#: internal/rpc/client.go:111
 msgid "RPC returned status %d: %s"
 msgstr "RPC вернул статус %d: %s"
 
@@ -1245,9 +1265,6 @@ msgstr "%s %s загружается — %s/с\n"
 
 #~ msgid "Failed to prompt user to view build script"
 #~ msgstr "Не удалось предложить пользователю просмотреть скрипт сборки"
-
-#~ msgid "Compressing package"
-#~ msgstr "Сжатие пакета"
 
 #~ msgid "Installing build dependencies"
 #~ msgstr "Установка зависимостей сборки"
